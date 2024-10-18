@@ -1,0 +1,5 @@
+*build*
+.idea
+*.o
+*.elf
+.DS_Store
