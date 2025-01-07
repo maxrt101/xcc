@@ -2,6 +2,7 @@
 #include <fstream>
 #include <sstream>
 
+#include "xcc/xcc.h"
 #include "xcc/lexer.h"
 #include "xcc/parser.h"
 #include "xcc/codegen.h"
@@ -14,6 +15,16 @@ extern "C" [[maybe_unused]] int32_t xcc_putc(int32_t c) {
 
 extern "C" [[maybe_unused]] int32_t xcc_putd(int32_t i) {
   printf("%d", i);
+  return 0;
+}
+
+extern "C" [[maybe_unused]] int32_t xcc_putud(uint32_t i) {
+  printf("%u", i);
+  return 0;
+}
+
+extern "C" [[maybe_unused]] int32_t xcc_putux(uint32_t i) {
+  printf("%x", i);
   return 0;
 }
 
@@ -95,7 +106,7 @@ int main(int argc, char ** argv) {
     return 0;
   }
 
-  printf("xcc (experimental) repl v0.1.0 by maxrt\n");
+  printf("xcc (experimental) repl %s by maxrt\n", xcc::getVersion().c_str());
 
   while (true) {
     printf("-> ");
@@ -113,6 +124,13 @@ int main(int argc, char ** argv) {
       break;
     }
 
+    if (tokens[0] == "/help" || tokens[0] == "/h") {
+      printf("/help or /h - Prints this message\n");
+      printf("/quit or /q - Exits from REPL\n");
+      printf("/list or /l - List global function symbols\n");
+      continue;
+    }
+
     if (tokens[0] == "/list") {
       for (auto& [name, fn] : globalContext->functions) {
         printf("%s\n", fn->toString().c_str());
@@ -120,7 +138,13 @@ int main(int argc, char ** argv) {
       continue;
     }
 
+    // If user didn't put ';' at the end
+    if (line.back() != ';') {
+      line += ";";
+    }
+
     try {
+      // Run line from REPL
       xcc::run(globalContext, line, true);
     } catch (std::exception& e) {
       printf("%s\n", e.what());
