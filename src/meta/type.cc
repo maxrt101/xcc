@@ -18,6 +18,10 @@ TypeTag Type::getTag() const {
   return tag;
 }
 
+std::shared_ptr<Type> Type::getPointedType() const {
+  return pointedType;
+}
+
 llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
   switch (tag) {
     case TypeTag::VOID:
@@ -46,7 +50,7 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
       return llvm::Type::getDoubleTy(*ctx.llvm.ctx);
 
     case TypeTag::PTR:
-      return llvm::Type::getPointerTo();
+      return pointedType->getLLVMType(ctx)->getPointerTo();
 
     default:
       throw CodegenException("Unknown type");
@@ -89,6 +93,10 @@ bool Type::isFloat() const {
   return isAnyOf(TypeTag::F32, TypeTag::F64);
 }
 
+bool Type::isPointer() const {
+  return is(TypeTag::PTR);
+}
+
 llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
   switch (tag) {
     case TypeTag::U8:
@@ -105,8 +113,10 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
     case TypeTag::F64:
       return llvm::ConstantFP::get(getLLVMType(ctx), 0.0);
 
-    case TypeTag::VOID:
     case TypeTag::PTR:
+      return llvm::Constant::getNullValue(getLLVMType(ctx));
+
+    case TypeTag::VOID:
     default:
       return nullptr;
   }

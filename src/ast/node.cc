@@ -35,8 +35,10 @@ std::string Node::typeToString(NodeType type) {
       {AST_EXPR_STRING, "AST_EXPR_STRING"},
       {AST_EXPR_IDENTIFIER, "AST_EXPR_IDENTIFIER"},
       {AST_EXPR_CALL, "AST_EXPR_CALL"},
+      {AST_EXPR_CAST, "AST_EXPR_CAST"},
       {AST_EXPR_BINARY, "AST_EXPR_BINARY"},
       {AST_EXPR_UNARY, "AST_EXPR_UNARY"},
+      {AST_EXPR_ASSIGN, "AST_EXPR_ASSIGN"},
       {AST_EXPR_TYPE, "AST_EXPR_TYPE"},
       {AST_EXPR_TYPED_IDENTIFIER, "AST_EXPR_TYPED_IDENTIFIER"},
       {AST_BLOCK, "AST_BLOCK"},
@@ -46,7 +48,6 @@ std::string Node::typeToString(NodeType type) {
       {AST_IF, "AST_IF"},
       {AST_FOR, "AST_FOR"},
       {AST_WHILE, "AST_WHILE"},
-      {AST_FOR, "AST_FOR"},
       {AST_RETURN, "AST_RETURN"},
   };
 

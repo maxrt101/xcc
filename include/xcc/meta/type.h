@@ -45,6 +45,7 @@ public:
   [[nodiscard]] bool isSigned() const;
   [[nodiscard]] bool isInteger() const;
   [[nodiscard]] bool isFloat() const;
+  [[nodiscard]] bool isPointer() const;
 
   llvm::Value * getDefault(codegen::ModuleContext& ctx) const;
 

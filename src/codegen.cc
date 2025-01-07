@@ -70,7 +70,7 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 
   if (!type) {
     // TODO: Logger
-    printf("Warning: Can't infer __anonymous__ return type, resorting to i32\n");
+    printf("Warning: Can't infer %s return type, resorting to i32\n", ANONYMOUS_EXPR_FN_NAME);
     type = meta::Type::createI32();
   }
 
@@ -193,6 +193,18 @@ llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Ty
     } else {
       return ctx.ir_builder->CreateZExtOrBitCast(val, target_type);
     }
+  }
+
+  if (util::isPointer(val->getType()) && util::isInteger(target_type)) {
+    return ctx.ir_builder->CreatePtrToInt(val, target_type);
+  }
+
+  if (util::isInteger(val->getType()) && util::isPointer(target_type)) {
+    return ctx.ir_builder->CreateIntToPtr(val, target_type);
+  }
+
+  if (util::isPointer(val->getType()) && util::isPointer(target_type)) {
+    return ctx.ir_builder->CreatePointerCast(val, target_type);
   }
 
   throw CodegenException("Can't perform cast");
