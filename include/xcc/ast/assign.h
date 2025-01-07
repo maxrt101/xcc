@@ -11,14 +11,14 @@ namespace xcc::ast {
 
 class Assign : public Node {
 public:
-  std::shared_ptr<Identifier> name;
-  std::shared_ptr<Node> value;
+  std::shared_ptr<Node> lhs;
+  std::shared_ptr<Node> rhs;
 
 public:
-  Assign(std::shared_ptr<Identifier> name, std::shared_ptr<Node> value);
+  Assign(std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
   virtual ~Assign() override = default;
 
-  static std::shared_ptr<Assign> create(std::shared_ptr<Identifier> name, std::shared_ptr<Node> value);
+  static std::shared_ptr<Assign> create(std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx) override;

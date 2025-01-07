@@ -15,29 +15,13 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx) {
   auto lhs_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
   auto lhs_val = throwIfNull(lhs->generateValue(ctx), CodegenException("LHS Value is NULL"));
 
-//  assertThrow(lhs_type.get(), CodegenException("LHS Type is "));
-
   auto rhs_type = throwIfNull(rhs->generateType(ctx), CodegenException("RHS Type is NULL"));
   auto rhs_val = throwIfNull(rhs->generateValue(ctx), CodegenException("RHS Value is NULL"));
 
-//  if (!lhs_val || !rhs_val) {
-//    throw CodegenException(operation.line, "NULL value is returned in binary expression codegen");
-//  }
-
   auto common_type = meta::Type::alignTypes(lhs_type, rhs_type);
 
-//  if (*lhs_type != *common_type) {
-//    lhs_val = codegen::cast(ctx, lhs_val, common_type->getLLVMType());
-//  }
-//
-//  if (*rhs_type != *common_type) {
-//    rhs_val = codegen::cast(ctx, rhs_val, common_type->getLLVMType());
-//  }
-    lhs_val = codegen::castIfNotSame(ctx, lhs_val, common_type->getLLVMType(ctx));
-    rhs_val = codegen::castIfNotSame(ctx, rhs_val, common_type->getLLVMType(ctx));
-
-//  ctx.ir_builder->CreateIntCast();
-//  ctx.ir_builder->CreateFPCast();
+  lhs_val = codegen::castIfNotSame(ctx, lhs_val, common_type->getLLVMType(ctx));
+  rhs_val = codegen::castIfNotSame(ctx, rhs_val, common_type->getLLVMType(ctx));
 
   switch (operation.type) {
     case TOKEN_PLUS:

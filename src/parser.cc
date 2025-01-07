@@ -282,8 +282,8 @@ std::shared_ptr<ast::Node> Parser::parseAssignment() {
   while (checkAdvanceAnyOf(TokenType::TOKEN_EQUALS)) {
     Token op = previous();
     auto rhs = parseLogic();
-    if (expr->is(ast::AST_EXPR_IDENTIFIER)) {
-      expr = ast::Assign::create(ast::Node::cast<ast::Identifier>(expr), rhs);
+    if (expr->is(ast::AST_EXPR_IDENTIFIER) || expr->is(ast::AST_EXPR_UNARY)) {
+      expr = ast::Assign::create(expr, rhs);
     } else {
       throw ParserException("Invalid LHS for assignment (" + ast::Node::typeToString(expr->type) + ")");
     }
@@ -342,35 +342,37 @@ std::shared_ptr<ast::Node> Parser::parseTerm() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseFactor() {
-  auto expr = parseUnary();
+  auto expr = parseCast();
 
   // TODO: %
   while (checkAdvanceAnyOf(TokenType::TOKEN_SLASH, TokenType::TOKEN_STAR)) {
     Token op = previous();
-    auto rhs = parseUnary();
+    auto rhs = parseCast();
     expr = ast::Binary::create(op, expr, rhs);
   }
 
   return expr;
 }
 
-std::shared_ptr<ast::Node> Parser::parseUnary() {
-  if (checkAdvanceAnyOf(TokenType::TOKEN_NOT, TokenType::TOKEN_MINUS)) {
-    Token op = previous();
-    return ast::Unary::create(op, parseUnary());
-  }
-
-  return parseCast();
-}
-
 std::shared_ptr<ast::Node> Parser::parseCast() {
-  auto expr = parseRvalue();
+  auto expr = parseUnary();
 
   if (checkAdvance(TokenType::TOKEN_AS)) {
     return ast::Cast::create(expr, parseType());
   }
 
   return expr;
+}
+
+
+std::shared_ptr<ast::Node> Parser::parseUnary() {
+  if (checkAdvanceAnyOf(TokenType::TOKEN_NOT, TokenType::TOKEN_MINUS,
+                        TokenType::TOKEN_AMP, TokenType::TOKEN_STAR)) {
+    Token op = previous();
+    return ast::Unary::create(op, parseRvalue());
+  }
+
+  return parseRvalue();
 }
 
 std::shared_ptr<ast::Node> Parser::parseRvalue() {

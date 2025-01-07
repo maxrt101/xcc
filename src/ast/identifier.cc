@@ -5,7 +5,7 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-Identifier::Identifier(const std::string& value) : Node(AST_EXPR_IDENTIFIER), value(value) {}
+Identifier::Identifier(const std::string& value) : Node(AST_EXPR_IDENTIFIER), value(std::move(value)) {}
 
 std::shared_ptr<Identifier> Identifier::create(const std::string& value) {
   return std::make_shared<Identifier>(value);

@@ -39,6 +39,10 @@ inline bool isInteger(llvm::Type * type) {
   return type->isIntegerTy();
 }
 
+inline bool isPointer(llvm::Type * type) {
+  return type->isPointerTy();
+}
+
 inline bool compareTypes(llvm::Type * lhs, llvm::Type * rhs) {
   return lhs == rhs;
 }
