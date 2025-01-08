@@ -1,5 +1,6 @@
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
+#include "xcc/util/log.h"
 #include "xcc/util/llvm.h"
 #include "xcc/ast.h"
 
@@ -8,6 +9,7 @@ using namespace xcc::codegen;
 
 constexpr char ANONYMOUS_EXPR_FN_NAME[] = "__anonymous__";
 
+static auto logger = xcc::util::log::Logger("CODEGEN");
 
 GlobalContext::GlobalContext() {
   jit = JIT::create();
@@ -69,8 +71,7 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   auto type = expr->generateType(*ctx);
 
   if (!type) {
-    // TODO: Logger
-    printf("Warning: Can't infer %s return type, resorting to i32\n", ANONYMOUS_EXPR_FN_NAME);
+    logger.warn("Warning: Can't infer %s return type, resorting to i32", ANONYMOUS_EXPR_FN_NAME);
     type = meta::Type::createI32();
   }
 
@@ -95,8 +96,7 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   auto symbol = jit->lookup(ANONYMOUS_EXPR_FN_NAME);
 
   if (!symbol) {
-    // TODO: Logger
-    printf("Can't find '%s'\n", ANONYMOUS_EXPR_FN_NAME);
+    logger.error("Can't find '%s'", ANONYMOUS_EXPR_FN_NAME);
     return;
   }
 
@@ -105,15 +105,15 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 #if USE_PRINT_EXPR_RESULT
   switch (result.tag) {
     case util::GenericValueContainer::SIGNED_INTEGER:
-      printf("Result: %lld\n", result.value.signed_integer);
+      logger.debug("Result: %lld", result.value.signed_integer);
       break;
 
     case util::GenericValueContainer::UNSIGNED_INTEGER:
-      printf("Result: %llu\n", result.value.unsigned_integer);
+      logger.debug("Result: %llu", result.value.unsigned_integer);
       break;
 
     case util::GenericValueContainer::FLOATING:
-      printf("Result: %g\n", result.value.floating);
+      logger.debug("Result: %g", result.value.floating);
       break;
 
     default:

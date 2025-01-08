@@ -1,7 +1,10 @@
 #include "xcc/jit.h"
+#include "xcc/util/log.h"
 #include "xcc/exceptions.h"
 
 using namespace xcc::codegen;
+
+static auto logger = xcc::util::log::Logger("JIT");
 
 class SymbolResolverGenerator : public llvm::orc::DefinitionGenerator {
 public:
@@ -23,7 +26,7 @@ public:
 
       if (sym) {
 #if USE_REPORT_SYMBOL_RESOLVER_SUCCESS
-        printf("Found symbol '%s' (mangled '%s')\n", name.c_str(),
+        logger.info("Found symbol '%s' (mangled '%s')", name.c_str(),
                llvm::orc::SymbolStringPoolEntryUnsafe::from(mangle(name)).rawPtr()->first().str().c_str());
 #endif
 

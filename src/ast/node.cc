@@ -1,31 +1,28 @@
 #include "xcc/ast/node.h"
 #include "xcc/codegen.h"
+#include "xcc/util/log.h"
 #include "xcc/exceptions.h"
 #include <unordered_map>
 
 using namespace xcc;
 using namespace xcc::ast;
 
+static auto logger = xcc::util::log::Logger("AST_NODE");
+
 Node::Node(NodeType type) : type(type) {}
 
 llvm::Value * Node::generateValue(codegen::ModuleContext& ctx) {
-//  throw CodegenException("Default Node::generateValue is called on node with type " + Node::typeToString(type) + " (" + std::to_string(int(type)) + ")");
-  // TODO: Logger
-  printf("Warning: Default Node::generateValue is called on node with type '%s' (%d)\n", Node::typeToString(type).c_str(), int(type));
+  logger.warn("Warning: Default Node::generateValue is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
 llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx) {
-//  throw CodegenException("Default Node::generateFunction is called on node with type " + Node::typeToString(type) + " (" + std::to_string(int(type)) + ")");
-  // TODO: Logger
-  printf("Warning: Default Node::generateFunction is called on node with type '%s' (%d)\n", Node::typeToString(type).c_str(), int(type));
+  logger.warn("Warning: Default Node::generateFunction is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
 std::shared_ptr<meta::Type> Node::generateType(codegen::ModuleContext& ctx) {
-//  throw CodegenException("Default Node::generateType is called on node with type " + Node::typeToString(type) + " (" + std::to_string(int(type)) + ")");
-  // TODO: Logger
-  printf("Warning: Default Node::generateType is called on node with type '%s' (%d)\n", Node::typeToString(type).c_str(), int(type));
+  logger.warn("Warning: Default Node::generateType is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
