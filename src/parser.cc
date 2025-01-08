@@ -73,7 +73,7 @@ std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl() {
   }
 
   if (checkAdvance(TOKEN_EQUALS)) {
-    value = parseExpr(); // TODO: parse expr
+    value = parseExpr();
   }
 
   return ast::TypedIdentifier::create(name, type, value);

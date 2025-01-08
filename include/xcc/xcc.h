@@ -2,6 +2,11 @@
 
 #include <cstdint>
 #include <string>
+#include "xcc/lexer.h"
+#include "xcc/parser.h"
+#include "xcc/codegen.h"
+#include "xcc/exceptions.h"
+#include "xcc/util/log.h"
 
 namespace xcc {
 
@@ -14,5 +19,11 @@ inline std::string getVersion() {
        + std::to_string(XCC_VERSION_MINOR) + "."
        + std::to_string(XCC_VERSION_PATCH);
 }
+
+void init(bool autoCleanup = true);
+
+void cleanup();
+
+void run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl = false);
 
 }
