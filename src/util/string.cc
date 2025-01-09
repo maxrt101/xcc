@@ -21,3 +21,22 @@ void xcc::util::strreplace(std::string& str, const std::string& from, const std:
     start_pos += to.length();
   }
 }
+
+std::string xcc::util::strescseq(const std::string& str, bool add) {
+  std::string result = str;
+
+  // TODO: Make two-way map for this
+  if (add) {
+    util::strreplace(result, "\\n", "\n");
+    util::strreplace(result, "\\r", "\r");
+    util::strreplace(result, "\\t", "\t");
+    util::strreplace(result, "\\b", "\b");
+  } else {
+    util::strreplace(result, "\n", "\\n");
+    util::strreplace(result, "\r", "\\r");
+    util::strreplace(result, "\t", "\\t");
+    util::strreplace(result, "\b", "\\b");
+  }
+
+  return result;
+}

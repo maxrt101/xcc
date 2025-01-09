@@ -1,4 +1,5 @@
 #include "xcc/xcc.h"
+#include "xcc/util/string.h"
 
 static auto logger = xcc::util::log::Logger("XCC");
 
@@ -22,12 +23,16 @@ void xcc::cleanup() {
 void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl) {
   auto tokens = Lexer(src).tokenize();
 
-#if USE_PRINT_TOKENS
+//#if USE_PRINT_TOKENS
   logger.info("TOKENS:");
   for (auto& token : tokens) {
-    logger.print("%-20s '%s'\n", Token::typeToString(token.type).c_str(), token.value.c_str());
+    std::string value = token.value;
+    if (token.is(TokenType::TOKEN_STRING)) {
+      value = util::strescseq(value, false);
+    }
+    logger.print("%-20s '%s'\n", Token::typeToString(token.type).c_str(), value.c_str());
   }
-#endif
+//#endif
 
   auto ast = Parser(tokens).parse(isRepl);
 

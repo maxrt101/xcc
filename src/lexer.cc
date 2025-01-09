@@ -41,6 +41,10 @@ static PrefixTree<TokenType> s_token_patterns(TOKEN_EOF, {
     {"!", TOKEN_NOT},
 });
 
+static inline bool isBase16Char(char c) {
+  return isnumber(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
 std::string Token::typeToString(TokenType type) {
   static std::unordered_map<TokenType, std::string> type_map {
       {TOKEN_EOF, "TOKEN_EOF"},
@@ -145,14 +149,7 @@ void Lexer::tokenizeString() {
     consume();
   }
 
-  auto str = text.substr(start, current_index - start);
-
-  util::strreplace(str, "\\n", "\n");
-  util::strreplace(str, "\\r", "\r");
-  util::strreplace(str, "\\t", "\t");
-  util::strreplace(str, "\\b", "\b");
-
-  result.push_back({TOKEN_STRING, str});
+  result.push_back({TOKEN_STRING, util::strescseq(text.substr(start, current_index - start), true)});
 
   // Skip closing quote
   consume();
@@ -174,8 +171,24 @@ void Lexer::tokenizeIdentifier() {
 
 void Lexer::tokenizeNumber() {
   size_t begin = current_index;
+  bool allow_base_16_chars = false;
 
-  while (isnumber(current()) || current() == '.') {
+  if (current() == '0') {
+    consume();
+
+    switch (current()) {
+      case 'x':
+        allow_base_16_chars = true;
+      case 'b':
+        consume();
+      default:
+        break;
+    }
+  }
+
+  while (isnumber(current())
+         || current() == '.'
+         || allow_base_16_chars && isBase16Char(current())) {
     if (isAtEnd()) {
       throw LexerException(line, "Unexpected EOF");
     }
