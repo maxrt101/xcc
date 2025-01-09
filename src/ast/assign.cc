@@ -30,11 +30,8 @@ std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ct
     }
 
     throw CodegenException("Unknown variable '" + name->value + "'");
-  } else if (lhs->is(ast::AST_EXPR_UNARY)) {
-    return lhs->generateType(ctx);
-  } else if (lhs->is(ast::AST_EXPR_SUBSCRIPT)) {
-    auto base_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
-    return base_type->getPointedType();
+  } else {
+    return lhs->generateTypeForValueWithoutLoad(ctx);
   }
 
   throw CodegenException("Invalid LHS node for assignment");
