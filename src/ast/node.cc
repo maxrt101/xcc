@@ -16,6 +16,11 @@ llvm::Value * Node::generateValue(codegen::ModuleContext& ctx) {
   return nullptr;
 }
 
+llvm::Value * Node::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
+  logger.warn("Warning: Default Node::generateValueWithoutLoad is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
+  return nullptr;
+}
+
 llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx) {
   logger.warn("Warning: Default Node::generateFunction is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
@@ -23,6 +28,11 @@ llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx) {
 
 std::shared_ptr<meta::Type> Node::generateType(codegen::ModuleContext& ctx) {
   logger.warn("Warning: Default Node::generateType is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
+  return nullptr;
+}
+
+std::shared_ptr<meta::Type> Node::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) {
+  logger.warn("Warning: Default Node::generateTypeForValueWithoutLoad is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 

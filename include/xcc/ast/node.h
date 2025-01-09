@@ -75,8 +75,10 @@ public:
   }
 
   virtual llvm::Value * generateValue(codegen::ModuleContext& ctx);
+  virtual llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx);
   virtual llvm::Function * generateFunction(codegen::ModuleContext& ctx);
   virtual std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx);
+  virtual std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx);
 
   static std::string typeToString(NodeType type);
 };
