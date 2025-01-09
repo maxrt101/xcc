@@ -42,6 +42,29 @@ llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx) {
   throw CodegenException(operation.line, "Unsupported unary expression operator or type (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + std::to_string((int)rhs_type->getTag()) + ")");
 }
 
+llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
+  auto rhs_type = throwIfNull(rhs->generateType(ctx), CodegenException("RHS Type is NULL"));
+  auto rhs_val = throwIfNull(rhs->generateValue(ctx), CodegenException("RHS Value is NULL"));
+
+  switch (operation.type) {
+    case TOKEN_STAR: {
+      if (!rhs_type->isPointer()) {
+        throw CodegenException(operation.line, "Value is not a pointer (unary '*' operator)");
+      }
+      return rhs_val;
+    }
+
+    default:
+      break;
+  }
+
+  throw CodegenException(operation.line, "Unsupported unary expression operator/type or can't generate without load (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + std::to_string((int)rhs_type->getTag()) + ")");
+}
+
 std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx) {
   return throwIfNull(rhs->generateType(ctx), CodegenException("RHS Type is NULL"));
+}
+
+std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) {
+  return throwIfNull(rhs->generateType(ctx)->getPointedType(), CodegenException("RHS Type is NULL"));
 }

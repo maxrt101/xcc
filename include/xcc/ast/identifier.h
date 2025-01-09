@@ -17,7 +17,9 @@ public:
   static std::shared_ptr<Identifier> create(const std::string& value);
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx) override;
+  llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx) override;
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx) override;
+  std::shared_ptr<xcc::meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) override;
 };
 
 } /* namespace xcc::ast */

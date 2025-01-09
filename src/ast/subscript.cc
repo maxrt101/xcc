@@ -13,6 +13,13 @@ std::shared_ptr<Subscript> Subscript::create(std::shared_ptr<Node> lhs, std::sha
 
 llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx) {
   auto base_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
+  auto element_ptr = generateValueWithoutLoad(ctx);
+
+  return ctx.ir_builder->CreateLoad(base_type->getPointedType()->getLLVMType(ctx), element_ptr, "element");
+}
+
+llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
+  auto base_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
   auto index_type = throwIfNull(rhs->generateType(ctx), CodegenException("RHS Type is NULL"));
 
   assertThrow(base_type->isPointer(), CodegenException("Type '" + base_type->toString() + "' is not subscriptable"));
@@ -21,12 +28,14 @@ llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx) {
   auto base_ptr = throwIfNull(lhs->generateValue(ctx), CodegenException("LHS Value is NULL"));
   auto index = throwIfNull(rhs->generateValue(ctx), CodegenException("RHS Value is NULL"));
 
-  auto element_ptr = ctx.ir_builder->CreateGEP(base_type->getPointedType()->getLLVMType(ctx), base_ptr, index, "element_ptr");
-
-  return ctx.ir_builder->CreateLoad(base_type->getPointedType()->getLLVMType(ctx), element_ptr, "element");
+  return ctx.ir_builder->CreateGEP(base_type->getPointedType()->getLLVMType(ctx), base_ptr, index, "element_ptr");
 }
 
 std::shared_ptr<xcc::meta::Type> Subscript::generateType(codegen::ModuleContext& ctx) {
   auto base_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
   return base_type->getPointedType();
+}
+
+std::shared_ptr<xcc::meta::Type> Subscript::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) {
+  return generateType(ctx);
 }

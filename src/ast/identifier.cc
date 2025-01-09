@@ -18,9 +18,20 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx) {
   throw CodegenException("Undeclared value referenced: '" + value + "'");
 }
 
+llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
+  if (ctx.namedValues.find(value) != ctx.namedValues.end()) {
+    return ctx.namedValues[value]->value;
+  }
+  throw CodegenException("Undeclared value referenced: '" + value + "'");
+}
+
 std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx) {
   if (ctx.namedValues.find(value) != ctx.namedValues.end()) {
     return ctx.namedValues[value]->type;
   }
   throw CodegenException("Undeclared value referenced: '" + value + "'");
+}
+
+std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) {
+  return generateType(ctx);
 }
