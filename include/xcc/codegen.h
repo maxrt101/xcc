@@ -43,8 +43,11 @@ public:
   /* Functions */
   std::map<std::string, std::shared_ptr<meta::Function>> functions;
 
-  /*  */
+  /* Current Function Name */
   std::string current_function;
+
+  /* Global Module */
+  std::shared_ptr<ModuleContext> globalModule;
 
 public:
   GlobalContext();
