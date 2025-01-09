@@ -26,6 +26,7 @@ enum NodeType {
   AST_EXPR_CAST,              // expr as type
   AST_EXPR_BINARY,            // lhs op rhs
   AST_EXPR_UNARY,             // op rhs
+  AST_EXPR_SUBSCRIPT,         // lhs [ rhs ]
   AST_EXPR_ASSIGN,            // if = expr
 
   AST_EXPR_TYPE,              // identifier (generic?)

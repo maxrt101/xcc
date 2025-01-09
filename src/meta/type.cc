@@ -200,7 +200,7 @@ std::shared_ptr<Type> Type::createF64() {
 
 std::shared_ptr<Type> Type::createPointer(std::shared_ptr<Type> pointedType) {
   auto t = Type::create(TypeTag::PTR);
-  t->pointedType = pointedType;
+  t->pointedType = std::move(pointedType);
   return t;
 }
 

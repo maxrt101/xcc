@@ -282,7 +282,7 @@ std::shared_ptr<ast::Node> Parser::parseAssignment() {
   while (checkAdvanceAnyOf(TokenType::TOKEN_EQUALS)) {
     Token op = previous();
     auto rhs = parseLogic();
-    if (expr->is(ast::AST_EXPR_IDENTIFIER) || expr->is(ast::AST_EXPR_UNARY)) {
+    if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT)) {
       expr = ast::Assign::create(expr, rhs);
     } else {
       throw ParserException("Invalid LHS for assignment (" + ast::Node::typeToString(expr->type) + ")");
@@ -364,15 +364,26 @@ std::shared_ptr<ast::Node> Parser::parseCast() {
   return expr;
 }
 
-
 std::shared_ptr<ast::Node> Parser::parseUnary() {
   if (checkAdvanceAnyOf(TokenType::TOKEN_NOT, TokenType::TOKEN_MINUS,
                         TokenType::TOKEN_AMP, TokenType::TOKEN_STAR)) {
     Token op = previous();
-    return ast::Unary::create(op, parseRvalue());
+    return ast::Unary::create(op, parseSubscript());
   }
 
-  return parseRvalue();
+  return parseSubscript();
+}
+
+std::shared_ptr<ast::Node> Parser::parseSubscript() {
+  auto lhs = parseRvalue();
+
+  if (checkAdvance(TokenType::TOKEN_LEFT_SQUARE_BRACE)) {
+    auto rhs = parseExpr();
+    assertThrow(checkAdvance(TokenType::TOKEN_RIGHT_SQUARE_BRACE), ParserException("Missing closing ']' after '[' in subscript operator"));
+    return ast::Subscript::create(lhs, rhs);
+  }
+
+  return lhs;
 }
 
 std::shared_ptr<ast::Node> Parser::parseRvalue() {

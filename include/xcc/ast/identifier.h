@@ -11,7 +11,7 @@ public:
   std::string value;
 
 public:
-  explicit Identifier(const std::string& value);
+  explicit Identifier(std::string value);
   virtual ~Identifier() override = default;
 
   static std::shared_ptr<Identifier> create(const std::string& value);
