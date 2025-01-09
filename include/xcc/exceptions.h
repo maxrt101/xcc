@@ -65,14 +65,15 @@ public:
   }
 };
 
-inline void assertThrow(bool expr, const std::exception& ex) {
+template <typename E>
+inline void assertThrow(bool expr, const E& ex) {
   if (!expr) {
     throw ex;
   }
 }
 
-template <typename T>
-inline T throwIfNull(T expr, const std::exception& ex) {
+template <typename T, typename E>
+inline T throwIfNull(T expr, const E& ex) {
   if (!expr) {
     throw ex;
   }
