@@ -27,6 +27,11 @@ extern "C" [[maybe_unused]] int32_t xcc_putux(uint32_t i) {
   return 0;
 }
 
+extern "C" [[maybe_unused]] int32_t xcc_puts(int8_t * s) {
+  printf("%s", s);
+  return 0;
+}
+
 int main(int argc, char ** argv) {
   xcc::init();
 

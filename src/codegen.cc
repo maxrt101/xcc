@@ -13,6 +13,8 @@ static auto logger = xcc::util::log::Logger("CODEGEN");
 
 GlobalContext::GlobalContext() {
   jit = JIT::create();
+
+  globalModule = std::make_shared<ModuleContext>(*this, "<global>");
 }
 
 std::unique_ptr<GlobalContext> GlobalContext::create() {
@@ -52,8 +54,6 @@ std::shared_ptr<meta::Function> GlobalContext::getCurrentFunction() {
 }
 
 void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
-  auto ctx = createModule();
-
   std::shared_ptr<ast::Block> body;
 
   if (expr->is(ast::AST_BLOCK)) {
@@ -68,7 +68,7 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
     });
   }
 
-  auto type = expr->generateType(*ctx);
+  auto type = expr->generateType(*globalModule);
 
   if (!type) {
     logger.warn("Warning: Can't infer %s return type, resorting to i32", ANONYMOUS_EXPR_FN_NAME);
@@ -82,14 +82,14 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 
   auto fndef = ast::FnDef::create(fndecl, body);
 
-  auto fn = fndef->generateFunction(*ctx);
+  auto fn = fndef->generateFunction(*globalModule);
 
 #if USE_PRINT_LLVM_IR
   fn->print(llvm::outs());
 #endif
 
   auto rt = jit->getMainJitDylib().createResourceTracker();
-  auto tsm = llvm::orc::ThreadSafeModule(std::move(ctx->llvm.module), std::move(ctx->llvm.ctx));
+  auto tsm = llvm::orc::ThreadSafeModule(std::move(globalModule->llvm.module), std::move(globalModule->llvm.ctx));
 
   CodegenException::throwIfError(jit->addModule(std::move(tsm), rt));
 
