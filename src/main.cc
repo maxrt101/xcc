@@ -89,11 +89,6 @@ int main(int argc, char ** argv) {
       continue;
     }
 
-    // If user didn't put ';' at the end
-    if (line.back() != ';') {
-      line += ";";
-    }
-
     try {
       xcc::run(globalContext, line, true);
     } catch (std::exception& e) {

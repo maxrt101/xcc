@@ -486,9 +486,6 @@ std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
     } else {
       if (isRepl) {
         block->body.push_back(parseStmt());
-        if (!checkAdvance(TOKEN_SEMICOLON)) {
-          throw ParserException(current().line, "Expected ';' after statement (top-level)");
-        }
       } else {
         throw ParserException(current().line, "Unexpected token at top-level scope: '" + current().value + "' (" + Token::typeToString(current().type) + ")");
       }
