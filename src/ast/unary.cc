@@ -12,34 +12,14 @@ std::shared_ptr<Unary> Unary::create(Token operation, std::shared_ptr<Node> rhs)
 }
 
 llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx) {
-  auto rhs_type = throwIfNull(rhs->generateType(ctx), CodegenException("RHS Type is NULL"));
-  auto rhs_val = throwIfNull(rhs->generateValue(ctx), CodegenException("RHS Value is NULL"));
-
   switch (operation.type) {
-    case TOKEN_AMP: {
-      assertThrow(rhs->is(ast::AST_EXPR_IDENTIFIER), CodegenException("Invalid RHS node for unary operator '&'"));
-
-      auto value = rhs->as<ast::Identifier>()->value;
-
-      if (ctx.namedValues.find(value) != ctx.namedValues.end()) {
-        return ctx.namedValues[value]->value;
-      }
-
-      throw CodegenException("Undeclared value referenced: '" + value + "' (at unary '&')");
-    }
-
     case TOKEN_STAR: {
-      if (!rhs_type->isPointer()) {
-        throw CodegenException(operation.line, "Value is not a pointer (unary '*' operator)");
-      }
-      return ctx.ir_builder->CreateLoad(rhs_type->getPointedType()->getLLVMType(ctx), rhs_val, "dereferenced");
+      return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx)->getLLVMType(ctx), generateValueWithoutLoad(ctx), "dereferenced");
     }
 
     default:
-      break;
+      return generateValueWithoutLoad(ctx);
   }
-
-  throw CodegenException(operation.line, "Unsupported unary expression operator or type (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + std::to_string((int)rhs_type->getTag()) + ")");
 }
 
 llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
@@ -47,6 +27,14 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
   auto rhs_val = throwIfNull(rhs->generateValue(ctx), CodegenException("RHS Value is NULL"));
 
   switch (operation.type) {
+    case TOKEN_AMP: {
+      assertThrow(rhs->is(ast::AST_EXPR_IDENTIFIER), CodegenException("Invalid RHS node for unary operator '&'"));
+
+      auto identifier = rhs->as<ast::Identifier>();
+
+      return identifier->generateValueWithoutLoad(ctx);
+    }
+
     case TOKEN_STAR: {
       if (!rhs_type->isPointer()) {
         throw CodegenException(operation.line, "Value is not a pointer (unary '*' operator)");
