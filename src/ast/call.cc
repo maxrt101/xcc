@@ -30,7 +30,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx) {
     throw CodegenException("Unknown function to call ('" + fn_name + "')");
   }
 
-  if (fn->arg_size() != args.size()) {
+  if (!meta_fn->decl->isVariadic && fn->arg_size() != args.size()) {
     throw CodegenException("Argument mismatch (function: '" + fn_name + "', expected: " + std::to_string(fn->arg_size()) + ", got: " + std::to_string(args.size()) + ")");
   }
 
@@ -43,11 +43,9 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx) {
       throw CodegenException("Failed to generate function call arguments");
     }
 
-//    if (val->getType() != meta_fn->args[i]->getLLVMType()) {
-//      val = codegen::cast(ctx, val, meta_fn->args[i]->getLLVMType());
-//    }
-    val = codegen::castIfNotSame(ctx, val, meta_fn->args[i]->getLLVMType(ctx));
-
+    if (!meta_fn->decl->isVariadic) {
+      val = codegen::castIfNotSame(ctx, val, meta_fn->args[i]->getLLVMType(ctx));
+    }
 
     arg_vals.push_back(val);
   }

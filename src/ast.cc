@@ -189,6 +189,9 @@ static void print_node(Node* node, Node* parent, int indent) {
           logger.print(", ");
         }
       }
+      if (fndecl->isVariadic) {
+        logger.print(", ...");
+      }
       logger.print("): ");
       print_node(fndecl->return_type.get(), fndecl, indent);
       if (!parent->is(AST_FUNCTION_DEF)) {

@@ -83,11 +83,12 @@ std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseFunction() {
-  bool isExtern = false;
+  bool is_extern = false;
+  bool is_variadic = false;
 
   if (check(TOKEN_EXTERN)) {
     advance();
-    isExtern = true;
+    is_extern = true;
   }
 
   if (!checkAdvance(TOKEN_FN)) {
@@ -104,7 +105,12 @@ std::shared_ptr<ast::Node> Parser::parseFunction() {
 
   if (!check(TOKEN_RIGHT_PAREN)) {
     do {
-      args.push_back(parseValueDecl());
+      if (checkAdvance(TOKEN_3_DOTS)) {
+        is_variadic = true;
+        break;
+      } else {
+        args.push_back(parseValueDecl());
+      }
     } while (checkAdvance(TOKEN_COMMA));
   }
 
@@ -118,7 +124,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction() {
 
   return_type = parseType();
 
-  auto fndecl = ast::FnDecl::create(name, return_type, args, isExtern);
+  auto fndecl = ast::FnDecl::create(name, return_type, args, is_extern, is_variadic);
 
   if (!check(TOKEN_LEFT_BRACE)) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
