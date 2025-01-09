@@ -21,9 +21,15 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx) {
   }
 
   auto then_type = throwIfNull(then_branch->generateType(ctx), CodegenException("if then branch generated NULL type"));
-  auto else_type = throwIfNull(else_branch->generateType(ctx), CodegenException("if else branch generated NULL type"));
+  auto else_type = meta::Type::createVoid();
 
-  auto common_type = meta::Type::alignTypes(then_type, else_type);
+  auto common_type = then_type;
+
+  // If else_branch exists, use its type - otherwise use then_branch type
+  if (else_branch) {
+    else_type = throwIfNull(else_branch->generateType(ctx), CodegenException("if else branch generated NULL type"));
+    common_type = meta::Type::alignTypes(then_type, else_type);
+  }
 
   auto i64_type = meta::Type::createI64()->getLLVMType(ctx);
 
@@ -91,7 +97,11 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx) {
 
 std::shared_ptr<xcc::meta::Type> If::generateType(codegen::ModuleContext& ctx) {
   auto then_type = throwIfNull(then_branch->generateType(ctx), CodegenException("if then branch generated NULL type"));
-  auto else_type = throwIfNull(else_branch->generateType(ctx), CodegenException("if else branch generated NULL type"));
+  auto else_type = meta::Type::createVoid();
+
+  if (else_branch) {
+    else_type = throwIfNull(else_branch->generateType(ctx), CodegenException("if else branch generated NULL type"));
+  }
 
   return meta::Type::alignTypes(then_type, else_type);
 }
