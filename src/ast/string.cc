@@ -3,10 +3,10 @@
 
 using namespace xcc::ast;
 
-String::String(const std::string& value) : Node(AST_EXPR_STRING), value(value) {}
+String::String(std::string value) : Node(AST_EXPR_STRING), value(std::move(value)) {}
 
-std::shared_ptr<String> String::create(const std::string& value) {
-  return std::make_shared<String>(value);
+std::shared_ptr<String> String::create(std::string value) {
+  return std::make_shared<String>(std::move(value));
 }
 
 llvm::Value * String::generateValue(codegen::ModuleContext& ctx) {
@@ -15,7 +15,7 @@ llvm::Value * String::generateValue(codegen::ModuleContext& ctx) {
 
   llvm::Constant * constant = llvm::ConstantDataArray::getString(*ctx.globalContext.globalModule->llvm.ctx, value, true);
 
-  auto global = new llvm::GlobalVariable(
+  [[maybe_unused]] auto global = new llvm::GlobalVariable(
       *ctx.globalContext.globalModule->llvm.module,
       constant->getType(),
       true,

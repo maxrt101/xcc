@@ -1,9 +1,12 @@
 #include <memory>
 
 #include "xcc/parser.h"
+#include "xcc/util/log.h"
 #include "xcc/exceptions.h"
 
 using namespace xcc;
+
+static auto logger = xcc::util::log::Logger("PARSER");
 
 bool Parser::isAtEnd() const {
   return current_idx >= tokens.size();
@@ -386,13 +389,35 @@ std::shared_ptr<ast::Node> Parser::parseSubscript() {
   return lhs;
 }
 
+std::shared_ptr<ast::Node> Parser::parseNumber() {
+  if (previous().value.find('.') != std::string::npos) {
+    return ast::Number::createFloating(std::stod(previous().value));
+  } else {
+    std::string value = previous().value;
+    int base = 10;
+    int prefix_len = 2;
+
+    if (value.size() > 2 && value[0] == '0') {
+      if (value[1] == 'x') {
+        base = 16;
+      } else if (value[1] == 'b') {
+        base = 2;
+      } else if (value[1] == 'o') {
+        base = 8;
+      } else {
+        base = 8;
+        prefix_len = 1;
+      }
+      value = value.substr(prefix_len);
+    }
+
+    return ast::Number::createInteger(std::stol(value, nullptr, base));
+  }
+}
+
 std::shared_ptr<ast::Node> Parser::parseRvalue() {
   if (checkAdvance(TokenType::TOKEN_NUMBER)) {
-    if (previous().value.find('.') != std::string::npos) {
-      return ast::Number::createFloating(std::stod(previous().value));
-    } else {
-      return ast::Number::createInteger(std::stol(previous().value));
-    }
+    return parseNumber();
   }
 
   if (checkAdvance(TokenType::TOKEN_STRING)) {

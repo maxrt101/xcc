@@ -1,6 +1,7 @@
 #include "xcc/ast.h"
 #include "xcc/lexer.h"
 #include "xcc/util/log.h"
+#include "xcc/util/string.h"
 
 using namespace xcc;
 using namespace xcc::ast;
@@ -54,9 +55,11 @@ static void print_node(Node* node, Node* parent, int indent) {
       break;
     }
 
-    case AST_EXPR_STRING:
-      logger.print("\"%s\"", node->as<String>()->value.c_str());
+    case AST_EXPR_STRING: {
+      auto str = util::strescseq(node->as<String>()->value, false);
+      logger.print("\"%s\"", str.c_str());
       break;
+    }
 
     case AST_EXPR_IDENTIFIER:
       logger.print("%s", node->as<Identifier>()->value.c_str());

@@ -86,6 +86,10 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 
 #if USE_PRINT_LLVM_IR
   fn->print(llvm::outs());
+  for (auto &global : globalModule->llvm.module->globals()) {
+    global.print(llvm::outs());
+    llvm::outs() << "\n";
+  }
 #endif
 
   auto rt = jit->getMainJitDylib().createResourceTracker();
