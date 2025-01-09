@@ -1,6 +1,7 @@
 #include "xcc/lexer.h"
 #include "xcc/exceptions.h"
 #include "xcc/util/prefix_tree.h"
+#include "xcc/util/string.h"
 
 using namespace xcc;
 
@@ -144,7 +145,14 @@ void Lexer::tokenizeString() {
     consume();
   }
 
-  result.push_back({TOKEN_STRING, text.substr(start, current_index - start)});
+  auto str = text.substr(start, current_index - start);
+
+  util::strreplace(str, "\\n", "\n");
+  util::strreplace(str, "\\r", "\r");
+  util::strreplace(str, "\\t", "\t");
+  util::strreplace(str, "\\b", "\b");
+
+  result.push_back({TOKEN_STRING, str});
 
   // Skip closing quote
   consume();
