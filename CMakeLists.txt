@@ -38,6 +38,7 @@ add_compile_definitions(
         USE_PRINT_LLVM_IR=1
         USE_PRINT_EXPR_RESULT=1
         USE_REPORT_SYMBOL_RESOLVER_SUCCESS=1
+        USE_LEGACY_XCC_EXTERN_FUNCTIONS=1
 )
 
 add_executable(xcc
