@@ -14,12 +14,26 @@ public:
   std::shared_ptr<Type> return_type;
   std::vector<std::shared_ptr<TypedIdentifier>> args;
   bool isExtern;
+  bool isVariadic;
 
 public:
-  FnDecl(std::shared_ptr<Identifier> name, std::shared_ptr<Type> return_type, std::vector<std::shared_ptr<TypedIdentifier>> args = {}, bool isExtern = false);
+  FnDecl(
+      std::shared_ptr<Identifier> name,
+      std::shared_ptr<Type> return_type,
+      std::vector<std::shared_ptr<TypedIdentifier>> args = {},
+      bool isExtern = false,
+      bool isVariadic = false
+  );
+
   virtual ~FnDecl() override = default;
 
-  static std::shared_ptr<FnDecl> create(std::shared_ptr<Identifier> name, std::shared_ptr<Type> return_type, std::vector<std::shared_ptr<TypedIdentifier>> args = {}, bool isExtern = false);
+  static std::shared_ptr<FnDecl> create(
+      std::shared_ptr<Identifier> name,
+      std::shared_ptr<Type> return_type,
+      std::vector<std::shared_ptr<TypedIdentifier>> args = {},
+      bool isExtern = false,
+      bool isVariadic = false
+  );
 
   llvm::Function * generateFunction(codegen::ModuleContext& ctx) override;
 };

@@ -5,11 +5,27 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-FnDecl::FnDecl(std::shared_ptr<Identifier> name, std::shared_ptr<Type> return_type, std::vector<std::shared_ptr<TypedIdentifier>> args, bool isExtern)
-  : Node(AST_FUNCTION_DECL), name(std::move(name)), return_type(std::move(return_type)), args(std::move(args)), isExtern(isExtern) {}
+FnDecl::FnDecl(
+    std::shared_ptr<Identifier> name,
+    std::shared_ptr<Type> return_type,
+    std::vector<std::shared_ptr<TypedIdentifier>> args,
+    bool isExtern,
+    bool isVariadic
+) : Node(AST_FUNCTION_DECL),
+    name(std::move(name)),
+    return_type(std::move(return_type)),
+    args(std::move(args)),
+    isExtern(isExtern),
+    isVariadic(isVariadic) {}
 
-std::shared_ptr<FnDecl> FnDecl::create(std::shared_ptr<Identifier> name, std::shared_ptr<Type> return_type, std::vector<std::shared_ptr<TypedIdentifier>> args, bool isExtern) {
-  return std::make_shared<FnDecl>(std::move(name), std::move(return_type), std::move(args), isExtern);
+std::shared_ptr<FnDecl> FnDecl::create(
+    std::shared_ptr<Identifier> name,
+    std::shared_ptr<Type> return_type,
+    std::vector<std::shared_ptr<TypedIdentifier>> args,
+    bool isExtern,
+    bool isVariadic
+) {
+  return std::make_shared<FnDecl>(std::move(name), std::move(return_type), std::move(args), isExtern, isVariadic);
 }
 
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx) {
@@ -27,7 +43,7 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx) {
 
   auto return_meta_type = return_type->generateType(ctx);
 
-  auto llvm_fn_type = llvm::FunctionType::get(return_meta_type->getLLVMType(ctx), meta::Function::typesFromMetaArgs(ctx, arg_meta_types), false);
+  auto llvm_fn_type = llvm::FunctionType::get(return_meta_type->getLLVMType(ctx), meta::Function::typesFromMetaArgs(ctx, arg_meta_types), isVariadic);
   auto llvm_fn = llvm::Function::Create(llvm_fn_type, isExtern ? llvm::Function::ExternalLinkage : llvm::Function::CommonLinkage, fn_name, ctx.llvm.module.get());
 
   size_t arg_idx = 0;
