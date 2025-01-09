@@ -76,7 +76,7 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx) {
       }
       break;
 
-  case TOKEN_GREATER_EQUALS:
+    case TOKEN_GREATER_EQUALS:
       if (common_type->isInteger()) {
         return ctx.ir_builder->CreateICmpUGE(lhs_val, rhs_val, "cmptmp");
       } else if (common_type->isFloat()) {

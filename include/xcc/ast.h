@@ -14,6 +14,7 @@
 #include "xcc/ast/number.h"
 #include "xcc/ast/return.h"
 #include "xcc/ast/string.h"
+#include "xcc/ast/subscript.h"
 #include "xcc/ast/type.h"
 #include "xcc/ast/typed_identifier.h"
 #include "xcc/ast/unary.h"

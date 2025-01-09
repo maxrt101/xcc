@@ -99,6 +99,15 @@ static void print_node(Node* node, Node* parent, int indent) {
       break;
     }
 
+    case AST_EXPR_SUBSCRIPT: {
+      auto subscript = node->as<Subscript>();
+      print_node(subscript->lhs.get(), subscript, indent);
+      logger.print("[");
+      print_node(subscript->rhs.get(), subscript, indent);
+      logger.print("]");
+      break;
+    }
+
     case AST_EXPR_TYPE: {
       auto type = node->as<Type>();
       print_node(type->name.get(), type, indent);
