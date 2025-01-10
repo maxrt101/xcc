@@ -11,20 +11,20 @@ std::shared_ptr<Unary> Unary::create(Token operation, std::shared_ptr<Node> rhs)
   return std::make_shared<Unary>(std::move(operation), std::move(rhs));
 }
 
-llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, void * payload) {
+llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
   switch (operation.type) {
     case TOKEN_STAR: {
-      return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx)->getLLVMType(ctx), generateValueWithoutLoad(ctx), "dereferenced");
+      return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx, {})->getLLVMType(ctx), generateValueWithoutLoad(ctx, {}), "dereferenced");
     }
 
     default:
-      return generateValueWithoutLoad(ctx);
+      return generateValueWithoutLoad(ctx, {});
   }
 }
 
-llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
-  auto rhs_type = throwIfNull(rhs->generateType(ctx), CodegenException("RHS Type is NULL"));
-  auto rhs_val = throwIfNull(rhs->generateValue(ctx), CodegenException("RHS Value is NULL"));
+llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  auto rhs_type = throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
+  auto rhs_val = throwIfNull(rhs->generateValue(ctx, {}), CodegenException("RHS Value is NULL"));
 
   switch (operation.type) {
     case TOKEN_AMP: {
@@ -32,7 +32,7 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, void 
 
       auto identifier = rhs->as<ast::Identifier>();
 
-      return identifier->generateValueWithoutLoad(ctx);
+      return identifier->generateValueWithoutLoad(ctx, {});
     }
 
     case TOKEN_STAR: {
@@ -49,10 +49,10 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, void 
   throw CodegenException(operation.line, "Unsupported unary expression operator/type or can't generate without load (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + std::to_string((int)rhs_type->getTag()) + ")");
 }
 
-std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, void * payload) {
-  return throwIfNull(rhs->generateType(ctx), CodegenException("RHS Type is NULL"));
+std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  return throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
 }
 
-std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
-  return throwIfNull(rhs->generateType(ctx)->getPointedType(), CodegenException("RHS Type is NULL"));
+std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  return throwIfNull(rhs->generateType(ctx, {})->getPointedType(), CodegenException("RHS Type is NULL"));
 }

@@ -4,6 +4,14 @@
 
 using namespace xcc::ast;
 
+Number::Payload::Payload(int bits) : Node::Payload(ast::AST_EXPR_NUMBER), bits(bits) {}
+
+std::shared_ptr<Node::Payload> Number::Payload::create(int bits) {
+  return std::dynamic_pointer_cast<Node::Payload>(
+      std::make_shared<Number::Payload>(bits)
+  );
+}
+
 Number::Number() : Node(AST_EXPR_NUMBER) {}
 
 std::shared_ptr<Number> Number::createInteger(int64_t value) {
@@ -20,9 +28,24 @@ std::shared_ptr<Number> Number::createFloating(double value) {
   return number;
 }
 
-llvm::Value * Number::generateValueWithSpecificBitWidth(codegen::ModuleContext& ctx, int bits) const {
+llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  return generateValueWithoutLoad(ctx, payload);
+}
+
+llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  int bits = 64;
+
+  if (auto p = selectPayloadFirst(payload)) {
+    bits = p->as<Number::Payload>()->bits;
+  }
+
   if (tag == FLOATING) {
-    return llvm::ConstantFP::get(*ctx.llvm.ctx, llvm::APFloat(value.floating));
+    return llvm::ConstantFP::get(
+        *ctx.llvm.ctx,
+        llvm::APFloat(bits == 32
+            ? (float)  value.floating
+            : (double) value.floating)
+    );
   } else if (tag == INTEGER) {
     return llvm::ConstantInt::get(llvm::IntegerType::get(*ctx.llvm.ctx, bits), value.integer);
   }
@@ -30,25 +53,21 @@ llvm::Value * Number::generateValueWithSpecificBitWidth(codegen::ModuleContext& 
   throw CodegenException("Invalid number literal");
 }
 
-llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, void * payload) {
-  return generateValueWithoutLoad(ctx, payload);
+std::shared_ptr<xcc::meta::Type> Number::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  return generateTypeForValueWithoutLoad(ctx, std::move(payload));
 }
 
-llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
-  if (tag == FLOATING) {
-    return llvm::ConstantFP::get(*ctx.llvm.ctx, llvm::APFloat(value.floating));
-  } else if (tag == INTEGER) {
-    return llvm::ConstantInt::get(llvm::IntegerType::get(*ctx.llvm.ctx, 64), value.integer);
+std::shared_ptr<xcc::meta::Type> Number::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  int bits = 64;
+
+  if (auto p = selectPayloadFirst(payload)) {
+    bits = p->as<Number::Payload>()->bits;
   }
 
-  throw CodegenException("Invalid number literal");
-}
-
-std::shared_ptr<xcc::meta::Type> Number::generateType(codegen::ModuleContext& ctx, void * payload) {
   if (tag == FLOATING) {
-    return xcc::meta::Type::createF64();
+    return xcc::meta::Type::createFloating(bits);
   } else if (tag == INTEGER) {
-    return xcc::meta::Type::createI64();
+    return xcc::meta::Type::createSigned(bits);
   }
 
   throw CodegenException("Invalid number literal");

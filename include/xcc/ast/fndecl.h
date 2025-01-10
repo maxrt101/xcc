@@ -35,7 +35,7 @@ public:
       bool isVariadic = false
   );
 
-  llvm::Function * generateFunction(codegen::ModuleContext& ctx, void * payload = nullptr) override;
+  llvm::Function * generateFunction(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) override;
 };
 
 } /* namespace xcc::ast */

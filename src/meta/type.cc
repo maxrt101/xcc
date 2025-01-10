@@ -221,6 +221,34 @@ std::shared_ptr<Type> Type::createF64() {
   return Type::create(TypeTag::F64);
 }
 
+std::shared_ptr<Type> Type::createSigned(int bits) {
+  switch (bits) {
+    case 8:  return createI8();
+    case 16: return createI16();
+    case 32: return createI32();
+    case 64:
+    default: return createI64();
+  }
+}
+
+std::shared_ptr<Type> Type::createUnsigned(int bits) {
+  switch (bits) {
+    case 8:  return createU8();
+    case 16: return createU16();
+    case 32: return createU32();
+    case 64:
+    default: return createU64();
+  }
+}
+
+std::shared_ptr<Type> Type::createFloating(int bits) {
+  switch (bits) {
+    case 32: return createF32();
+    case 64:
+    default: return createF64();
+  }
+}
+
 std::shared_ptr<Type> Type::createPointer(std::shared_ptr<Type> pointedType) {
   auto t = Type::create(TypeTag::PTR);
   t->pointedType = std::move(pointedType);

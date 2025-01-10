@@ -20,8 +20,8 @@ public:
 
   static std::shared_ptr<Assign> create(std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
 
-  llvm::Value * generateValue(codegen::ModuleContext& ctx, void * payload = nullptr) override;
-  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, void * payload = nullptr) override;
+  llvm::Value * generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) override;
+  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) override;
 };
 
 } /* namespace xcc::ast */

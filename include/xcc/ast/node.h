@@ -44,6 +44,19 @@ enum NodeType {
 
 class Node {
 public:
+  struct Payload {
+    NodeType type;
+
+    Payload(NodeType type);
+    virtual ~Payload() = default;
+
+    template <typename T>
+    inline T * as() {
+      return (T *)this;
+    }
+  };
+
+public:
   NodeType type;
 
 public:
@@ -74,11 +87,14 @@ public:
     return std::dynamic_pointer_cast<Node>(ptr);
   }
 
-  virtual llvm::Value * generateValue(codegen::ModuleContext& ctx, void * payload = nullptr);
-  virtual llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, void * payload = nullptr);
-  virtual llvm::Function * generateFunction(codegen::ModuleContext& ctx, void * payload = nullptr);
-  virtual std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, void * payload = nullptr);
-  virtual std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, void * payload = nullptr);
+  std::vector<std::shared_ptr<Node::Payload>> selectPayload(const std::vector<std::shared_ptr<Node::Payload>>& payload);
+  std::shared_ptr<Node::Payload> selectPayloadFirst(const std::vector<std::shared_ptr<Node::Payload>>& payload);
+
+  virtual llvm::Value * generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload);
+  virtual llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload);
+  virtual llvm::Function * generateFunction(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload);
+  virtual std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload);
+  virtual std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload);
 
   static std::string typeToString(NodeType type);
 };

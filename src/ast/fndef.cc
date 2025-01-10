@@ -12,8 +12,8 @@ std::shared_ptr<FnDef> FnDef::create(std::shared_ptr<FnDecl> decl, std::shared_p
   return std::make_shared<FnDef>(std::move(decl), std::move(body));
 }
 
-llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, void * payload) {
-  decl->generateFunction(ctx);
+llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  decl->generateFunction(ctx, {});
 
   auto meta_fn = ctx.globalContext.getMetaFunction(decl->name->value);
 
@@ -37,7 +37,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, void * pay
 
   ctx.globalContext.setCurrentFunction(decl->name->value);
 
-  auto last_val = body->generateValue(ctx);
+  auto last_val = body->generateValue(ctx, {});
 
   if (!body->body.back()->is(AST_RETURN)) {
     last_val = codegen::castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx));

@@ -13,21 +13,21 @@ std::shared_ptr<If> If::create(std::shared_ptr<Node> condition, std::shared_ptr<
   return std::make_shared<If>(std::move(condition), std::move(then_branch), std::move(else_branch));
 }
 
-llvm::Value * If::generateValue(codegen::ModuleContext& ctx, void * payload) {
-  auto cond_val = throwIfNull(condition->generateValue(ctx), CodegenException("if condition generated NULL"));
+llvm::Value * If::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  auto cond_val = throwIfNull(condition->generateValue(ctx, {}), CodegenException("if condition generated NULL"));
 
   if (!cond_val) {
     throw CodegenException("Error generating condition of 'if' statement");
   }
 
-  auto then_type = throwIfNull(then_branch->generateType(ctx), CodegenException("if then branch generated NULL type"));
+  auto then_type = throwIfNull(then_branch->generateType(ctx, {}), CodegenException("if then branch generated NULL type"));
   auto else_type = meta::Type::createVoid();
 
   auto common_type = then_type;
 
   // If else_branch exists, use its type - otherwise use then_branch type
   if (else_branch) {
-    else_type = throwIfNull(else_branch->generateType(ctx), CodegenException("if else branch generated NULL type"));
+    else_type = throwIfNull(else_branch->generateType(ctx, {}), CodegenException("if else branch generated NULL type"));
     common_type = meta::Type::alignTypes(then_type, else_type);
   }
 
@@ -49,7 +49,7 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, void * payload) {
 
   // If then branch
   ctx.ir_builder->SetInsertPoint(then_block);
-  auto then_val = throwIfNull(then_branch->generateValue(ctx), CodegenException("if then branch generated NULL"));
+  auto then_val = throwIfNull(then_branch->generateValue(ctx, {}), CodegenException("if then branch generated NULL"));
 
   if (!then_val) {
     throw CodegenException("Error generating 'then' block of 'if' statement");
@@ -67,7 +67,7 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, void * payload) {
   fn->insert(fn->end(), else_block);
   ctx.ir_builder->SetInsertPoint(else_block);
 
-  auto else_val = else_branch ? throwIfNull(else_branch->generateValue(ctx), CodegenException("If else branch generated NULL")) : nullptr;
+  auto else_val = else_branch ? throwIfNull(else_branch->generateValue(ctx, {}), CodegenException("If else branch generated NULL")) : nullptr;
 
   if (else_val) {
     else_val = codegen::castIfNotSame(ctx, else_val, common_type->getLLVMType(ctx));
@@ -95,12 +95,12 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, void * payload) {
   return phi;
 }
 
-std::shared_ptr<xcc::meta::Type> If::generateType(codegen::ModuleContext& ctx, void * payload) {
-  auto then_type = throwIfNull(then_branch->generateType(ctx), CodegenException("if then branch generated NULL type"));
+std::shared_ptr<xcc::meta::Type> If::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  auto then_type = throwIfNull(then_branch->generateType(ctx, {}), CodegenException("if then branch generated NULL type"));
   auto else_type = meta::Type::createVoid();
 
   if (else_branch) {
-    else_type = throwIfNull(else_branch->generateType(ctx), CodegenException("if else branch generated NULL type"));
+    else_type = throwIfNull(else_branch->generateType(ctx, {}), CodegenException("if else branch generated NULL type"));
   }
 
   return meta::Type::alignTypes(then_type, else_type);

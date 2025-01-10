@@ -74,6 +74,9 @@ public:
   static std::shared_ptr<Type> createU64();
   static std::shared_ptr<Type> createF32();
   static std::shared_ptr<Type> createF64();
+  static std::shared_ptr<Type> createSigned(int bits);
+  static std::shared_ptr<Type> createUnsigned(int bits);
+  static std::shared_ptr<Type> createFloating(int bits);
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
 
   static std::shared_ptr<Type> alignTypes(std::shared_ptr<Type> lhs, std::shared_ptr<Type> rhs);

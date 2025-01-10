@@ -10,6 +10,6 @@ std::shared_ptr<TypedIdentifier> TypedIdentifier::create(std::shared_ptr<Identif
   return std::make_shared<TypedIdentifier>(std::move(name), std::move(type), std::move(value));
 }
 
-std::shared_ptr<xcc::meta::Type> TypedIdentifier::generateType(codegen::ModuleContext &ctx, void * payload) {
-  return value_type->generateType(ctx);
+std::shared_ptr<xcc::meta::Type> TypedIdentifier::generateType(codegen::ModuleContext &ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  return value_type->generateType(ctx, {});
 }
