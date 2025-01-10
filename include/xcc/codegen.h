@@ -41,13 +41,16 @@ public:
   std::unique_ptr<JIT> jit;
 
   /* Functions */
-  std::map<std::string, std::shared_ptr<meta::Function>> functions;
+  std::unordered_map<std::string, std::shared_ptr<meta::Function>> functions;
 
   /* Current Function Name */
   std::string current_function;
 
   /* Global Module */
   std::shared_ptr<ModuleContext> globalModule;
+
+  /* Global Variable Types */
+  std::unordered_map<std::string, std::shared_ptr<meta::Type>> globals;
 
 public:
   GlobalContext();
@@ -65,6 +68,10 @@ public:
   void setCurrentFunction(const std::string& name);
   void clearCurrentFunction();
   std::shared_ptr<meta::Function> getCurrentFunction();
+
+  bool hasGlobal(const std::string& name);
+  llvm::GlobalVariable * getGlobal(ModuleContext& ctx, const std::string& name);
+  std::shared_ptr<meta::Type> getGlobalType(const std::string& name);
 
   void runExpr(std::shared_ptr<ast::Node> expr);
 };
@@ -84,7 +91,7 @@ public:
   std::unique_ptr<llvm::IRBuilder<>> ir_builder;
 
   /* Named values (variables/args) */
-  std::map<std::string, std::shared_ptr<meta::TypedValue>> namedValues;
+  std::map<std::string, std::shared_ptr<meta::TypedValue>> locals;
 
   /* Optimization Contexts */
   struct {
@@ -98,11 +105,15 @@ public:
   } opt;
 
 public:
-  ModuleContext(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME);
+  explicit ModuleContext(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME);
 
   static std::unique_ptr<ModuleContext> create(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME);
 
   llvm::Function * getFunction(const std::string& name);
+
+  bool hasLocal(const std::string& name);
+  llvm::AllocaInst * getLocalValue(const std::string& name);
+  std::shared_ptr<meta::Type> getLocalType(const std::string& name);
 };
 
 llvm::Value * cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type);

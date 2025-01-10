@@ -162,14 +162,14 @@ std::shared_ptr<ast::Block> Parser::parseBlock() {
   return ast::Block::create(nodes);
 }
 
-std::shared_ptr<ast::Node> Parser::parseVar() {
+std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
   if (!checkAdvance(TOKEN_VAR)) {
     throw ParserException(current().line, "Expected 'var'");
   }
 
   auto valdecl = parseValueDecl();
 
-  return ast::VarDecl::create(valdecl->name, valdecl->value_type, valdecl->value);
+  return ast::VarDecl::create(valdecl->name, valdecl->value_type, valdecl->value, global);
 }
 
 std::shared_ptr<ast::Node> Parser::parseIf() {
@@ -206,7 +206,7 @@ std::shared_ptr<ast::Node> Parser::parseFor() {
     throw ParserException(current().line, "Expected '(' after 'for'");
   }
 
-  std::shared_ptr<ast::Node> init = parseVar();
+  std::shared_ptr<ast::Node> init = parseVar(false);
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
     throw ParserException(current().line, "Expected ';' after 'init' part of 'for'");
@@ -265,7 +265,7 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
 
 std::shared_ptr<ast::Node> Parser::parseStmt() {
   if (check(TOKEN_VAR)) {
-    return parseVar();
+    return parseVar(false);
   } else if (check(TOKEN_IF)) {
     return parseIf();
   } else if (check(TOKEN_FOR)) {
@@ -489,6 +489,11 @@ std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
   while (!isAtEnd()) {
     if (checkAnyOf(TOKEN_FN, TOKEN_EXTERN)) {
       block->body.push_back(parseFunction());
+    } else if (check(TOKEN_VAR)) {
+      block->body.push_back(parseVar(true));
+      if (!checkAdvance(TOKEN_SEMICOLON)) {
+        throw ParserException(current().line, "Expected ';' variable declaration (global scope)");
+      }
     } else {
       if (isRepl) {
         block->body.push_back(parseStmt());

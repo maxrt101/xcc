@@ -43,6 +43,10 @@ inline bool isPointer(llvm::Type * type) {
   return type->isPointerTy();
 }
 
+inline bool isArray(llvm::Type * type) {
+  return type->isArrayTy();
+}
+
 inline bool compareTypes(llvm::Type * lhs, llvm::Type * rhs) {
   return lhs == rhs;
 }

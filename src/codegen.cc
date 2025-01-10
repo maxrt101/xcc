@@ -53,6 +53,25 @@ std::shared_ptr<meta::Function> GlobalContext::getCurrentFunction() {
   return current_function.empty() ? nullptr : functions[current_function];
 }
 
+bool GlobalContext::hasGlobal(const std::string& name) {
+  return globals.find(name) != globals.end();
+}
+
+llvm::GlobalVariable * GlobalContext::getGlobal(ModuleContext& ctx, const std::string& name) {
+//  auto global = throwIfNull(globalModule->llvm.module->getGlobalVariable(name),
+//                            CodegenException("Error retrieving value for global variable '" + name + "'"));
+  // FIXME: getInt32Ty???
+  return llvm::cast<llvm::GlobalVariable>(
+      ctx.llvm.module->getOrInsertGlobal(name, llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
+}
+
+std::shared_ptr<meta::Type> GlobalContext::getGlobalType(const std::string& name) {
+  if (!hasGlobal(name)) {
+    throw CodegenException("Unknown global variable '" + name + "'");
+  }
+  return globals[name];
+}
+
 void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   std::shared_ptr<ast::Block> body;
 
@@ -174,6 +193,18 @@ llvm::Function * ModuleContext::getFunction(const std::string& name) {
   return nullptr;
 }
 
+bool ModuleContext::hasLocal(const std::string& name) {
+  return locals.find(name) != locals.end();
+}
+
+llvm::AllocaInst * ModuleContext::getLocalValue(const std::string& name) {
+  return locals[name]->value;
+}
+
+std::shared_ptr<meta::Type> ModuleContext::getLocalType(const std::string& name) {
+  return locals[name]->type;
+}
+
 llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type) {
   if (!val || !target_type) {
     throw CodegenException("codegen::cast received nullptr");
@@ -209,6 +240,16 @@ llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Ty
 
   if (util::isPointer(val->getType()) && util::isPointer(target_type)) {
     return ctx.ir_builder->CreatePointerCast(val, target_type);
+  }
+
+  // TODO: Test if this shit works or even needed
+  if (util::isArray(val->getType()) && util::isPointer(target_type)) {
+    llvm::Value * zero = ctx.ir_builder->getInt32(0);
+    return ctx.ir_builder->CreateInBoundsGEP(
+        val->getType(),
+        val,
+        {zero, zero}
+    );
   }
 
   throw CodegenException("Can't perform cast");

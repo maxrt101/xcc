@@ -40,7 +40,7 @@ private:
 
   std::shared_ptr<ast::Node> parseFunction();
   std::shared_ptr<ast::Block> parseBlock();
-  std::shared_ptr<ast::Node> parseVar();
+  std::shared_ptr<ast::Node> parseVar(bool global);
   std::shared_ptr<ast::Node> parseIf();
   std::shared_ptr<ast::Node> parseFor();
   std::shared_ptr<ast::Node> parseWhile();

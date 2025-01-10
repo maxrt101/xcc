@@ -12,26 +12,40 @@ std::shared_ptr<Identifier> Identifier::create(const std::string& value) {
 }
 
 llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx) {
-  if (ctx.namedValues.find(value) != ctx.namedValues.end()) {
-    return ctx.ir_builder->CreateLoad(ctx.namedValues[value]->value->getAllocatedType(), ctx.namedValues[value]->value, value.c_str());
+  if (ctx.hasLocal(value)) {
+    return ctx.ir_builder->CreateLoad(ctx.getLocalValue(value)->getAllocatedType(), ctx.getLocalValue(value), value.c_str());
+  } else if (ctx.globalContext.hasGlobal(value)) {
+    auto global = ctx.globalContext.getGlobal(ctx, value);
+
+    if (ctx.globalContext.getGlobalType(value)->isPointer()) {
+      auto alloca = ctx.ir_builder->CreateAlloca(ctx.globalContext.getGlobalType(value)->getLLVMType(ctx), nullptr);
+      ctx.ir_builder->CreateStore(global, alloca);
+      return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(value)->getLLVMType(ctx), alloca);
+    }
+
+    return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(value)->getLLVMType(ctx), global);
   }
   throw CodegenException("Undeclared value referenced: '" + value + "'");
 }
 
 llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
-  if (ctx.namedValues.find(value) != ctx.namedValues.end()) {
-    return ctx.namedValues[value]->value;
+  if (ctx.hasLocal(value)) {
+    return ctx.getLocalValue(value);
+  } else if (ctx.globalContext.hasGlobal(value)) {
+    return ctx.globalContext.getGlobal(ctx, value);
   }
   throw CodegenException("Undeclared value referenced: '" + value + "'");
 }
 
 std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx) {
-  if (ctx.namedValues.find(value) != ctx.namedValues.end()) {
-    return ctx.namedValues[value]->type;
-  }
-  throw CodegenException("Undeclared value referenced: '" + value + "'");
+  return generateTypeForValueWithoutLoad(ctx);
 }
 
 std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) {
-  return generateType(ctx);
+ if (ctx.hasLocal(value)) {
+    return ctx.getLocalType(value);
+  } else if (ctx.globalContext.hasGlobal(value)) {
+    return ctx.globalContext.getGlobalType(value);
+  }
+  throw CodegenException("Undeclared value referenced: '" + value + "'");
 }

@@ -20,7 +20,21 @@ std::shared_ptr<Number> Number::createFloating(double value) {
   return number;
 }
 
+llvm::Value * Number::generateValueWithSpecificBitWidth(codegen::ModuleContext& ctx, int bits) const {
+  if (tag == FLOATING) {
+    return llvm::ConstantFP::get(*ctx.llvm.ctx, llvm::APFloat(value.floating));
+  } else if (tag == INTEGER) {
+    return llvm::ConstantInt::get(llvm::IntegerType::get(*ctx.llvm.ctx, bits), value.integer);
+  }
+
+  throw CodegenException("Invalid number literal");
+}
+
 llvm::Value * Number::generateValue(codegen::ModuleContext& ctx) {
+  return generateValueWithoutLoad(ctx);
+}
+
+llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
   if (tag == FLOATING) {
     return llvm::ConstantFP::get(*ctx.llvm.ctx, llvm::APFloat(value.floating));
   } else if (tag == INTEGER) {

@@ -17,6 +17,7 @@ public:
   static std::shared_ptr<String> create(std::string value);
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx) override;
+  llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx) override;
 };
 
