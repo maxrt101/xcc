@@ -18,7 +18,7 @@ public:
 
   static std::shared_ptr<Type> create(std::shared_ptr<Node> name, bool pointer = false);
 
-  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx) override;
+  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, void * payload = nullptr) override;
 };
 
 } /* namespace xcc::ast */

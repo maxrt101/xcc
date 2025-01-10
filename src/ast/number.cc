@@ -30,11 +30,11 @@ llvm::Value * Number::generateValueWithSpecificBitWidth(codegen::ModuleContext& 
   throw CodegenException("Invalid number literal");
 }
 
-llvm::Value * Number::generateValue(codegen::ModuleContext& ctx) {
-  return generateValueWithoutLoad(ctx);
+llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, void * payload) {
+  return generateValueWithoutLoad(ctx, payload);
 }
 
-llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
+llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
   if (tag == FLOATING) {
     return llvm::ConstantFP::get(*ctx.llvm.ctx, llvm::APFloat(value.floating));
   } else if (tag == INTEGER) {
@@ -44,7 +44,7 @@ llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
   throw CodegenException("Invalid number literal");
 }
 
-std::shared_ptr<xcc::meta::Type> Number::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> Number::generateType(codegen::ModuleContext& ctx, void * payload) {
   if (tag == FLOATING) {
     return xcc::meta::Type::createF64();
   } else if (tag == INTEGER) {

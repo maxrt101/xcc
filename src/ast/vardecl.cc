@@ -24,7 +24,7 @@ std::shared_ptr<VarDecl> VarDecl::create(
   return std::make_shared<VarDecl>(std::move(name), std::move(type), std::move(value), global);
 }
 
-llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx) {
+llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, void * payload) {
   auto meta_type = type->generateType(ctx);
 
   if (global) {
@@ -80,6 +80,6 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx) {
   }
 }
 
-std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, void * payload) {
   return type->generateType(ctx);
 }

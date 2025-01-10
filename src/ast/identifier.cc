@@ -11,7 +11,7 @@ std::shared_ptr<Identifier> Identifier::create(const std::string& value) {
   return std::make_shared<Identifier>(value);
 }
 
-llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx) {
+llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, void * payload) {
   if (ctx.hasLocal(value)) {
     return ctx.ir_builder->CreateLoad(ctx.getLocalValue(value)->getAllocatedType(), ctx.getLocalValue(value), value.c_str());
   } else if (ctx.globalContext.hasGlobal(value)) {
@@ -28,7 +28,7 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx) {
   throw CodegenException("Undeclared value referenced: '" + value + "'");
 }
 
-llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
+llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
   if (ctx.hasLocal(value)) {
     return ctx.getLocalValue(value);
   } else if (ctx.globalContext.hasGlobal(value)) {
@@ -37,11 +37,11 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx) 
   throw CodegenException("Undeclared value referenced: '" + value + "'");
 }
 
-std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx) {
-  return generateTypeForValueWithoutLoad(ctx);
+std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx, void * payload) {
+  return generateTypeForValueWithoutLoad(ctx, payload);
 }
 
-std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
  if (ctx.hasLocal(value)) {
     return ctx.getLocalType(value);
   } else if (ctx.globalContext.hasGlobal(value)) {

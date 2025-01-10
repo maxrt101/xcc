@@ -11,7 +11,7 @@ std::shared_ptr<Binary> Binary::create(Token operation, std::shared_ptr<Node> lh
   return std::make_shared<Binary>(std::move(operation), std::move(lhs), std::move(rhs));
 }
 
-llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx) {
+llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, void * payload) {
   auto lhs_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
   auto lhs_val = throwIfNull(lhs->generateValue(ctx), CodegenException("LHS Value is NULL"));
 
@@ -116,7 +116,7 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx) {
   throw CodegenException(operation.line, "Unsupported binary expression operator or type (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + std::to_string((int)common_type->getTag()) + ")");
 }
 
-std::shared_ptr<xcc::meta::Type> Binary::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> Binary::generateType(codegen::ModuleContext& ctx, void * payload) {
   auto lhs_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS type is NULL"));
   auto rhs_type = throwIfNull(rhs->generateType(ctx), CodegenException("RHS type is NULL"));
 

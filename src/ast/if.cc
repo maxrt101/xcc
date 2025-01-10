@@ -13,7 +13,7 @@ std::shared_ptr<If> If::create(std::shared_ptr<Node> condition, std::shared_ptr<
   return std::make_shared<If>(std::move(condition), std::move(then_branch), std::move(else_branch));
 }
 
-llvm::Value * If::generateValue(codegen::ModuleContext& ctx) {
+llvm::Value * If::generateValue(codegen::ModuleContext& ctx, void * payload) {
   auto cond_val = throwIfNull(condition->generateValue(ctx), CodegenException("if condition generated NULL"));
 
   if (!cond_val) {
@@ -95,7 +95,7 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx) {
   return phi;
 }
 
-std::shared_ptr<xcc::meta::Type> If::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> If::generateType(codegen::ModuleContext& ctx, void * payload) {
   auto then_type = throwIfNull(then_branch->generateType(ctx), CodegenException("if then branch generated NULL type"));
   auto else_type = meta::Type::createVoid();
 

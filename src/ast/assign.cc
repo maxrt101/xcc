@@ -14,14 +14,14 @@ std::shared_ptr<Assign> Assign::create(std::shared_ptr<Node> lhs, std::shared_pt
   return std::make_shared<Assign>(std::move(lhs), std::move(rhs));
 }
 
-llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx) {
+llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, void * payload) {
   auto val = throwIfNull(rhs->generateValue(ctx), CodegenException("assignment value generated NULL"));
 
   val = codegen::castIfNotSame(ctx, val, lhs->generateTypeForValueWithoutLoad(ctx)->getLLVMType(ctx));
   return ctx.ir_builder->CreateStore(val, lhs->generateValueWithoutLoad(ctx));
 }
 
-std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ctx, void * payload) {
   if (lhs->is(ast::AST_EXPR_IDENTIFIER)) {
     auto name = ast::Node::cast<ast::Identifier>(lhs);
 

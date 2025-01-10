@@ -11,27 +11,27 @@ static auto logger = xcc::util::log::Logger("AST_NODE");
 
 Node::Node(NodeType type) : type(type) {}
 
-llvm::Value * Node::generateValue(codegen::ModuleContext& ctx) {
+llvm::Value * Node::generateValue(codegen::ModuleContext& ctx, void * payload) {
   logger.warn("Warning: Default Node::generateValue is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
-llvm::Value * Node::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
-  return generateValue(ctx);
+llvm::Value * Node::generateValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
+  return generateValue(ctx, payload);
 }
 
-llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx) {
+llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx, void * payload) {
   logger.warn("Warning: Default Node::generateFunction is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
-std::shared_ptr<meta::Type> Node::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<meta::Type> Node::generateType(codegen::ModuleContext& ctx, void * payload) {
   logger.warn("Warning: Default Node::generateType is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
-std::shared_ptr<meta::Type> Node::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) {
-  return generateType(ctx);
+std::shared_ptr<meta::Type> Node::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
+  return generateType(ctx, payload);
 }
 
 std::string Node::typeToString(NodeType type) {

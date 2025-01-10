@@ -74,11 +74,11 @@ public:
     return std::dynamic_pointer_cast<Node>(ptr);
   }
 
-  virtual llvm::Value * generateValue(codegen::ModuleContext& ctx);
-  virtual llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx);
-  virtual llvm::Function * generateFunction(codegen::ModuleContext& ctx);
-  virtual std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx);
-  virtual std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx);
+  virtual llvm::Value * generateValue(codegen::ModuleContext& ctx, void * payload = nullptr);
+  virtual llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, void * payload = nullptr);
+  virtual llvm::Function * generateFunction(codegen::ModuleContext& ctx, void * payload = nullptr);
+  virtual std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, void * payload = nullptr);
+  virtual std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, void * payload = nullptr);
 
   static std::string typeToString(NodeType type);
 };
