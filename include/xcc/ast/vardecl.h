@@ -33,8 +33,8 @@ public:
       bool global = false
   );
 
-  llvm::Value * generateValue(codegen::ModuleContext& ctx) override;
-  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx) override;
+  llvm::Value * generateValue(codegen::ModuleContext& ctx, void * payload = nullptr) override;
+  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, void * payload = nullptr) override;
 };
 
 } /* namespace xcc::ast */

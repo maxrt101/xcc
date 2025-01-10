@@ -17,8 +17,8 @@ public:
 
   static std::shared_ptr<If> create(std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch = nullptr);
 
-  llvm::Value * generateValue(codegen::ModuleContext& ctx) override;
-  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx) override;
+  llvm::Value * generateValue(codegen::ModuleContext& ctx, void * payload = nullptr) override;
+  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, void * payload = nullptr) override;
 };
 
 } /* namespace xcc::ast */

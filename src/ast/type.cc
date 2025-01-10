@@ -12,7 +12,7 @@ std::shared_ptr<Type> Type::create(std::shared_ptr<Node> name, bool pointer) {
   return std::make_shared<Type>(std::move(name), pointer);
 }
 
-std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx, void * payload) {
   if (name->is(AST_EXPR_IDENTIFIER)) {
     auto baseType = xcc::meta::Type::fromTypeName(name->as<Identifier>()->value);
     return pointer ? xcc::meta::Type::createPointer(baseType) : baseType;

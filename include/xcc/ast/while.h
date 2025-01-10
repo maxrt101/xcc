@@ -15,7 +15,7 @@ public:
 
   static std::shared_ptr<While> create(std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
 
-  llvm::Value * generateValue(codegen::ModuleContext& ctx) override;
+  llvm::Value * generateValue(codegen::ModuleContext& ctx, void * payload = nullptr) override;
 };
 
 } /* namespace xcc::ast */

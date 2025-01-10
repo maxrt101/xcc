@@ -10,10 +10,10 @@ std::shared_ptr<Cast> Cast::create(std::shared_ptr<Node> expr, std::shared_ptr<T
   return std::make_shared<Cast>(std::move(expr), std::move(type));
 }
 
-llvm::Value * Cast::generateValue(codegen::ModuleContext& ctx) {
+llvm::Value * Cast::generateValue(codegen::ModuleContext& ctx, void * payload) {
   return codegen::castIfNotSame(ctx, expr->generateValue(ctx), type->generateType(ctx)->getLLVMType(ctx));
 }
 
-std::shared_ptr<xcc::meta::Type> Cast::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> Cast::generateType(codegen::ModuleContext& ctx, void * payload) {
   return type->generateType(ctx);
 }

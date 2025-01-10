@@ -11,14 +11,14 @@ std::shared_ptr<Subscript> Subscript::create(std::shared_ptr<Node> lhs, std::sha
   return std::make_shared<Subscript>(std::move(lhs), std::move(rhs));
 }
 
-llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx) {
+llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, void * payload) {
   auto base_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
-  auto element_ptr = generateValueWithoutLoad(ctx);
+  auto element_ptr = generateValueWithoutLoad(ctx, payload);
 
   return ctx.ir_builder->CreateLoad(base_type->getPointedType()->getLLVMType(ctx), element_ptr, "element");
 }
 
-llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
+llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
   auto base_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
   auto index_type = throwIfNull(rhs->generateType(ctx), CodegenException("RHS Type is NULL"));
 
@@ -31,11 +31,11 @@ llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
   return ctx.ir_builder->CreateGEP(base_type->getPointedType()->getLLVMType(ctx), base_ptr, index, "element_ptr");
 }
 
-std::shared_ptr<xcc::meta::Type> Subscript::generateType(codegen::ModuleContext& ctx) {
+std::shared_ptr<xcc::meta::Type> Subscript::generateType(codegen::ModuleContext& ctx, void * payload) {
   auto base_type = throwIfNull(lhs->generateType(ctx), CodegenException("LHS Type is NULL"));
   return base_type->getPointedType();
 }
 
-std::shared_ptr<xcc::meta::Type> Subscript::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx) {
-  return generateType(ctx);
+std::shared_ptr<xcc::meta::Type> Subscript::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, void * payload) {
+  return generateType(ctx, payload);
 }

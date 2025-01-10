@@ -35,7 +35,7 @@ public:
       bool isVariadic = false
   );
 
-  llvm::Function * generateFunction(codegen::ModuleContext& ctx) override;
+  llvm::Function * generateFunction(codegen::ModuleContext& ctx, void * payload = nullptr) override;
 };
 
 } /* namespace xcc::ast */
