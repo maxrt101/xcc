@@ -232,7 +232,6 @@ llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Ty
   }
 
   if (util::isInteger(val->getType()) && util::isPointer(target_type)) {
-    printf("inttoptr %s\n", val->getName().str().c_str());
     return ctx.ir_builder->CreateIntToPtr(val, target_type);
   }
 

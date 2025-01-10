@@ -33,6 +33,4 @@ std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ct
   } else {
     return lhs->generateTypeForValueWithoutLoad(ctx, {});
   }
-
-  throw CodegenException("Invalid LHS node for assignment");
 }
