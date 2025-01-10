@@ -11,12 +11,12 @@ std::shared_ptr<For> For::create(std::shared_ptr<VarDecl> init, std::shared_ptr<
   return std::make_shared<For>(std::move(init), std::move(cond), std::move(step), std::move(body));
 }
 
-llvm::Value * For::generateValue(codegen::ModuleContext& ctx, void * payload) {
+llvm::Value * For::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
-  auto var = meta::TypedValue::create(ctx, fn, init->generateType(ctx), init->name->value);
+  auto var = meta::TypedValue::create(ctx, fn, init->generateType(ctx, {}), init->name->value);
 
-  auto init_val = init->generateValue(ctx);
+  auto init_val = init->generateValue(ctx, {});
 
   ctx.ir_builder->CreateStore(init_val, var->value);
 
@@ -30,13 +30,13 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, void * payload) {
   ctx.locals[init->name->value] = var;
 
   //
-  auto body_val = body->generateValue(ctx);
+  auto body_val = body->generateValue(ctx, {});
 
   //
-  auto step_val = step->generateValue(ctx);
+  auto step_val = step->generateValue(ctx, {});
 
   //
-  auto cond_val = cond->generateValue(ctx);
+  auto cond_val = cond->generateValue(ctx, {});
 
   auto i64_type = meta::Type::createI64()->getLLVMType(ctx);
 

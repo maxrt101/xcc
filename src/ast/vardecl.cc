@@ -24,20 +24,14 @@ std::shared_ptr<VarDecl> VarDecl::create(
   return std::make_shared<VarDecl>(std::move(name), std::move(type), std::move(value), global);
 }
 
-llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, void * payload) {
-  auto meta_type = type->generateType(ctx);
+llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  auto meta_type = type->generateType(ctx, {});
 
   if (global) {
     // FIXME: Check if can convert to constant
 
-    // Here are 2 hacks at once. First is the outer ternary - checks if initializer is present,
-    // if not, generates default value for type. Second is the inner ternary - if it's a number,
-    // generate constant with specific bit width specified by type
-    // FIXME: Find better way
     auto constant = (llvm::Constant *)(value
-        ? (value->is(ast::AST_EXPR_NUMBER)
-            ? value->as<ast::Number>()->generateValueWithSpecificBitWidth(ctx, meta_type->getNumberBitWidth())
-            : value->generateValueWithoutLoad(ctx))
+        ? value->generateValueWithoutLoad(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
         : meta_type->getDefault(ctx));
 
     ctx.globalContext.globals[name->value] = meta_type;
@@ -58,14 +52,8 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, void * payload
   } else {
     auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
-    // Here are 2 hacks at once. First is the outer ternary - checks if initializer is present,
-    // if not, generates default value for type. Second is the inner ternary - if it's a number,
-    // generate constant with specific bit width specified by type
-    // FIXME: Find better way
     llvm::Value * init = value
-        ? (value->is(ast::AST_EXPR_NUMBER)
-            ? value->as<ast::Number>()->generateValueWithSpecificBitWidth(ctx, meta_type->getNumberBitWidth())
-            : value->generateValue(ctx))
+        ? value->generateValue(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
         : meta_type->getDefault(ctx);
 
     init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx));
@@ -80,6 +68,6 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, void * payload
   }
 }
 
-std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, void * payload) {
-  return type->generateType(ctx);
+std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+  return type->generateType(ctx, {});
 }

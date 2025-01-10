@@ -48,7 +48,7 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
     if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
       fn_nodes.push_back(node);
     } else if (node->is(ast::AST_VAR_DECL)) {
-      node->generateValue(*globalContext->globalModule);
+      node->generateValue(*globalContext->globalModule, {});
     } else {
       if (isRepl) {
         expr_nodes.push_back(node);
@@ -67,7 +67,7 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
     auto ctx = globalContext->createModule();
 
     if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
-      auto fn = node->generateFunction(*ctx);
+      auto fn = node->generateFunction(*ctx, {});
 #if USE_PRINT_LLVM_IR
       fn->print(llvm::outs());
 #endif

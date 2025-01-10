@@ -10,11 +10,11 @@ std::shared_ptr<Return> Return::create(std::shared_ptr<Node> value) {
   return std::make_shared<Return>(std::move(value));
 }
 
-llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, void * payload) {
+llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
   llvm::Value * val = nullptr;
 
   if (value) {
-    val = value->generateValue(ctx);
+    val = value->generateValue(ctx, {});
 
     if (auto fn = ctx.globalContext.getCurrentFunction()) {
       val = codegen::castIfNotSame(ctx, val, fn->getLLVMReturnType(ctx));
@@ -28,9 +28,9 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, void * payload)
   return val;
 }
 
-std::shared_ptr<xcc::meta::Type> Return::generateType(codegen::ModuleContext& ctx, void * payload) {
+std::shared_ptr<xcc::meta::Type> Return::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
   if (value) {
-    return value->generateType(ctx);
+    return value->generateType(ctx, {});
   }
 
   return xcc::meta::Type::createVoid();

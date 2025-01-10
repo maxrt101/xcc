@@ -84,7 +84,7 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
     });
   }
 
-  auto type = expr->generateType(*globalModule);
+  auto type = expr->generateType(*globalModule, {});
 
   if (!type) {
     logger.warn("Warning: Can't infer %s return type, resorting to i32", ANONYMOUS_EXPR_FN_NAME);
@@ -98,7 +98,7 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 
   auto fndef = ast::FnDef::create(fndecl, body);
 
-  auto fn = fndef->generateFunction(*globalModule);
+  auto fn = fndef->generateFunction(*globalModule, {});
 
 #if USE_PRINT_LLVM_IR
   fn->print(llvm::outs());
@@ -184,7 +184,7 @@ llvm::Function * ModuleContext::getFunction(const std::string& name) {
   }
 
   if (globalContext.functions.find(name) != globalContext.functions.end()) {
-    return globalContext.functions[name]->decl->generateFunction(*this);
+    return globalContext.functions[name]->decl->generateFunction(*this, {});
   }
 
   return nullptr;
@@ -232,6 +232,7 @@ llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Ty
   }
 
   if (util::isInteger(val->getType()) && util::isPointer(target_type)) {
+    printf("inttoptr %s\n", val->getName().str().c_str());
     return ctx.ir_builder->CreateIntToPtr(val, target_type);
   }
 
