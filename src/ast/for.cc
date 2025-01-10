@@ -26,8 +26,8 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx) {
 
   ctx.ir_builder->SetInsertPoint(loop_block);
 
-  auto old_val = ctx.namedValues[init->name->value];
-  ctx.namedValues[init->name->value] = var;
+  auto old_val = ctx.locals[init->name->value];
+  ctx.locals[init->name->value] = var;
 
   //
   auto body_val = body->generateValue(ctx);
@@ -53,9 +53,9 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx) {
   ctx.ir_builder->SetInsertPoint(loop_after_block);
 
   if (old_val) {
-    ctx.namedValues[init->name->value] = old_val;
+    ctx.locals[init->name->value] = old_val;
   } else {
-    ctx.namedValues.erase(init->name->value);
+    ctx.locals.erase(init->name->value);
   }
 
   return meta::Type::createI64()->getDefault(ctx);

@@ -25,8 +25,8 @@ std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ct
   if (lhs->is(ast::AST_EXPR_IDENTIFIER)) {
     auto name = ast::Node::cast<ast::Identifier>(lhs);
 
-    if (ctx.namedValues.find(name->value) != ctx.namedValues.end()) {
-      return ctx.namedValues[name->value]->type;
+    if (ctx.hasLocal(name->value)) {
+      return ctx.getLocalType(name->value);
     }
 
     throw CodegenException("Unknown variable '" + name->value + "'");

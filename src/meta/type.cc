@@ -97,6 +97,29 @@ bool Type::isPointer() const {
   return is(TypeTag::PTR);
 }
 
+int Type::getNumberBitWidth() const {
+  switch (tag) {
+    case TypeTag::U8:
+    case TypeTag::I8:
+      return 8;
+    case TypeTag::U16:
+    case TypeTag::I16:
+      return 16;
+    case TypeTag::U32:
+    case TypeTag::I32:
+    case TypeTag::F32:
+      return 32;
+    case TypeTag::I64:
+    case TypeTag::U64:
+    case TypeTag::F64:
+      return 64;
+    case TypeTag::PTR:
+    case TypeTag::VOID:
+    default:
+      return 0;
+  }
+}
+
 llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
   switch (tag) {
     case TypeTag::U8:

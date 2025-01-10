@@ -47,6 +47,8 @@ public:
   [[nodiscard]] bool isFloat() const;
   [[nodiscard]] bool isPointer() const;
 
+  int getNumberBitWidth() const;
+
   llvm::Value * getDefault(codegen::ModuleContext& ctx) const;
 
   inline bool is(TypeTag expected) const {

@@ -24,6 +24,7 @@ llvm::Value * String::generateValue(codegen::ModuleContext& ctx) {
       name
   );
 
+  // FIXME: getInt32Ty???
   auto extern_global = llvm::cast<llvm::GlobalVariable>(
       ctx.llvm.module->getOrInsertGlobal(name, llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
 
@@ -32,6 +33,10 @@ llvm::Value * String::generateValue(codegen::ModuleContext& ctx) {
       {ctx.ir_builder->getInt32(0), ctx.ir_builder->getInt32(0)},
       "str_ptr"
   );
+}
+
+llvm::Value * String::generateValueWithoutLoad(codegen::ModuleContext& ctx) {
+  return llvm::ConstantDataArray::getString(*ctx.globalContext.globalModule->llvm.ctx, value, true);
 }
 
 std::shared_ptr<xcc::meta::Type> String::generateType(codegen::ModuleContext& ctx) {

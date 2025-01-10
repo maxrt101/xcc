@@ -14,12 +14,24 @@ public:
   std::shared_ptr<Identifier> name;
   std::shared_ptr<Type> type;
   std::shared_ptr<Node> value;
+  bool global;
 
 public:
-  VarDecl(std::shared_ptr<Identifier> name, std::shared_ptr<Type> type, std::shared_ptr<Node> value = nullptr);
+  VarDecl(
+      std::shared_ptr<Identifier> name,
+      std::shared_ptr<Type> type,
+      std::shared_ptr<Node> value = nullptr,
+      bool global = false
+  );
+
   virtual ~VarDecl() override = default;
 
-  static std::shared_ptr<VarDecl> create(std::shared_ptr<Identifier> name, std::shared_ptr<Type> type, std::shared_ptr<Node> value = nullptr);
+  static std::shared_ptr<VarDecl> create(
+      std::shared_ptr<Identifier> name,
+      std::shared_ptr<Type> type,
+      std::shared_ptr<Node> value = nullptr,
+      bool global = false
+  );
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx) override;
