@@ -24,14 +24,13 @@ llvm::Value * String::generateValue(codegen::ModuleContext& ctx) {
       name
   );
 
-  // FIXME: getInt32Ty???
   auto extern_global = llvm::cast<llvm::GlobalVariable>(
       ctx.llvm.module->getOrInsertGlobal(name, llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
 
+  auto zero = ctx.ir_builder->getInt32(0);
+
   return ctx.ir_builder->CreateInBoundsGEP(
-      extern_global->getValueType(), extern_global,
-      {ctx.ir_builder->getInt32(0), ctx.ir_builder->getInt32(0)},
-      "str_ptr"
+      extern_global->getValueType(), extern_global, {zero, zero}, "str_ptr"
   );
 }
 
