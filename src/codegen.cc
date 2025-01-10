@@ -58,9 +58,6 @@ bool GlobalContext::hasGlobal(const std::string& name) {
 }
 
 llvm::GlobalVariable * GlobalContext::getGlobal(ModuleContext& ctx, const std::string& name) {
-//  auto global = throwIfNull(globalModule->llvm.module->getGlobalVariable(name),
-//                            CodegenException("Error retrieving value for global variable '" + name + "'"));
-  // FIXME: getInt32Ty???
   return llvm::cast<llvm::GlobalVariable>(
       ctx.llvm.module->getOrInsertGlobal(name, llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
 }
