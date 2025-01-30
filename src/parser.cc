@@ -430,6 +430,10 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
     return ast::String::create(previous().value);
   }
 
+  if (checkAdvance(TokenType::TOKEN_CHAR)) {
+    return ast::Number::createInteger(previous().value[0]);
+  }
+
   if (checkAdvance(TokenType::TOKEN_LEFT_PAREN)) {
     auto expr = parseExpr();
     if (!checkAdvance(TokenType::TOKEN_RIGHT_PAREN)) {

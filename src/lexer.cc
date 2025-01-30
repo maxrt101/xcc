@@ -53,6 +53,7 @@ std::string Token::typeToString(TokenType type) {
       {TOKEN_IDENTIFIER, "TOKEN_IDENTIFIER"},
       {TOKEN_NUMBER, "TOKEN_NUMBER"},
       {TOKEN_STRING, "TOKEN_STRING"},
+      {TOKEN_CHAR, "TOKEN_CHAR"},
       {TOKEN_EXTERN, "TOKEN_EXTERN"},
       {TOKEN_FN, "TOKEN_FN"},
       {TOKEN_VAR, "TOKEN_VAR"},
@@ -159,6 +160,20 @@ void Lexer::tokenizeString() {
   consume();
 }
 
+void Lexer::tokenizeChar() {
+  // Skip opening quote
+  consume();
+
+  result.push_back({TOKEN_CHAR, util::strescseq(std::string() + current(), true)});
+  consume();
+
+//  if (!check('\'')) {}
+  assertThrow(check('\''), LexerException("Expected closing quote after char literal"));
+
+  // Skip closing quote
+  consume();
+}
+
 void Lexer::tokenizeIdentifier() {
   size_t begin = current_index;
 
@@ -225,6 +240,8 @@ std::vector<Token> Lexer::tokenize() {
       tokenizeIdentifier();
     } else if (check('"')) {
       tokenizeString();
+    } else if (check('\'')) {
+      tokenizeChar();
     } else if (isnumber(current())) {
       // TODO: add hex, floating point, octal, bin, etc
       tokenizeNumber();

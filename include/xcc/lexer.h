@@ -12,6 +12,7 @@ enum TokenType {
   TOKEN_IDENTIFIER,
   TOKEN_NUMBER,
   TOKEN_STRING,
+  TOKEN_CHAR,
 
   // Keywords
   TOKEN_EXTERN,
@@ -85,6 +86,7 @@ private:
   void skipWhitespace();
 
   void tokenizeString();
+  void tokenizeChar();
   void tokenizeIdentifier();
   void tokenizeNumber();
 
