@@ -172,6 +172,36 @@ std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
   return ast::VarDecl::create(valdecl->name, valdecl->value_type, valdecl->value, global);
 }
 
+std::shared_ptr<ast::Node> Parser::parseStruct() {
+  if (!checkAdvance(TOKEN_STRUCT)) {
+    throw ParserException(current().line, "Expected 'struct'");
+  }
+
+  auto name = parseIdentifier("for struct name");
+
+  if (!checkAdvance(TOKEN_LEFT_BRACE)) {
+    throw ParserException(current().line, "Expected '{' after 'struct'");
+  }
+
+  std::vector<std::shared_ptr<ast::TypedIdentifier>> fields;
+
+  bool shouldContinue = true;
+
+  do {
+    if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
+      break;
+    }
+    fields.push_back(parseValueDecl());
+    shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_SEMICOLON);
+  } while (shouldContinue);
+
+  if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
+    throw ParserException(current().line, "Expected '}' after struct definition");
+  }
+
+  return ast::Struct::create(name, fields);
+}
+
 std::shared_ptr<ast::Node> Parser::parseIf() {
   if (!checkAdvance(TOKEN_IF)) {
     throw ParserException(current().line, "Expected 'if'");
@@ -291,7 +321,7 @@ std::shared_ptr<ast::Node> Parser::parseAssignment() {
   while (checkAdvanceAnyOf(TokenType::TOKEN_EQUALS)) {
     Token op = previous();
     auto rhs = parseLogic();
-    if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT)) {
+    if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT, ast::AST_EXPR_MEMBER_ACCESS)) {
       expr = ast::Assign::create(expr, rhs);
     } else {
       throw ParserException("Invalid LHS for assignment (" + ast::Node::typeToString(expr->type) + ")");
@@ -377,19 +407,21 @@ std::shared_ptr<ast::Node> Parser::parseUnary() {
   if (checkAdvanceAnyOf(TokenType::TOKEN_NOT, TokenType::TOKEN_MINUS,
                         TokenType::TOKEN_AMP, TokenType::TOKEN_STAR)) {
     Token op = previous();
-    return ast::Unary::create(op, parseSubscript());
+    return ast::Unary::create(op, parseSubscriptAndMemberAccess());
   }
 
-  return parseSubscript();
+  return parseSubscriptAndMemberAccess();
 }
 
-std::shared_ptr<ast::Node> Parser::parseSubscript() {
+std::shared_ptr<ast::Node> Parser::parseSubscriptAndMemberAccess() {
   auto lhs = parseRvalue();
 
   if (checkAdvance(TokenType::TOKEN_LEFT_SQUARE_BRACE)) {
     auto rhs = parseExpr();
     assertThrow(checkAdvance(TokenType::TOKEN_RIGHT_SQUARE_BRACE), ParserException("Missing closing ']' after '[' in subscript operator"));
     return ast::Subscript::create(lhs, rhs);
+  } else if (checkAdvance(TokenType::TOKEN_DOT)) {
+    return ast::MemberAccess::create(lhs, parseIdentifier("for member access"));
   }
 
   return lhs;
@@ -498,6 +530,8 @@ std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
       if (!checkAdvance(TOKEN_SEMICOLON)) {
         throw ParserException(current().line, "Expected ';' variable declaration (global scope)");
       }
+    } else if (check(TOKEN_STRUCT)) {
+      block->body.push_back(parseStruct());
     } else {
       if (isRepl) {
         block->body.push_back(parseStmt());

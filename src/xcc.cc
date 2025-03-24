@@ -49,6 +49,8 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
       fn_nodes.push_back(node);
     } else if (node->is(ast::AST_VAR_DECL)) {
       node->generateValue(*globalContext->globalModule, {});
+    } else if (node->is(ast::AST_STRUCT)) {
+      node->generateType(*globalContext->globalModule, {});
     } else {
       if (isRepl) {
         expr_nodes.push_back(node);

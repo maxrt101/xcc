@@ -18,6 +18,7 @@ enum TokenType {
   TOKEN_EXTERN,
   TOKEN_FN,
   TOKEN_VAR,
+  TOKEN_STRUCT,
   TOKEN_IF,
   TOKEN_ELSE,
   TOKEN_FOR,

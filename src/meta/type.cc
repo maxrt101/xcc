@@ -4,6 +4,8 @@
 
 using namespace xcc::meta;
 
+std::unordered_map<std::string, std::shared_ptr<Type>> Type::customTypes;
+
 Type::Type(TypeTag tag) : tag(tag) {}
 
 bool Type::operator==(Type& rhs) {
@@ -52,6 +54,17 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     case TypeTag::PTR:
       return pointedType->getLLVMType(ctx)->getPointerTo();
 
+    case TypeTag::STRUCT: {
+      std::vector<llvm::Type*> elements;
+
+      for (auto & member : members) {
+        elements.push_back(member.second->getLLVMType(ctx));
+      }
+
+      return llvm::StructType::get(*ctx.llvm.ctx, elements, false);
+    }
+
+
     default:
       throw CodegenException("Unknown type");
   }
@@ -59,18 +72,29 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
 
 std::string Type::toString() const {
   switch (tag) {
-    case TypeTag::VOID:  return "void";
-    case TypeTag::U8:    return "u8";
-    case TypeTag::I8:    return "i8";
-    case TypeTag::U16:   return "u16";
-    case TypeTag::I16:   return "i16";
-    case TypeTag::U32:   return "u32";
-    case TypeTag::I32:   return "i32";
-    case TypeTag::U64:   return "u64";
-    case TypeTag::I64:   return "i64";
-    case TypeTag::F32:   return "f32";
-    case TypeTag::F64:   return "f64";
-    case TypeTag::PTR:   return pointedType->toString() + "*";
+    case TypeTag::VOID:   return "void";
+    case TypeTag::U8:     return "u8";
+    case TypeTag::I8:     return "i8";
+    case TypeTag::U16:    return "u16";
+    case TypeTag::I16:    return "i16";
+    case TypeTag::U32:    return "u32";
+    case TypeTag::I32:    return "i32";
+    case TypeTag::U64:    return "u64";
+    case TypeTag::I64:    return "i64";
+    case TypeTag::F32:    return "f32";
+    case TypeTag::F64:    return "f64";
+    case TypeTag::PTR:    return pointedType->toString() + "*";
+    case TypeTag::STRUCT: {
+      std::string result = "struct {";
+      auto iter = members.begin();
+      for (size_t i = 0; i < members.size(); ++i) {
+        result += iter->second->toString();
+        if (i + 1 != members.size()) {
+          result += ", ";
+        }
+      }
+      return result + "}";
+    }
     default:
       return "<?>";
   }
@@ -97,6 +121,10 @@ bool Type::isPointer() const {
   return is(TypeTag::PTR);
 }
 
+bool Type::isStruct() const {
+  return is(TypeTag::STRUCT);
+}
+
 int Type::getNumberBitWidth() const {
   switch (tag) {
     case TypeTag::U8:
@@ -114,10 +142,31 @@ int Type::getNumberBitWidth() const {
     case TypeTag::F64:
       return 64;
     case TypeTag::PTR:
+    case TypeTag::STRUCT:
     case TypeTag::VOID:
     default:
       return 0;
   }
+}
+
+bool Type::hasMember(const std::string& name) const {
+  return members.find(name) != members.end();
+}
+
+size_t Type::getMemberIndex(const std::string& name) const {
+  size_t idx = 0;
+
+  auto iter = members.begin();
+
+  while (iter->first != name && iter != members.end()) {
+    idx++;
+  }
+
+  return idx;
+}
+
+std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
+  return members.at(name);
 }
 
 llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
@@ -138,6 +187,18 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
 
     case TypeTag::PTR:
       return llvm::Constant::getNullValue(getLLVMType(ctx));
+
+    case TypeTag::STRUCT: {
+      // llvm::StructType * llvm_type = (llvm::StructType *) getLLVMType(ctx);
+
+      std::vector<llvm::Constant *> initializers;
+
+      for (auto & member : members) {
+        initializers.push_back((llvm::Constant *) member.second->getDefault(ctx));
+      }
+
+      return llvm::ConstantStruct::get((llvm::StructType *) getLLVMType(ctx), initializers);
+    }
 
     case TypeTag::VOID:
     default:
@@ -172,6 +233,10 @@ std::shared_ptr<Type> Type::fromTypeName(const std::string& name) {
     return Type::createF32();
   } else if (name == "f64") {
     return Type::createF64();
+  } else {
+    if (customTypes.find(name) != customTypes.end()) {
+      return customTypes[name];
+    }
   }
 
   throw CodegenException("Unknown type '" + name + "'");
@@ -253,6 +318,16 @@ std::shared_ptr<Type> Type::createPointer(std::shared_ptr<Type> pointedType) {
   auto t = Type::create(TypeTag::PTR);
   t->pointedType = std::move(pointedType);
   return t;
+}
+
+std::shared_ptr<Type> Type::createStruct(std::unordered_map<std::string, std::shared_ptr<Type>> members) {
+  auto type = create(TypeTag::STRUCT);
+  type->members = std::move(members);
+  return type;
+}
+
+void Type::registerCustomType(const std::string& name, std::shared_ptr<Type> type) {
+  customTypes[name] = std::move(type);
 }
 
 std::shared_ptr<Type> Type::alignTypes(std::shared_ptr<Type> lhs, std::shared_ptr<Type> rhs) {

@@ -27,6 +27,7 @@ enum NodeType {
   AST_EXPR_BINARY,            // lhs op rhs
   AST_EXPR_UNARY,             // op rhs
   AST_EXPR_SUBSCRIPT,         // lhs [ rhs ]
+  AST_EXPR_MEMBER_ACCESS,     // lhs . rhs
   AST_EXPR_ASSIGN,            // if = expr
 
   AST_EXPR_TYPE,              // identifier (generic?)
@@ -36,6 +37,7 @@ enum NodeType {
   AST_VAR_DECL,               // var name: type [= value]
   AST_FUNCTION_DECL,          // fn name([args])[: type];
   AST_FUNCTION_DEF,           // function-decl { body }
+  AST_STRUCT,                 // struct name { field: type [= init], ... }
   AST_IF,                     // if (cond) then else
   AST_FOR,                    // for (init; cond; inc) body | for (typed_id in expr) body
   AST_WHILE,                  // while (cond) body

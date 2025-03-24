@@ -41,6 +41,12 @@ int main(int argc, char ** argv) {
 
   if (argc == 2) {
     std::ifstream fs(argv[1]);
+
+    if (!fs.is_open()) {
+      logger.fatal("Failed to open file '%s'", argv[1]);
+      return 1;
+    }
+
     std::stringstream ss;
     ss << fs.rdbuf();
 

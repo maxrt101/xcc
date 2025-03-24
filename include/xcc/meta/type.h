@@ -1,6 +1,7 @@
 #pragma once
 
 #include <llvm/IR/DerivedTypes.h>
+#include <unordered_map>
 
 namespace xcc::codegen {
 class ModuleContext;
@@ -20,13 +21,21 @@ enum class TypeTag {
   I64,
   F32,
   F64,
-  PTR
+  PTR,
+  STRUCT,
 };
 
 class Type {
 private:
   TypeTag tag;
+
+  // For TypeTag::PTR
   std::shared_ptr<Type> pointedType;
+
+  // For TypeTag::STRUCT
+  std::unordered_map<std::string, std::shared_ptr<Type>> members;
+
+  static std::unordered_map<std::string, std::shared_ptr<Type>> customTypes;
 
 public:
   explicit Type(TypeTag tag);
@@ -46,8 +55,13 @@ public:
   [[nodiscard]] bool isInteger() const;
   [[nodiscard]] bool isFloat() const;
   [[nodiscard]] bool isPointer() const;
+  [[nodiscard]] bool isStruct() const;
 
   int getNumberBitWidth() const;
+
+  bool hasMember(const std::string& name) const;
+  size_t getMemberIndex(const std::string& name) const;
+  std::shared_ptr<Type> getMemberType(const std::string& name) const;
 
   llvm::Value * getDefault(codegen::ModuleContext& ctx) const;
 
@@ -78,6 +92,9 @@ public:
   static std::shared_ptr<Type> createUnsigned(int bits);
   static std::shared_ptr<Type> createFloating(int bits);
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
+  static std::shared_ptr<Type> createStruct(std::unordered_map<std::string, std::shared_ptr<Type>> members);
+
+  static void registerCustomType(const std::string& name, std::shared_ptr<Type> type);
 
   static std::shared_ptr<Type> alignTypes(std::shared_ptr<Type> lhs, std::shared_ptr<Type> rhs);
 };

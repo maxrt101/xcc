@@ -132,6 +132,14 @@ static void print_node(Node* node, Node* parent, int indent) {
       break;
     }
 
+    case AST_EXPR_MEMBER_ACCESS: {
+      auto access = node->as<MemberAccess>();
+      print_node(access->lhs.get(), access, indent);
+      logger.print(".");
+      print_node(access->rhs.get(), access, indent);
+      break;
+    }
+
     case AST_RETURN: {
       auto return_stmt = node->as<Return>();
       logger.print("return ");
@@ -156,7 +164,7 @@ static void print_node(Node* node, Node* parent, int indent) {
       for (auto& stmt : block->body) {
         print_indent(indent + 2);
         print_node(stmt.get(), block, indent + 2);
-        if (!node_any_of(stmt->type, {AST_BLOCK, AST_FUNCTION_DECL, AST_FUNCTION_DEF, AST_IF, AST_FOR, AST_WHILE})) {
+        if (!node_any_of(stmt->type, {AST_BLOCK, AST_FUNCTION_DECL, AST_FUNCTION_DEF, AST_IF, AST_FOR, AST_WHILE, AST_STRUCT})) {
           logger.print(";\n");
         }
       }
@@ -205,6 +213,21 @@ static void print_node(Node* node, Node* parent, int indent) {
       auto fndef = node->as<FnDef>();
       print_node(fndef->decl.get(), fndef, indent);
       print_node(fndef->body.get(), fndef, indent);
+      break;
+    }
+
+    case AST_STRUCT: {
+      auto _struct = node->as<Struct>();
+      logger.print("struct ");
+      print_node(_struct->name.get(), _struct, indent);
+      logger.print(" {\n");
+      for (auto& field : _struct->fields) {
+        print_indent(indent + 2);
+        print_node(field.get(), _struct, indent + 2);
+        logger.print(";\n");
+      }
+      print_indent(indent);
+      logger.print("}\n");
       break;
     }
 
