@@ -86,9 +86,10 @@ std::string Type::toString() const {
     case TypeTag::PTR:    return pointedType->toString() + "*";
     case TypeTag::STRUCT: {
       std::string result = "struct {";
-      auto iter = members.begin();
       for (size_t i = 0; i < members.size(); ++i) {
-        result += iter->second->toString();
+        result += members[i].first.c_str();
+        result += ": ";
+        result += members[i].second->toString();
         if (i + 1 != members.size()) {
           result += ", ";
         }
@@ -150,23 +151,32 @@ int Type::getNumberBitWidth() const {
 }
 
 bool Type::hasMember(const std::string& name) const {
-  return members.find(name) != members.end();
+  return std::find_if(
+    members.begin(), members.end(),
+    [&name](auto & element) {
+      return element.first == name;
+    }
+  ) != members.end();
 }
 
 size_t Type::getMemberIndex(const std::string& name) const {
-  size_t idx = 0;
-
-  auto iter = members.begin();
-
-  while (iter->first != name && iter != members.end()) {
-    idx++;
+  for (size_t idx = 0; idx < members.size(); ++idx) {
+    if (members[idx].first == name) {
+      return idx;
+    }
   }
 
-  return idx;
+  throw CodegenException("Struct '" + toString() + "' has no member '" + name + "'");
 }
 
 std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
-  return members.at(name);
+  for (size_t idx = 0; idx < members.size(); ++idx) {
+    if (members[idx].first == name) {
+      return members[idx].second;
+    }
+  }
+
+  throw CodegenException("Struct '" + toString() + "' has no member '" + name + "'");
 }
 
 llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
@@ -320,7 +330,7 @@ std::shared_ptr<Type> Type::createPointer(std::shared_ptr<Type> pointedType) {
   return t;
 }
 
-std::shared_ptr<Type> Type::createStruct(std::unordered_map<std::string, std::shared_ptr<Type>> members) {
+std::shared_ptr<Type> Type::createStruct(StructMembers members) {
   auto type = create(TypeTag::STRUCT);
   type->members = std::move(members);
   return type;

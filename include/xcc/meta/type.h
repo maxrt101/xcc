@@ -1,7 +1,6 @@
 #pragma once
 
 #include <llvm/IR/DerivedTypes.h>
-#include <unordered_map>
 
 namespace xcc::codegen {
 class ModuleContext;
@@ -25,6 +24,10 @@ enum class TypeTag {
   STRUCT,
 };
 
+class Type;
+
+using StructMembers = std::vector<std::pair<std::string, std::shared_ptr<Type>>>;
+
 class Type {
 private:
   TypeTag tag;
@@ -33,7 +36,7 @@ private:
   std::shared_ptr<Type> pointedType;
 
   // For TypeTag::STRUCT
-  std::unordered_map<std::string, std::shared_ptr<Type>> members;
+  StructMembers members;
 
   static std::unordered_map<std::string, std::shared_ptr<Type>> customTypes;
 
@@ -92,7 +95,7 @@ public:
   static std::shared_ptr<Type> createUnsigned(int bits);
   static std::shared_ptr<Type> createFloating(int bits);
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
-  static std::shared_ptr<Type> createStruct(std::unordered_map<std::string, std::shared_ptr<Type>> members);
+  static std::shared_ptr<Type> createStruct(StructMembers members);
 
   static void registerCustomType(const std::string& name, std::shared_ptr<Type> type);
 

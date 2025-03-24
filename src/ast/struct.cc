@@ -25,13 +25,13 @@ std::shared_ptr<xcc::meta::Type> Struct::generateType(codegen::ModuleContext &ct
 }
 
 std::shared_ptr<xcc::meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
-  std::unordered_map<std::string, std::shared_ptr<meta::Type>> meta_elements;
+  meta::StructMembers members;
 
   for (auto & field : fields) {
-    meta_elements[field->name->value] = field->generateType(ctx, {});
+    members.push_back({field->name->value, field->generateType(ctx, {})});
   }
 
-  auto type =  meta::Type::createStruct(meta_elements);
+  auto type =  meta::Type::createStruct(members);
 
   meta::Type::registerCustomType(name->value, type);
 
