@@ -15,14 +15,16 @@ llvm::Value * String::generateValue(codegen::ModuleContext& ctx, std::vector<std
 
   llvm::Constant * constant = llvm::ConstantDataArray::getString(*ctx.globalContext.globalModule->llvm.ctx, value, true);
 
-  [[maybe_unused]] auto global = new llvm::GlobalVariable(
-      *ctx.globalContext.globalModule->llvm.module,
-      constant->getType(),
-      true,
-      llvm::GlobalValue::ExternalLinkage,
-      constant,
-      name
-  );
+  if (!constant->isConstantUsed()) {
+    [[maybe_unused]] auto global = new llvm::GlobalVariable(
+        *ctx.globalContext.globalModule->llvm.module,
+        constant->getType(),
+        true,
+        llvm::GlobalValue::ExternalLinkage,
+        constant,
+        name
+    );
+  }
 
   auto extern_global = llvm::cast<llvm::GlobalVariable>(
       ctx.llvm.module->getOrInsertGlobal(name, llvm::Type::getInt32Ty(*ctx.llvm.ctx)));

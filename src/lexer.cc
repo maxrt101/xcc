@@ -167,7 +167,6 @@ void Lexer::tokenizeChar() {
   result.push_back({TOKEN_CHAR, util::strescseq(std::string() + current(), true)});
   consume();
 
-//  if (!check('\'')) {}
   assertThrow(check('\''), LexerException("Expected closing quote after char literal"));
 
   // Skip closing quote
