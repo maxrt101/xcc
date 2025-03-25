@@ -318,11 +318,24 @@ std::shared_ptr<ast::Node> Parser::parseExpr() {
 std::shared_ptr<ast::Node> Parser::parseAssignment() {
   auto expr = parseLogicAndBitOps();
 
-  while (checkAdvanceAnyOf(TOKEN_EQUALS)) {
+  logger.debug("Parser::parseAssignment expr=%s prev=%s cur=%s next=%s",
+    ast::Node::typeToString(expr->type).c_str(),
+    Token::typeToString(previous().type).c_str(),
+    Token::typeToString(current().type).c_str(),
+    Token::typeToString(next().type).c_str());
+
+  logger.debug("check=%d",
+    checkAnyOf(TOKEN_EQUALS, TOKEN_ADD_EQUALS, TOKEN_MIN_EQUALS, TOKEN_MUL_EQUALS, TOKEN_DIV_EQUALS,
+               TOKEN_AND_EQUALS, TOKEN_OR_EQUALS, TOKEN_LOGICAL_AND_EQUALS, TOKEN_LOGICAL_OR_EQUALS));
+
+  while (checkAdvanceAnyOf(TOKEN_EQUALS, TOKEN_ADD_EQUALS, TOKEN_MIN_EQUALS, TOKEN_MUL_EQUALS, TOKEN_DIV_EQUALS,
+                           TOKEN_AND_EQUALS, TOKEN_OR_EQUALS, TOKEN_LOGICAL_AND_EQUALS, TOKEN_LOGICAL_OR_EQUALS)) {
+    logger.debug("In while");
     Token op = previous();
     auto rhs = parseLogicAndBitOps();
     if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT, ast::AST_EXPR_MEMBER_ACCESS)) {
-      expr = ast::Assign::create(expr, rhs);
+      logger.debug("Parser::parseAssignment %s", Token::typeToString(op.type).c_str());
+      expr = ast::Assign::create(op, expr, rhs);
     } else {
       throw ParserException("Invalid LHS for assignment (" + ast::Node::typeToString(expr->type) + ")");
     }

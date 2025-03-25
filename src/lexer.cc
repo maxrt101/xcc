@@ -29,6 +29,14 @@ static PrefixTree<TokenType> s_token_patterns(TOKEN_EOF, {
     {";", TOKEN_SEMICOLON},
     {"->", TOKEN_RIGHT_ARROW},
     {"=", TOKEN_EQUALS},
+    {"+=", TOKEN_ADD_EQUALS},
+    {"-=", TOKEN_MIN_EQUALS},
+    {"*=", TOKEN_MUL_EQUALS},
+    {"/=", TOKEN_DIV_EQUALS},
+    {"&=", TOKEN_AND_EQUALS},
+    {"|=", TOKEN_OR_EQUALS},
+    {"&&=", TOKEN_LOGICAL_AND_EQUALS},
+    {"||=", TOKEN_LOGICAL_OR_EQUALS},
     {"+", TOKEN_PLUS},
     {"-", TOKEN_MINUS},
     {"/", TOKEN_SLASH},
@@ -79,6 +87,14 @@ std::string Token::typeToString(TokenType type) {
       {TOKEN_3_DOTS, "TOKEN_3_DOTS"},
       {TOKEN_SEMICOLON, "TOKEN_SEMICOLON"},
       {TOKEN_EQUALS, "TOKEN_EQUALS"},
+      {TOKEN_ADD_EQUALS, "TOKEN_ADD_EQUALS"},
+      {TOKEN_MIN_EQUALS, "TOKEN_MIN_EQUALS"},
+      {TOKEN_MUL_EQUALS, "TOKEN_MUL_EQUALS"},
+      {TOKEN_DIV_EQUALS, "TOKEN_DIV_EQUALS"},
+      {TOKEN_AND_EQUALS, "TOKEN_AND_EQUALS"},
+      {TOKEN_OR_EQUALS, "TOKEN_OR_EQUALS"},
+      {TOKEN_LOGICAL_AND_EQUALS, "TOKEN_LOGICAL_AND_EQUALS"},
+      {TOKEN_LOGICAL_OR_EQUALS, "TOKEN_LOGICAL_OR_EQUALS"},
       {TOKEN_PLUS, "TOKEN_PLUS"},
       {TOKEN_MINUS, "TOKEN_MINUS"},
       {TOKEN_SLASH, "TOKEN_SLASH"},
@@ -225,6 +241,12 @@ void Lexer::tokenizeNumber() {
 Lexer::Lexer(const std::string &text) : text(text) {}
 
 std::vector<Token> Lexer::tokenize() {
+  for (uint32_t i = 0; i < TOKEN_COUNT; ++i) {
+    printf("%02d %s\n", i, Token::typeToString((TokenType) i).c_str());
+  }
+
+  s_token_patterns.print();
+
   while (!isAtEnd()) {
     skipWhitespace();
 

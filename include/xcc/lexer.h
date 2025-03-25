@@ -44,6 +44,14 @@ enum TokenType {
 
   // Assignment Operators
   TOKEN_EQUALS,
+  TOKEN_ADD_EQUALS,
+  TOKEN_MIN_EQUALS,
+  TOKEN_MUL_EQUALS,
+  TOKEN_DIV_EQUALS,
+  TOKEN_AND_EQUALS,
+  TOKEN_OR_EQUALS,
+  TOKEN_LOGICAL_AND_EQUALS,
+  TOKEN_LOGICAL_OR_EQUALS,
 
   // Arithmetic Operators
   TOKEN_PLUS,
@@ -63,6 +71,8 @@ enum TokenType {
   TOKEN_AND,
   TOKEN_OR,
   TOKEN_NOT,
+
+  TOKEN_COUNT,
 };
 
 struct Token {
@@ -70,13 +80,25 @@ struct Token {
   std::string value;
   size_t line;
 
-  inline bool is(TokenType expected) const {
+  [[nodiscard]] inline bool is(TokenType expected) const {
     return type == expected;
   }
 
   template <typename... Types>
-  inline bool isAnyOf(Types... expected) const {
+  [[nodiscard]] inline bool isAnyOf(Types... expected) const {
     return ((this->type == expected) || ...);
+  }
+
+  [[nodiscard]] inline Token clone(TokenType type) const {
+    return {type, this->value, this->line};
+  }
+
+  [[nodiscard]] inline Token clone(const std::string& value) const {
+    return {this->type, value, this->line};
+  }
+
+  [[nodiscard]] inline Token clone(size_t line) const {
+    return {this->type, this->value, line};
   }
 
   static std::string typeToString(TokenType type);
