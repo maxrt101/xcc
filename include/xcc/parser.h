@@ -52,7 +52,7 @@ private:
 
   // Expressions
   std::shared_ptr<ast::Node> parseAssignment();
-  std::shared_ptr<ast::Node> parseLogic();
+  std::shared_ptr<ast::Node> parseLogicAndBitOps();
   std::shared_ptr<ast::Node> parseEquality();
   std::shared_ptr<ast::Node> parseComparison();
   std::shared_ptr<ast::Node> parseTerm();

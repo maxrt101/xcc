@@ -113,6 +113,22 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, std::vector<std
       }
       break;
 
+    case TOKEN_AND: {
+      return ctx.ir_builder->CreateLogicalAnd(lhs_val, rhs_val, "landtmp");
+    }
+
+    case TOKEN_OR: {
+      return ctx.ir_builder->CreateLogicalOr(lhs_val, rhs_val, "lortmp");
+    }
+
+    case TOKEN_AMP: {
+      return ctx.ir_builder->CreateAnd(lhs_val, rhs_val, "andtmp");
+    }
+
+    case TOKEN_VERTICAL_LINE: {
+      return ctx.ir_builder->CreateOr(lhs_val, rhs_val, "ortmp");
+    }
+
     default:
       break;
   }

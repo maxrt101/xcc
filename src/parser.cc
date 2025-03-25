@@ -316,11 +316,11 @@ std::shared_ptr<ast::Node> Parser::parseExpr() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseAssignment() {
-  auto expr = parseLogic();
+  auto expr = parseLogicAndBitOps();
 
-  while (checkAdvanceAnyOf(TokenType::TOKEN_EQUALS)) {
+  while (checkAdvanceAnyOf(TOKEN_EQUALS)) {
     Token op = previous();
-    auto rhs = parseLogic();
+    auto rhs = parseLogicAndBitOps();
     if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT, ast::AST_EXPR_MEMBER_ACCESS)) {
       expr = ast::Assign::create(expr, rhs);
     } else {
@@ -331,10 +331,10 @@ std::shared_ptr<ast::Node> Parser::parseAssignment() {
   return expr;
 }
 
-std::shared_ptr<ast::Node> Parser::parseLogic() {
+std::shared_ptr<ast::Node> Parser::parseLogicAndBitOps() {
   auto expr = parseEquality();
 
-  while (checkAdvanceAnyOf(TokenType::TOKEN_AND, TokenType::TOKEN_OR)) {
+  while (checkAdvanceAnyOf(TOKEN_AND, TOKEN_OR, TOKEN_AMP, TOKEN_VERTICAL_LINE)) {
     Token op = previous();
     auto rhs = parseEquality();
     expr = ast::Binary::create(op, expr, rhs);
@@ -346,7 +346,7 @@ std::shared_ptr<ast::Node> Parser::parseLogic() {
 std::shared_ptr<ast::Node> Parser::parseEquality() {
   auto expr = parseComparison();
 
-  while (checkAdvanceAnyOf(TokenType::TOKEN_EQUALS_EQUALS, TokenType::TOKEN_NOT_EQUALS)) {
+  while (checkAdvanceAnyOf(TOKEN_EQUALS_EQUALS, TOKEN_NOT_EQUALS)) {
     Token op = previous();
     auto rhs = parseComparison();
     expr = ast::Binary::create(op, expr, rhs);
@@ -358,8 +358,8 @@ std::shared_ptr<ast::Node> Parser::parseEquality() {
 std::shared_ptr<ast::Node> Parser::parseComparison() {
   auto expr = parseTerm();
 
-  while (checkAdvanceAnyOf(TokenType::TOKEN_GREATER, TokenType::TOKEN_GREATER_EQUALS,
-                               TokenType::TOKEN_LESS, TokenType::TOKEN_LESS_EQUALS)) {
+  while (checkAdvanceAnyOf(TOKEN_GREATER, TOKEN_GREATER_EQUALS,
+                               TOKEN_LESS, TOKEN_LESS_EQUALS)) {
     Token op = previous();
     auto rhs = parseTerm();
     expr = ast::Binary::create(op, expr, rhs);
@@ -371,7 +371,7 @@ std::shared_ptr<ast::Node> Parser::parseComparison() {
 std::shared_ptr<ast::Node> Parser::parseTerm() {
   auto expr = parseFactor();
 
-  while (checkAdvanceAnyOf(TokenType::TOKEN_MINUS, TokenType::TOKEN_PLUS)) {
+  while (checkAdvanceAnyOf(TOKEN_MINUS, TOKEN_PLUS)) {
     Token op = previous();
     auto rhs = parseFactor();
     expr = ast::Binary::create(op, expr, rhs);
@@ -384,7 +384,7 @@ std::shared_ptr<ast::Node> Parser::parseFactor() {
   auto expr = parseCast();
 
   // TODO: %
-  while (checkAdvanceAnyOf(TokenType::TOKEN_SLASH, TokenType::TOKEN_STAR)) {
+  while (checkAdvanceAnyOf(TOKEN_SLASH, TOKEN_STAR)) {
     Token op = previous();
     auto rhs = parseCast();
     expr = ast::Binary::create(op, expr, rhs);
@@ -396,7 +396,7 @@ std::shared_ptr<ast::Node> Parser::parseFactor() {
 std::shared_ptr<ast::Node> Parser::parseCast() {
   auto expr = parseUnary();
 
-  if (checkAdvance(TokenType::TOKEN_AS)) {
+  if (checkAdvance(TOKEN_AS)) {
     return ast::Cast::create(expr, parseType());
   }
 
@@ -404,8 +404,8 @@ std::shared_ptr<ast::Node> Parser::parseCast() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseUnary() {
-  if (checkAdvanceAnyOf(TokenType::TOKEN_NOT, TokenType::TOKEN_MINUS,
-                        TokenType::TOKEN_AMP, TokenType::TOKEN_STAR)) {
+  if (checkAdvanceAnyOf(TOKEN_NOT, TOKEN_MINUS,
+                        TOKEN_AMP, TOKEN_STAR)) {
     Token op = previous();
     return ast::Unary::create(op, parseSubscript());
   }
@@ -416,16 +416,13 @@ std::shared_ptr<ast::Node> Parser::parseUnary() {
 std::shared_ptr<ast::Node> Parser::parseSubscript() {
   auto lhs = parseRvalue();
 
-  if (checkAdvance(TokenType::TOKEN_LEFT_SQUARE_BRACE)) {
+  if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
     auto rhs = parseExpr();
-    assertThrow(checkAdvance(TokenType::TOKEN_RIGHT_SQUARE_BRACE), ParserException("Missing closing ']' after '[' in subscript operator"));
+    assertThrow(checkAdvance(TOKEN_RIGHT_SQUARE_BRACE), ParserException("Missing closing ']' after '[' in subscript operator"));
     return ast::Subscript::create(lhs, rhs);
-  } else if (checkAdvance(TokenType::TOKEN_DOT)) {
-    logger.debug("parseSubscriptAndMemberAccess: '.'");
+  } else if (checkAdvance(TOKEN_DOT)) {
     return ast::MemberAccess::createByValue(lhs, parseIdentifier("for member access"));
-  } else if (checkAdvance(TokenType::TOKEN_RIGHT_ARROW)) {
-    logger.debug("parseSubscriptAndMemberAccess: '->'");
-    logger.debug("%s '%s'", Token::typeToString(current().type).c_str(), current().value.c_str());
+  } else if (checkAdvance(TOKEN_RIGHT_ARROW)) {
     return ast::MemberAccess::createByPointer(lhs, parseIdentifier("for member access"));
   }
 
@@ -459,21 +456,21 @@ std::shared_ptr<ast::Node> Parser::parseNumber() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseRvalue() {
-  if (checkAdvance(TokenType::TOKEN_NUMBER)) {
+  if (checkAdvance(TOKEN_NUMBER)) {
     return parseNumber();
   }
 
-  if (checkAdvance(TokenType::TOKEN_STRING)) {
+  if (checkAdvance(TOKEN_STRING)) {
     return ast::String::create(previous().value);
   }
 
-  if (checkAdvance(TokenType::TOKEN_CHAR)) {
+  if (checkAdvance(TOKEN_CHAR)) {
     return ast::Number::createInteger(previous().value[0]);
   }
 
-  if (checkAdvance(TokenType::TOKEN_LEFT_PAREN)) {
+  if (checkAdvance(TOKEN_LEFT_PAREN)) {
     auto expr = parseExpr();
-    if (!checkAdvance(TokenType::TOKEN_RIGHT_PAREN)) {
+    if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
       throw ParserException(current().line, "Expected ')' after expression");
     }
     // TODO: ast::Group?
@@ -484,25 +481,22 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
-  if (current().type != TokenType::TOKEN_IDENTIFIER) {
+  if (current().type != TOKEN_IDENTIFIER) {
     throw ParserException(current().line, "Unexpected token '" + current().value + "'(" + Token::typeToString(current().type) + "), expected identifier");
   }
 
-  if (next().type == TokenType::TOKEN_DOT) {
+  if (next().type == TOKEN_DOT) {
     auto lhs = parseIdentifier("for member access");
     advance();
-    logger.debug("parseLvalueAndCall: '.'");
     return ast::MemberAccess::createByValue(lhs, parseIdentifier("for member access"));
-  } else if (next().type == TokenType::TOKEN_RIGHT_ARROW) {
+  } else if (next().type == TOKEN_RIGHT_ARROW) {
     auto lhs = parseIdentifier("for member access");
     advance();
-    logger.debug("parseLvalueAndCall: '->'");
-    logger.debug("%s '%s'", Token::typeToString(current().type).c_str(), current().value.c_str());
     return ast::MemberAccess::createByPointer(lhs, parseIdentifier("for member access"));
   }
 
   // TODO: Fix this, what about dot separated sequences?
-  if (next().type == TokenType::TOKEN_LEFT_PAREN) {
+  if (next().type == TOKEN_LEFT_PAREN) {
     return parseCall();
   }
 

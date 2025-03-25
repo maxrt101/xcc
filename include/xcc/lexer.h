@@ -51,6 +51,7 @@ enum TokenType {
   TOKEN_SLASH,
   TOKEN_STAR,
   TOKEN_AMP,
+  TOKEN_VERTICAL_LINE,
 
   // Comparison/Logic operators
   TOKEN_EQUALS_EQUALS,
