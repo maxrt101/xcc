@@ -7,7 +7,7 @@ using namespace xcc::BinaryOperationConditions;
 using namespace xcc::ast;
 using namespace xcc;
 
-BinaryOperations s_binops = {
+static const BinaryOperations s_binops = {
   XCC_BINOP(TOKEN_PLUS,           INTEGER,            ctx.ir_builder->CreateAdd(lhs, rhs, "addtmp")),
   XCC_BINOP(TOKEN_PLUS,           FLOAT,              ctx.ir_builder->CreateFAdd(lhs, rhs, "addftmp")),
   XCC_BINOP(TOKEN_MINUS,          INTEGER,            ctx.ir_builder->CreateSub(lhs, rhs, "subtmp")),
@@ -43,32 +43,42 @@ std::shared_ptr<Binary> Binary::create(Token operation, std::shared_ptr<Node> lh
 }
 
 llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
-  auto lhs_type = throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL"));
-  auto lhs_val = throwIfNull(lhs->generateValue(ctx, {}), CodegenException("LHS Value is NULL"));
-
-  auto rhs_type = throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
-  auto rhs_val = throwIfNull(rhs->generateValue(ctx, {}), CodegenException("RHS Value is NULL"));
-
-  auto common_type = meta::Type::alignTypes(lhs_type, rhs_type);
+  auto common_type = meta::Type::alignTypes(
+    throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL")),
+    throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"))
+  );
 
   // Pointer comparisons are actually converted to integer
   if (common_type->isPointer()) {
     common_type = meta::Type::createU64();
   }
 
-  lhs_val = codegen::castIfNotSame(ctx, lhs_val, common_type->getLLVMType(ctx));
-  rhs_val = codegen::castIfNotSame(ctx, rhs_val, common_type->getLLVMType(ctx));
+  auto lhs_val = castIfNotSame(
+    ctx,
+    throwIfNull(
+      lhs->generateValue(ctx, {}),
+      CodegenException("LHS Value is NULL")
+    ),
+    common_type->getLLVMType(ctx)
+  );
 
-  auto opmeta = BinaryOperationMeta::fromType(operation.type, common_type);
+  auto rhs_val = castIfNotSame(
+    ctx,
+    throwIfNull(
+      rhs->generateValue(ctx, {}),
+      CodegenException("RHS Value is NULL")
+    ),
+    common_type->getLLVMType(ctx)
+  );
 
-  if (auto binop = findBinaryOperation(s_binops, opmeta)) {
+  if (auto binop = findBinaryOperation(s_binops, BinaryOperationMeta::fromType(operation.type, common_type))) {
     return binop->handler(ctx, lhs_val, rhs_val);
   }
 
-  throw CodegenException(operation.line, "Unsupported binary expression operator or type (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + common_type->toString() + ")");
+  throw CodegenException(operation.line, "Unsupported binary expression operator or type (op=" + operation.toString() + " type=" + common_type->toString() + ")");
 }
 
-std::shared_ptr<xcc::meta::Type> Binary::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<meta::Type> Binary::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
   auto lhs_type = throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS type is NULL"));
   auto rhs_type = throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS type is NULL"));
 
