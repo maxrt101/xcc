@@ -10,22 +10,30 @@ static auto logger = xcc::util::log::Logger("AST");
 
 static std::string operator_str_from_token_type(TokenType type) {
   switch (type) {
-    case TokenType::TOKEN_PLUS:           return "+";
-    case TokenType::TOKEN_MINUS:          return "-";
-    case TokenType::TOKEN_SLASH:          return "/";
-    case TokenType::TOKEN_STAR:           return "*";
-    case TokenType::TOKEN_EQUALS:         return "=";
-    case TokenType::TOKEN_EQUALS_EQUALS:  return "==";
-    case TokenType::TOKEN_NOT_EQUALS:     return "!=";
-    case TokenType::TOKEN_LESS:           return "<";
-    case TokenType::TOKEN_GREATER:        return ">";
-    case TokenType::TOKEN_LESS_EQUALS:    return "<=";
-    case TokenType::TOKEN_GREATER_EQUALS: return ">=";
-    case TokenType::TOKEN_AND:            return "&&";
-    case TokenType::TOKEN_OR:             return "||";
-    case TokenType::TOKEN_NOT:            return "!";
-    case TokenType::TOKEN_AMP:            return "&";
-    default:                              return "<?>";
+    case TokenType::TOKEN_PLUS:               return "+";
+    case TokenType::TOKEN_MINUS:              return "-";
+    case TokenType::TOKEN_SLASH:              return "/";
+    case TokenType::TOKEN_STAR:               return "*";
+    case TokenType::TOKEN_EQUALS:             return "=";
+    case TokenType::TOKEN_ADD_EQUALS:         return "+=";
+    case TokenType::TOKEN_MIN_EQUALS:         return "-=";
+    case TokenType::TOKEN_MUL_EQUALS:         return "*=";
+    case TokenType::TOKEN_DIV_EQUALS:         return "/=";
+    case TokenType::TOKEN_AND_EQUALS:         return "&=";
+    case TokenType::TOKEN_OR_EQUALS:          return "|=";
+    case TokenType::TOKEN_LOGICAL_AND_EQUALS: return "&&=";
+    case TokenType::TOKEN_LOGICAL_OR_EQUALS:  return "||=";
+    case TokenType::TOKEN_EQUALS_EQUALS:      return "==";
+    case TokenType::TOKEN_NOT_EQUALS:         return "!=";
+    case TokenType::TOKEN_LESS:               return "<";
+    case TokenType::TOKEN_GREATER:            return ">";
+    case TokenType::TOKEN_LESS_EQUALS:        return "<=";
+    case TokenType::TOKEN_GREATER_EQUALS:     return ">=";
+    case TokenType::TOKEN_AND:                return "&&";
+    case TokenType::TOKEN_OR:                 return "||";
+    case TokenType::TOKEN_NOT:                return "!";
+    case TokenType::TOKEN_AMP:                return "&";
+    default:                                  return "<?>";
   }
 }
 
@@ -150,10 +158,10 @@ static void print_node(Node* node, Node* parent, int indent) {
     }
 
     case AST_EXPR_ASSIGN: {
-      auto assign_expr = node->as<Assign>();
-      print_node(assign_expr->lhs.get(), assign_expr, indent);
-      logger.print(" = ");
-      print_node(assign_expr->rhs.get(), assign_expr, indent);
+      auto assign = node->as<Assign>();
+      print_node(assign->lhs.get(), assign, indent);
+      logger.print(" %s ", operator_str_from_token_type(assign->kind.type).c_str());
+      print_node(assign->rhs.get(), assign, indent);
       break;
     }
 
