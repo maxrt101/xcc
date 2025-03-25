@@ -3,6 +3,12 @@
 
 using namespace xcc::BinaryOperationConditions;
 
+static const std::unordered_map<uint8_t, std::string> s_binop_cond_str_map = {
+  {INTEGER, "INTEGER"},
+  {FLOAT, "FLOAT"},
+  {SIGNED, "SIGNED"},
+  {UNSIGNED, "UNSIGNED"},
+};
 
 bool xcc::BinaryOperationMeta::check(const BinaryOperationMeta& rhs) const {
   if (op != rhs.op) {
@@ -28,16 +34,9 @@ std::string xcc::BinaryOperationMeta::toString() const {
     return "NONE";
   }
 
-  std::unordered_map<uint8_t, std::string> binop_cond_str_map = {
-    {INTEGER, "INTEGER"},
-    {FLOAT, "FLOAT"},
-    {SIGNED, "SIGNED"},
-    {UNSIGNED, "UNSIGNED"},
-  };
-
   std::vector<std::string> result;
 
-  for (auto & p : binop_cond_str_map) {
+  for (auto & p : s_binop_cond_str_map) {
     if (cond & p.first) {
       result.push_back(p.second);
     }
@@ -57,7 +56,7 @@ xcc::BinaryOperationMeta xcc::BinaryOperationMeta::fromType(TokenType op, std::s
   };
 }
 
-xcc::BinaryOperation * xcc::findBinaryOperation(BinaryOperations& binops, BinaryOperationMeta& meta) {
+const xcc::BinaryOperation * xcc::findBinaryOperation(const BinaryOperations& binops, const BinaryOperationMeta& meta) {
   for (size_t i = 0; i < binops.size(); ++i) {
     if (binops[i].meta.check(meta)) {
       return &binops[i];

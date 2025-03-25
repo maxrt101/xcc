@@ -106,6 +106,6 @@ using BinaryOperations = std::vector<BinaryOperation>;
  * @param meta    Binop metadata that acts as a 'key' to look by
  * @returns nullptr If not found
  */
-BinaryOperation * findBinaryOperation(BinaryOperations& binops, BinaryOperationMeta& meta);
+const BinaryOperation * findBinaryOperation(const BinaryOperations& binops, const BinaryOperationMeta& meta);
 
 }
