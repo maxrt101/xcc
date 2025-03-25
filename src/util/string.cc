@@ -11,6 +11,19 @@ std::vector<std::string> xcc::util::strsplit(const std::string& str, const std::
   return result;
 }
 
+std::string xcc::util::strjoin(const std::vector<std::string>& parts, const std::string& delimiter) {
+  std::string result;
+
+  for (size_t i = 0; i < parts.size(); ++i) {
+    result += parts[i];
+    if (i + 1 != parts.size()) {
+      result += delimiter;
+    }
+  }
+
+  return result;
+}
+
 void xcc::util::strreplace(std::string& str, const std::string& from, const std::string& to) {
   if (from.empty()) {
     return;
