@@ -1,8 +1,39 @@
 #include "xcc/ast/binary.h"
+#include "xcc/meta/binops.h"
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
 
+using namespace xcc::BinaryOperationConditions;
 using namespace xcc::ast;
+using namespace xcc;
+
+BinaryOperations s_binops = {
+  XCC_BINOP(TOKEN_PLUS,           INTEGER,            ctx.ir_builder->CreateAdd(lhs, rhs, "addtmp")),
+  XCC_BINOP(TOKEN_PLUS,           FLOAT,              ctx.ir_builder->CreateFAdd(lhs, rhs, "addftmp")),
+  XCC_BINOP(TOKEN_MINUS,          INTEGER,            ctx.ir_builder->CreateSub(lhs, rhs, "subtmp")),
+  XCC_BINOP(TOKEN_MINUS,          FLOAT,              ctx.ir_builder->CreateFSub(lhs, rhs, "subftmp")),
+  XCC_BINOP(TOKEN_STAR,           INTEGER,            ctx.ir_builder->CreateMul(lhs, rhs, "multmp")),
+  XCC_BINOP(TOKEN_STAR,           FLOAT,              ctx.ir_builder->CreateFMul(lhs, rhs, "mulftmp")),
+  XCC_BINOP(TOKEN_SLASH,          INTEGER | SIGNED,   ctx.ir_builder->CreateSDiv(lhs, rhs, "divstmp")),
+  XCC_BINOP(TOKEN_SLASH,          INTEGER | UNSIGNED, ctx.ir_builder->CreateUDiv(lhs, rhs, "divutmp")),
+  XCC_BINOP(TOKEN_SLASH,          FLOAT,              ctx.ir_builder->CreateFDiv(lhs, rhs, "divftmp")),
+  XCC_BINOP(TOKEN_EQUALS_EQUALS,  INTEGER,            ctx.ir_builder->CreateICmpEQ(lhs, rhs, "eqcmptmp")),
+  XCC_BINOP(TOKEN_EQUALS_EQUALS,  FLOAT,              ctx.ir_builder->CreateFCmpUEQ(lhs, rhs, "eqcmpftmp")),
+  XCC_BINOP(TOKEN_NOT_EQUALS,     INTEGER,            ctx.ir_builder->CreateICmpNE(lhs, rhs, "neqcmptmp")),
+  XCC_BINOP(TOKEN_NOT_EQUALS,     FLOAT,              ctx.ir_builder->CreateFCmpUNE(lhs, rhs, "neqcmpftmp")),
+  XCC_BINOP(TOKEN_GREATER_EQUALS, INTEGER,            ctx.ir_builder->CreateICmpUGE(lhs, rhs, "gecmptmp")),
+  XCC_BINOP(TOKEN_GREATER_EQUALS, FLOAT,              ctx.ir_builder->CreateFCmpUGE(lhs, rhs, "gecmpftmp")),
+  XCC_BINOP(TOKEN_GREATER,        INTEGER,            ctx.ir_builder->CreateICmpUGT(lhs, rhs, "gtcmptmp")),
+  XCC_BINOP(TOKEN_GREATER,        FLOAT,              ctx.ir_builder->CreateFCmpUGT(lhs, rhs, "gtcmpftmp")),
+  XCC_BINOP(TOKEN_LESS_EQUALS,    INTEGER,            ctx.ir_builder->CreateICmpULE(lhs, rhs, "lecmptmp")),
+  XCC_BINOP(TOKEN_LESS_EQUALS,    FLOAT,              ctx.ir_builder->CreateFCmpULE(lhs, rhs, "lecmpftmp")),
+  XCC_BINOP(TOKEN_LESS,           INTEGER,            ctx.ir_builder->CreateICmpULT(lhs, rhs, "ltcmptmp")),
+  XCC_BINOP(TOKEN_LESS,           FLOAT,              ctx.ir_builder->CreateFCmpULT(lhs, rhs, "ltcmpftmp")),
+  XCC_BINOP(TOKEN_AND,            NONE,               ctx.ir_builder->CreateLogicalAnd(lhs, rhs, "landtmp")),
+  XCC_BINOP(TOKEN_OR,             NONE,               ctx.ir_builder->CreateLogicalOr(lhs, rhs, "lortmp")),
+  XCC_BINOP(TOKEN_AMP,            NONE,               ctx.ir_builder->CreateAnd(lhs, rhs, "andtmp")),
+  XCC_BINOP(TOKEN_VERTICAL_LINE,  NONE,               ctx.ir_builder->CreateOr(lhs, rhs, "ortmp")),
+};
 
 Binary::Binary(Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
   : Node(AST_EXPR_BINARY), operation(std::move(operation)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
@@ -28,109 +59,10 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, std::vector<std
   lhs_val = codegen::castIfNotSame(ctx, lhs_val, common_type->getLLVMType(ctx));
   rhs_val = codegen::castIfNotSame(ctx, rhs_val, common_type->getLLVMType(ctx));
 
-  switch (operation.type) {
-    case TOKEN_PLUS:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateAdd(lhs_val, rhs_val, "addtmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFAdd(lhs_val, rhs_val, "addftmp");
-      }
-      break;
+  auto opmeta = BinaryOperationMeta::fromType(operation.type, common_type);
 
-    case TOKEN_MINUS:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateSub(lhs_val, rhs_val, "subtmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFSub(lhs_val, rhs_val, "subftmp");
-      }
-      break;
-
-    case TOKEN_STAR:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateMul(lhs_val, rhs_val, "multmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFMul(lhs_val, rhs_val, "mulftmp");
-      }
-      break;
-
-    case TOKEN_SLASH:
-      if (common_type->isInteger()) {
-        if (common_type->isSigned()) {
-          return ctx.ir_builder->CreateSDiv(lhs_val, rhs_val, "divstmp");
-        } else {
-          return ctx.ir_builder->CreateUDiv(lhs_val, rhs_val, "divutmp");
-        }
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFDiv(lhs_val, rhs_val, "divftmp");
-      }
-      break;
-
-    case TOKEN_EQUALS_EQUALS:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateICmpEQ(lhs_val, rhs_val, "cmptmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFCmpUEQ(lhs_val, rhs_val, "cmpftmp");
-      }
-      break;
-
-    case TOKEN_NOT_EQUALS:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateICmpNE(lhs_val, rhs_val, "cmptmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFCmpUNE(lhs_val, rhs_val, "cmpftmp");
-      }
-      break;
-
-    case TOKEN_GREATER_EQUALS:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateICmpUGE(lhs_val, rhs_val, "cmptmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFCmpUGE(lhs_val, rhs_val, "cmpftmp");
-      }
-      break;
-
-    case TOKEN_GREATER:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateICmpUGT(lhs_val, rhs_val, "cmptmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFCmpUGT(lhs_val, rhs_val, "cmpftmp");
-      }
-      break;
-
-    case TOKEN_LESS_EQUALS:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateICmpULE(lhs_val, rhs_val, "cmptmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFCmpULE(lhs_val, rhs_val, "cmpftmp");
-      }
-      break;
-
-    case TOKEN_LESS:
-      if (common_type->isInteger()) {
-        return ctx.ir_builder->CreateICmpULT(lhs_val, rhs_val, "cmptmp");
-      } else if (common_type->isFloat()) {
-        return ctx.ir_builder->CreateFCmpULT(lhs_val, rhs_val, "cmpftmp");
-      }
-      break;
-
-    case TOKEN_AND: {
-      return ctx.ir_builder->CreateLogicalAnd(lhs_val, rhs_val, "landtmp");
-    }
-
-    case TOKEN_OR: {
-      return ctx.ir_builder->CreateLogicalOr(lhs_val, rhs_val, "lortmp");
-    }
-
-    case TOKEN_AMP: {
-      return ctx.ir_builder->CreateAnd(lhs_val, rhs_val, "andtmp");
-    }
-
-    case TOKEN_VERTICAL_LINE: {
-      return ctx.ir_builder->CreateOr(lhs_val, rhs_val, "ortmp");
-    }
-
-    default:
-      break;
+  if (auto binop = findBinaryOperation(s_binops, opmeta)) {
+    return binop->handler(ctx, lhs_val, rhs_val);
   }
 
   throw CodegenException(operation.line, "Unsupported binary expression operator or type (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + common_type->toString() + ")");
