@@ -241,12 +241,6 @@ void Lexer::tokenizeNumber() {
 Lexer::Lexer(const std::string &text) : text(text) {}
 
 std::vector<Token> Lexer::tokenize() {
-  for (uint32_t i = 0; i < TOKEN_COUNT; ++i) {
-    printf("%02d %s\n", i, Token::typeToString((TokenType) i).c_str());
-  }
-
-  s_token_patterns.print();
-
   while (!isAtEnd()) {
     skipWhitespace();
 
