@@ -50,12 +50,16 @@ int main(int argc, char ** argv) {
     std::stringstream ss;
     ss << fs.rdbuf();
 
+#if USE_CATCH_EXCEPTIONS
     try {
+#endif
       xcc::run(globalContext, ss.str(), false);
+#if USE_CATCH_EXCEPTIONS
     } catch (std::exception& e) {
       logger.fatal("%s", e.what());
       return 1;
     }
+#endif
 
     return 0;
   }
@@ -97,11 +101,15 @@ int main(int argc, char ** argv) {
       continue;
     }
 
+#if USE_CATCH_EXCEPTIONS
     try {
+#endif
       xcc::run(globalContext, line, true);
+#if USE_CATCH_EXCEPTIONS
     } catch (std::exception& e) {
       logger.error("%s\n", e.what());
     }
+#endif
   }
 
   return 0;

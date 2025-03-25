@@ -33,8 +33,9 @@ project_add_src_recursive(${PROJECT_DIR}/src)
 
 add_compile_definitions(
         USE_OPTIMIZATION=0
+        USE_CATCH_EXCEPTIONS=0
         USE_PRINT_TOKENS=0
-        USE_PRINT_AST=0
+        USE_PRINT_AST=1
         USE_PRINT_LLVM_IR=1
         USE_PRINT_EXPR_RESULT=1
         USE_REPORT_SYMBOL_RESOLVER_SUCCESS=1
