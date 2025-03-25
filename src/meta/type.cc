@@ -109,6 +109,10 @@ bool Type::isSigned() const {
   return isAnyOf(TypeTag::I8, TypeTag::I16, TypeTag::I32, TypeTag::I64);
 }
 
+bool Type::isUnsigned() const {
+  return isAnyOf(TypeTag::U8, TypeTag::U16, TypeTag::U32, TypeTag::U64);
+}
+
 bool Type::isInteger() const {
   return isAnyOf(TypeTag::I8, TypeTag::I16, TypeTag::I32, TypeTag::I64,
                  TypeTag::U8, TypeTag::U16, TypeTag::U32, TypeTag::U64);

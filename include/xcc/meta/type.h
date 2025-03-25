@@ -55,6 +55,7 @@ public:
 
   [[nodiscard]] bool isVoid() const;
   [[nodiscard]] bool isSigned() const;
+  [[nodiscard]] bool isUnsigned() const;
   [[nodiscard]] bool isInteger() const;
   [[nodiscard]] bool isFloat() const;
   [[nodiscard]] bool isPointer() const;
