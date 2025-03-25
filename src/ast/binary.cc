@@ -20,6 +20,11 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, std::vector<std
 
   auto common_type = meta::Type::alignTypes(lhs_type, rhs_type);
 
+  // Pointer comparisons are actually converted to integer
+  if (common_type->isPointer()) {
+    common_type = meta::Type::createU64();
+  }
+
   lhs_val = codegen::castIfNotSame(ctx, lhs_val, common_type->getLLVMType(ctx));
   rhs_val = codegen::castIfNotSame(ctx, rhs_val, common_type->getLLVMType(ctx));
 
@@ -112,8 +117,7 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, std::vector<std
       break;
   }
 
-  // TODO: Make Type::tagToString()
-  throw CodegenException(operation.line, "Unsupported binary expression operator or type (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + std::to_string((int)common_type->getTag()) + ")");
+  throw CodegenException(operation.line, "Unsupported binary expression operator or type (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + common_type->toString() + ")");
 }
 
 std::shared_ptr<xcc::meta::Type> Binary::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
