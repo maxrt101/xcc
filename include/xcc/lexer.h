@@ -26,25 +26,33 @@ enum TokenType {
   TOKEN_RETURN,
   TOKEN_AS,
 
-  // Symbols/Tokens
+  // Braces/Parenthesis
   TOKEN_LEFT_BRACE,
   TOKEN_RIGHT_BRACE,
   TOKEN_LEFT_SQUARE_BRACE,
   TOKEN_RIGHT_SQUARE_BRACE,
   TOKEN_LEFT_PAREN,
   TOKEN_RIGHT_PAREN,
+
+  // Special Operators
   TOKEN_COMMA,
-  TOKEN_COLON,
   TOKEN_DOT,
   TOKEN_3_DOTS,
+  TOKEN_COLON,
   TOKEN_SEMICOLON,
+  TOKEN_RIGHT_ARROW,
+
+  // Assignment Operators
   TOKEN_EQUALS,
+
+  // Arithmetic Operators
   TOKEN_PLUS,
   TOKEN_MINUS,
   TOKEN_SLASH,
   TOKEN_STAR,
   TOKEN_AMP,
 
+  // Comparison/Logic operators
   TOKEN_EQUALS_EQUALS,
   TOKEN_NOT_EQUALS,
   TOKEN_LESS,

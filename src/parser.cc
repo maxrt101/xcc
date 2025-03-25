@@ -407,13 +407,13 @@ std::shared_ptr<ast::Node> Parser::parseUnary() {
   if (checkAdvanceAnyOf(TokenType::TOKEN_NOT, TokenType::TOKEN_MINUS,
                         TokenType::TOKEN_AMP, TokenType::TOKEN_STAR)) {
     Token op = previous();
-    return ast::Unary::create(op, parseSubscriptAndMemberAccess());
+    return ast::Unary::create(op, parseSubscript());
   }
 
-  return parseSubscriptAndMemberAccess();
+  return parseSubscript();
 }
 
-std::shared_ptr<ast::Node> Parser::parseSubscriptAndMemberAccess() {
+std::shared_ptr<ast::Node> Parser::parseSubscript() {
   auto lhs = parseRvalue();
 
   if (checkAdvance(TokenType::TOKEN_LEFT_SQUARE_BRACE)) {
@@ -421,7 +421,12 @@ std::shared_ptr<ast::Node> Parser::parseSubscriptAndMemberAccess() {
     assertThrow(checkAdvance(TokenType::TOKEN_RIGHT_SQUARE_BRACE), ParserException("Missing closing ']' after '[' in subscript operator"));
     return ast::Subscript::create(lhs, rhs);
   } else if (checkAdvance(TokenType::TOKEN_DOT)) {
-    return ast::MemberAccess::create(lhs, parseIdentifier("for member access"));
+    logger.debug("parseSubscriptAndMemberAccess: '.'");
+    return ast::MemberAccess::createByValue(lhs, parseIdentifier("for member access"));
+  } else if (checkAdvance(TokenType::TOKEN_RIGHT_ARROW)) {
+    logger.debug("parseSubscriptAndMemberAccess: '->'");
+    logger.debug("%s '%s'", Token::typeToString(current().type).c_str(), current().value.c_str());
+    return ast::MemberAccess::createByPointer(lhs, parseIdentifier("for member access"));
   }
 
   return lhs;
@@ -481,6 +486,19 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
 std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
   if (current().type != TokenType::TOKEN_IDENTIFIER) {
     throw ParserException(current().line, "Unexpected token '" + current().value + "'(" + Token::typeToString(current().type) + "), expected identifier");
+  }
+
+  if (next().type == TokenType::TOKEN_DOT) {
+    auto lhs = parseIdentifier("for member access");
+    advance();
+    logger.debug("parseLvalueAndCall: '.'");
+    return ast::MemberAccess::createByValue(lhs, parseIdentifier("for member access"));
+  } else if (next().type == TokenType::TOKEN_RIGHT_ARROW) {
+    auto lhs = parseIdentifier("for member access");
+    advance();
+    logger.debug("parseLvalueAndCall: '->'");
+    logger.debug("%s '%s'", Token::typeToString(current().type).c_str(), current().value.c_str());
+    return ast::MemberAccess::createByPointer(lhs, parseIdentifier("for member access"));
   }
 
   // TODO: Fix this, what about dot separated sequences?

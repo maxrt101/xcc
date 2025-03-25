@@ -60,7 +60,7 @@ private:
   std::shared_ptr<ast::Node> parseCast();
   std::shared_ptr<ast::Node> parseCall();
   std::shared_ptr<ast::Node> parseUnary();
-  std::shared_ptr<ast::Node> parseSubscriptAndMemberAccess();
+  std::shared_ptr<ast::Node> parseSubscript();
   std::shared_ptr<ast::Node> parseNumber();
   std::shared_ptr<ast::Node> parseRvalue();
   std::shared_ptr<ast::Node> parseLvalueAndCall();

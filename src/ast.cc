@@ -135,7 +135,7 @@ static void print_node(Node* node, Node* parent, int indent) {
     case AST_EXPR_MEMBER_ACCESS: {
       auto access = node->as<MemberAccess>();
       print_node(access->lhs.get(), access, indent);
-      logger.print(".");
+      logger.print(access->kind == MemberAccess::MEMBER_ACCESS_VALUE ? "." : "->");
       print_node(access->rhs.get(), access, indent);
       break;
     }

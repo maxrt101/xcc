@@ -24,7 +24,6 @@ llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, std::vector<std:
 
 llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
   auto rhs_type = throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
-  auto rhs_val = throwIfNull(rhs->generateValue(ctx, {}), CodegenException("RHS Value is NULL"));
 
   switch (operation.type) {
     case TOKEN_AMP: {
@@ -39,7 +38,7 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::
       if (!rhs_type->isPointer()) {
         throw CodegenException(operation.line, "Value is not a pointer (unary '*' operator)");
       }
-      return rhs_val;
+      return throwIfNull(rhs->generateValue(ctx, {}), CodegenException("RHS Value is NULL"));
     }
 
     default:
