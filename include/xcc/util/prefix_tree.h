@@ -50,14 +50,14 @@ public:
     }
   }
 
-  inline FindResult find(const std::string& prefix, size_t start_index = 0) {
+  inline FindResult find(const std::string& prefix, size_t start_index = 0) const {
     if (roots.find(prefix[start_index]) != roots.end()) {
-      if (roots[prefix[start_index]].children.empty()) {
-        return {roots[prefix[start_index]].value, 1};
+      if (roots.at(prefix[start_index]).children.empty()) {
+        return {roots.at(prefix[start_index]).value, 1};
       } else {
-        FindResult result = find(roots[prefix[start_index]], prefix, start_index + 1);
+        FindResult result = find(roots.at(prefix[start_index]), prefix, start_index + 1);
         if (result.value == null_value) {
-          return {roots[prefix[start_index]].value, 1};
+          return {roots.at(prefix[start_index]).value, 1};
         } else {
           return result;
         }
@@ -90,12 +90,12 @@ private:
     append(node.children[prefix[index]], prefix, index + 1, value);
   }
 
-  inline FindResult find(Node& node, const std::string& prefix, size_t index) {
+  inline FindResult find(const Node& node, const std::string& prefix, size_t index) const {
     if (node.children.empty()) {
       return {node.value, node.depth};
     } else {
       if (node.children.find(prefix[index]) != node.children.end()) {
-        return find(node.children[prefix[index]], prefix, index + 1);
+        return find(node.children.at(prefix[index]), prefix, index + 1);
       }
     }
 
