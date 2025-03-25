@@ -38,7 +38,7 @@ Run:
  - Conditional execution (`if` statement, works just like in C)  
  - Loops (only `for` is supported (syntax like in C), `while` is in the works)  
  - Type casts (to some extent, represented by `as` expression)  
- - User-defined types (`struct`)  
+ - User-defined types (`struct` & member access operator `.` + pointer member access `->`)  
  - JIT (which allows for REPL to exist)  
  - Runtime function resolution in the scope of running process using extern  
 
