@@ -45,6 +45,8 @@ public:
 
     if (prefix.size() > 1) {
       append(roots[prefix[0]], prefix, 1, value);
+    } else {
+      roots[prefix[0]].value = value;
     }
   }
 
@@ -80,6 +82,9 @@ private:
         node.children[prefix[index]].value = value;
         return;
       }
+    } else if (index == prefix.size()) {
+      node.children[prefix[index]].value = value;
+      return;
     }
 
     append(node.children[prefix[index]], prefix, index + 1, value);
