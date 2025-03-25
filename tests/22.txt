@@ -20,23 +20,19 @@ fn memcopy(dest: i8*, src: i8*, size: u32): u32 {
   return 0;
 }
 
-fn context_init(ctx: context_t*, str: i8*): u8 {
+fn context_init(ctx: context_t*, str: i8*): void {
   ctx->buf.size = strlen(str) + 1;
   ctx->buf.data = malloc(ctx->buf.size);
 
   memcopy(ctx->buf.data, str, ctx->buf.size);
 
   ctx->status = 1;
-
-  return 0;
 }
 
-fn context_deinit(ctx: context_t *): u8 {
+fn context_deinit(ctx: context_t *): void {
   if (ctx->buf.data != 0) {
     free(ctx->buf.data);
   }
-
-  return 0;
 }
 
 fn main(): i32 {

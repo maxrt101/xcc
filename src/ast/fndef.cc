@@ -40,8 +40,12 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, std::vecto
   auto last_val = body->generateValue(ctx, {});
 
   if (!body->body.back()->is(AST_RETURN)) {
-    last_val = codegen::castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx));
-    ctx.ir_builder->CreateRet(last_val);
+    if (meta_fn->returnType->isVoid()) {
+      ctx.ir_builder->CreateRetVoid();
+    } else {
+      last_val = codegen::castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx));
+      ctx.ir_builder->CreateRet(last_val);
+    }
   }
 
   ctx.globalContext.clearCurrentFunction();
