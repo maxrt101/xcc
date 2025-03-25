@@ -1,6 +1,5 @@
 #include "xcc/ast/struct.h"
 #include "xcc/codegen.h"
-#include "xcc/exceptions.h"
 
 using namespace xcc;
 using namespace xcc::ast;
@@ -28,7 +27,7 @@ std::shared_ptr<xcc::meta::Type> Struct::generateTypeForValueWithoutLoad(codegen
   meta::StructMembers members;
 
   for (auto & field : fields) {
-    members.push_back({field->name->value, field->generateType(ctx, {})});
+    members.emplace_back(field->name->value, field->generateType(ctx, {}));
   }
 
   auto type =  meta::Type::createStruct(members);
