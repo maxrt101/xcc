@@ -4,7 +4,7 @@ A strongly-typed compiled programming language with Rust/C inspired syntax.
 Uses LLVM as a backend because of its vast support of platforms, JIT, and other features.  
 XCC is a working name, it may be changed later.  
 CC - is taken from GCC (GNU Compiler Collection), while XCC is not a compiler collection,  
-it must certainly is a compiler. X - is just a cool letter that I like :)  
+it most certainly is a compiler. X - is just a cool letter that I like :)  
 
 ### How to run  
 Prerequisites:  
