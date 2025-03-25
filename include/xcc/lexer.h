@@ -101,6 +101,8 @@ struct Token {
     return {this->type, this->value, line};
   }
 
+  std::string toString() const;
+
   static std::string typeToString(TokenType type);
 };
 
