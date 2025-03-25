@@ -87,7 +87,7 @@ std::string Type::toString() const {
     case TypeTag::STRUCT: {
       std::string result = "struct {";
       for (size_t i = 0; i < members.size(); ++i) {
-        result += members[i].first.c_str();
+        result += members[i].first;
         result += ": ";
         result += members[i].second->toString();
         if (i + 1 != members.size()) {
