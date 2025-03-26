@@ -71,32 +71,6 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     common_type->getLLVMType(ctx)
   );
 
-#if 0
-
-  typedef llvm::Value* (*InstructionGenerator)(llvm::Value*, llvm::Value*, const llvm::Twine&, bool, bool);
-
-  selectMember<InstructionGenerator, decltype(ctx.ir_builder), ctx.ir_builder->CreateAdd>();
-  static_cast<InstructionGenerator>(ctx.ir_builder->CreateAdd);
-  auto x = &decltype(*ctx.ir_builder)::CreateAdd;
-#endif
-
-#if 0
-  auto f = &llvm::IRBuilder<>::CreateAdd;
-
-  auto f_res = ((*ctx.ir_builder).*f)(lhs_val, rhs_val, "test", false, false);
-
-  return f_res;
-#endif
-
-#if 0
-  using namespace std::placeholders;
-
-  auto y_bound = std::bind(y, ctx.ir_builder.get(), lhs_val, rhs_val, "test");
-  auto y_bound = std::bind(y, _1, _2, _3, _4);
-
-  y_bound(ctx.ir_builder.get(), lhs_val, rhs_val, "test");
-#endif
-
   if (auto binop = findBinaryOperation(s_binops, binop::Meta::fromType(operation.type, common_type))) {
     return binop->handler(ctx, lhs_val, rhs_val, binop->twine);
   }
