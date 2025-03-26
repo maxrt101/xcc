@@ -1,9 +1,56 @@
 #pragma once
 
 #include "xcc/meta/type.h"
+#include "xcc/exceptions.h"
+#include "xcc/codegen.h"
 #include "xcc/lexer.h"
+#include <llvm/IR/IRBuilder.h>
 #include <functional>
 #include <vector>
+
+/**
+ * Helper macro to expand value encased in `()`
+ *
+ * @warning Internal
+ */
+#define XCC_BINOP_EXPAND(...) __VA_ARGS__
+
+/**
+ * Base class name, for which instruction generators are members
+ *
+ * @warning Internal
+ */
+#define XCC_BINOP_HANDLER_BASE_CLASS llvm::IRBuilderBase
+
+/**
+ * Returns type of instruction generator
+ *
+ * @warning Internal
+ */
+#define XCC_BINOP_HANDLER_RETURN llvm::Value*
+
+/**
+ * Arguments of a base instruction generators
+ *
+ * @warning Internal
+ */
+#define XCC_BINOP_HANDLER_BASE_ARGS llvm::Value*, llvm::Value*, const llvm::Twine&
+
+/**
+ * Implementation of XCC_BINOP_HANDLER_TYPE
+ *
+ * @warning Internal
+ */
+#define XCC_BINOP_HANDLER_TYPE_IMPL(...) \
+  XCC_BINOP_HANDLER_RETURN (XCC_BINOP_HANDLER_BASE_CLASS::*)(XCC_BINOP_HANDLER_BASE_ARGS, ## __VA_ARGS__)
+
+/**
+ * Generate instruction generator function type, with __VA_ARGS__ being additional arguments
+ *
+ * @warning Internal
+ */
+#define XCC_BINOP_HANDLER_TYPE(...) \
+  XCC_BINOP_HANDLER_TYPE_IMPL(__VA_ARGS__)
 
 /**
  * Creates a BinaryOperation
@@ -11,32 +58,39 @@
  * Example:
  * @code{.c}
  *   BinaryOperations ops = {
- *     XCC_BINOP(TOKEN_PLUS, INTEGER, ctx.ir_builder->CreateAdd(lhs, rhs)),
- *     XCC_BINOP(TOKEN_PLUS, FLOAT,   ctx.ir_builder->CreateFAdd(lhs, rhs))
+ *     XCC_BINOP(TOKEN_PLUS, INTEGER, CreateAdd,  (bool, bool)),
+ *     XCC_BINOP(TOKEN_PLUS, FLOAT,   CreateFAdd, ())
  *   };
  * @endcode
  *
  * @param __op    Operation (operator) - TokenType
  * @param __cond  Bitmask of BinaryOperationConditions
- * @param ...     Code to generate llvm::Value * from lhs & rhs
+ * @param __fn    Function name to generate instruction from lhs & rhs. Must be
+ *                a member of XCC_BINOP_HANDLER_BASE_CLASS
+ * @param __twine Twine (temporary value name)
+ * @param ...     Additional arguments that the function __fn expects
+ *                (besides lhs, rhs & twine)
  */
-#define XCC_BINOP(__op, __cond, ...)                                          \
-  {                                                                           \
-    {__op, __cond},                                                           \
-    [](codegen::ModuleContext& ctx,                                           \
-       llvm::Value * lhs,                                                     \
-       llvm::Value * rhs                                                      \
-      ) -> llvm::Value * {                                                    \
-        return __VA_ARGS__;                                                   \
-      }                                                                       \
+#define XCC_BINOP(__op, __cond, __fn, __twine, ...)                                                           \
+  {                                                                                                           \
+    {__op, __cond},                                                                                           \
+    binop::Handler::create((XCC_BINOP_HANDLER_TYPE(XCC_BINOP_EXPAND __VA_ARGS__)) &llvm::IRBuilder<>::__fn),  \
+    __twine                                                                                                   \
   }
 
-namespace xcc {
+/**
+ * Default values to be passed to handlers for unaccounted additional arguments
+ *
+ * @warning Internal
+ */
+#define XCC_BINIP_VARGS_DEFAULT_VALUES 0, 0
+
+namespace xcc::binop {
 
 /**
  * Represents condition, a type must meet for handler to be called
  */
-namespace BinaryOperationConditions {
+namespace Conditions {
   constexpr uint8_t NONE        = 0;
   constexpr uint8_t INTEGER     = 1 << 0;
   constexpr uint8_t FLOAT       = 1 << 1;
@@ -47,7 +101,47 @@ namespace BinaryOperationConditions {
 /**
  * Handler for binary operation
  */
-using BinaryOperationHandler = std::function<llvm::Value*(codegen::ModuleContext&, llvm::Value *, llvm::Value *)>;
+struct Handler {
+  /**
+   * Base instruction generator type
+   *
+   * ... is appended to account for additional arguments
+   * This is a *very* sketchy workaround for sake of generic handlers
+   */
+  using Base = XCC_BINOP_HANDLER_TYPE(...);
+
+public:
+  Base handler;
+
+public:
+  /**
+   * Call underlying handler (instruction generator)
+   *
+   * @param ctx Module Context
+   * @param lhs LeftHandSide of binary operation
+   * @param rhs RightHandSide of binary operation
+   * @param twine Temporary result name
+   * @return Operation result
+   */
+  llvm::Value * operator()(
+    codegen::ModuleContext& ctx,
+    llvm::Value * lhs,
+    llvm::Value * rhs,
+    const std::string& twine
+  ) const;
+
+  /**
+   * Creates generic binary operation Handler from specific handler
+   *
+   * @tparam T Handler member function type
+   * @param handler Function
+   * @return New Handler instance
+   */
+  template <typename T>
+  static Handler create(T handler) {
+    return Handler {(Base) handler};
+  }
+};
 
 /**
  * Metadata of binary operation
@@ -55,7 +149,7 @@ using BinaryOperationHandler = std::function<llvm::Value*(codegen::ModuleContext
  * Needed to decide which handler to call, based on operator (op) & condition (cond)
  * Condition is a bitmask of BinaryOperationConditions
  */
-struct BinaryOperationMeta {
+struct Meta {
   TokenType op;
   uint8_t cond;
 
@@ -69,7 +163,7 @@ public:
    *
    * @param rhs BinaryOperationMeta to check condtion of
    */
-  bool check(const BinaryOperationMeta& rhs) const;
+  bool check(const Meta& rhs) const;
 
   /**
    * Creates a human-readable representation of BinaryOperationMeta
@@ -82,22 +176,23 @@ public:
    * @param op   Operator (represented by a token type)
    * @param type Type metadata, from which cond is fotmed
    */
-  static BinaryOperationMeta fromType(TokenType op, std::shared_ptr<meta::Type> type);
+  static Meta fromType(TokenType op, std::shared_ptr<meta::Type> type);
 
 };
 
 /**
- * Binary Operation - meta + handler
+ * Binary Operation - meta, handler & twine
  */
-struct BinaryOperation {
-  BinaryOperationMeta meta;
-  BinaryOperationHandler handler;
+struct Context {
+  Meta meta;
+  Handler handler;
+  std::string twine;
 };
 
 /**
  * Shortcut for a list of binary operations
  */
-using BinaryOperations = std::vector<BinaryOperation>;
+using List = std::vector<Context>;
 
 /**
  * Looks for binary operation in a list by meta
@@ -106,6 +201,6 @@ using BinaryOperations = std::vector<BinaryOperation>;
  * @param meta    Binop metadata that acts as a 'key' to look by
  * @returns nullptr If not found
  */
-const BinaryOperation * findBinaryOperation(const BinaryOperations& binops, const BinaryOperationMeta& meta);
+const Context * findBinaryOperation(const List& binops, const Meta& meta);
 
 }

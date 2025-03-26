@@ -3,36 +3,36 @@
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
 
-using namespace xcc::BinaryOperationConditions;
+using namespace xcc::binop::Conditions;
 using namespace xcc::ast;
 using namespace xcc;
 
-static const BinaryOperations s_binops = {
-  XCC_BINOP(TOKEN_PLUS,           INTEGER,            ctx.ir_builder->CreateAdd(lhs, rhs, "addtmp")),
-  XCC_BINOP(TOKEN_PLUS,           FLOAT,              ctx.ir_builder->CreateFAdd(lhs, rhs, "addftmp")),
-  XCC_BINOP(TOKEN_MINUS,          INTEGER,            ctx.ir_builder->CreateSub(lhs, rhs, "subtmp")),
-  XCC_BINOP(TOKEN_MINUS,          FLOAT,              ctx.ir_builder->CreateFSub(lhs, rhs, "subftmp")),
-  XCC_BINOP(TOKEN_STAR,           INTEGER,            ctx.ir_builder->CreateMul(lhs, rhs, "multmp")),
-  XCC_BINOP(TOKEN_STAR,           FLOAT,              ctx.ir_builder->CreateFMul(lhs, rhs, "mulftmp")),
-  XCC_BINOP(TOKEN_SLASH,          INTEGER | SIGNED,   ctx.ir_builder->CreateSDiv(lhs, rhs, "divstmp")),
-  XCC_BINOP(TOKEN_SLASH,          INTEGER | UNSIGNED, ctx.ir_builder->CreateUDiv(lhs, rhs, "divutmp")),
-  XCC_BINOP(TOKEN_SLASH,          FLOAT,              ctx.ir_builder->CreateFDiv(lhs, rhs, "divftmp")),
-  XCC_BINOP(TOKEN_EQUALS_EQUALS,  INTEGER,            ctx.ir_builder->CreateICmpEQ(lhs, rhs, "eqcmptmp")),
-  XCC_BINOP(TOKEN_EQUALS_EQUALS,  FLOAT,              ctx.ir_builder->CreateFCmpUEQ(lhs, rhs, "eqcmpftmp")),
-  XCC_BINOP(TOKEN_NOT_EQUALS,     INTEGER,            ctx.ir_builder->CreateICmpNE(lhs, rhs, "neqcmptmp")),
-  XCC_BINOP(TOKEN_NOT_EQUALS,     FLOAT,              ctx.ir_builder->CreateFCmpUNE(lhs, rhs, "neqcmpftmp")),
-  XCC_BINOP(TOKEN_GREATER_EQUALS, INTEGER,            ctx.ir_builder->CreateICmpUGE(lhs, rhs, "gecmptmp")),
-  XCC_BINOP(TOKEN_GREATER_EQUALS, FLOAT,              ctx.ir_builder->CreateFCmpUGE(lhs, rhs, "gecmpftmp")),
-  XCC_BINOP(TOKEN_GREATER,        INTEGER,            ctx.ir_builder->CreateICmpUGT(lhs, rhs, "gtcmptmp")),
-  XCC_BINOP(TOKEN_GREATER,        FLOAT,              ctx.ir_builder->CreateFCmpUGT(lhs, rhs, "gtcmpftmp")),
-  XCC_BINOP(TOKEN_LESS_EQUALS,    INTEGER,            ctx.ir_builder->CreateICmpULE(lhs, rhs, "lecmptmp")),
-  XCC_BINOP(TOKEN_LESS_EQUALS,    FLOAT,              ctx.ir_builder->CreateFCmpULE(lhs, rhs, "lecmpftmp")),
-  XCC_BINOP(TOKEN_LESS,           INTEGER,            ctx.ir_builder->CreateICmpULT(lhs, rhs, "ltcmptmp")),
-  XCC_BINOP(TOKEN_LESS,           FLOAT,              ctx.ir_builder->CreateFCmpULT(lhs, rhs, "ltcmpftmp")),
-  XCC_BINOP(TOKEN_AND,            NONE,               ctx.ir_builder->CreateLogicalAnd(lhs, rhs, "landtmp")),
-  XCC_BINOP(TOKEN_OR,             NONE,               ctx.ir_builder->CreateLogicalOr(lhs, rhs, "lortmp")),
-  XCC_BINOP(TOKEN_AMP,            NONE,               ctx.ir_builder->CreateAnd(lhs, rhs, "andtmp")),
-  XCC_BINOP(TOKEN_VERTICAL_LINE,  NONE,               ctx.ir_builder->CreateOr(lhs, rhs, "ortmp")),
+static const binop::List s_binops = {
+  XCC_BINOP(TOKEN_PLUS,           INTEGER,            CreateAdd,         "addtmp",      (bool, bool)      ),
+  XCC_BINOP(TOKEN_PLUS,           FLOAT,              CreateFAdd,        "addftmp",     ()                ),
+  XCC_BINOP(TOKEN_MINUS,          INTEGER,            CreateSub,         "subtmp",      (bool, bool)      ),
+  XCC_BINOP(TOKEN_MINUS,          FLOAT,              CreateFSub,        "subftmp",     (llvm::MDNode*)   ),
+  XCC_BINOP(TOKEN_STAR,           INTEGER,            CreateMul,         "multmp",      (bool, bool)      ),
+  XCC_BINOP(TOKEN_STAR,           FLOAT,              CreateFMul,        "mulftmp",     (llvm::MDNode*)   ),
+  XCC_BINOP(TOKEN_SLASH,          INTEGER | SIGNED,   CreateSDiv,        "divstmp",     (bool)            ),
+  XCC_BINOP(TOKEN_SLASH,          INTEGER | UNSIGNED, CreateUDiv,        "divutmp",     (bool)            ),
+  XCC_BINOP(TOKEN_SLASH,          FLOAT,              CreateFDiv,        "divftmp",     (llvm::MDNode*)   ),
+  XCC_BINOP(TOKEN_EQUALS_EQUALS,  INTEGER,            CreateICmpEQ,      "eqcmptmp",    ()                ),
+  XCC_BINOP(TOKEN_EQUALS_EQUALS,  FLOAT,              CreateFCmpUEQ,     "eqcmpftmp",   (llvm::MDNode *)  ),
+  XCC_BINOP(TOKEN_NOT_EQUALS,     INTEGER,            CreateICmpNE,      "neqcmptmp",   ()                ),
+  XCC_BINOP(TOKEN_NOT_EQUALS,     FLOAT,              CreateFCmpUNE,     "neqcmpftmp",  (llvm::MDNode *)  ),
+  XCC_BINOP(TOKEN_GREATER_EQUALS, INTEGER,            CreateICmpUGE,     "gecmptmp",    ()                ),
+  XCC_BINOP(TOKEN_GREATER_EQUALS, FLOAT,              CreateFCmpUGE,     "gecmpftmp",   (llvm::MDNode *)  ),
+  XCC_BINOP(TOKEN_GREATER,        INTEGER,            CreateICmpUGT,     "gtcmptmp",    ()                ),
+  XCC_BINOP(TOKEN_GREATER,        FLOAT,              CreateFCmpUGT,     "gtcmpftmp",   (llvm::MDNode *)  ),
+  XCC_BINOP(TOKEN_LESS_EQUALS,    INTEGER,            CreateICmpULE,     "lecmptmp",    ()                ),
+  XCC_BINOP(TOKEN_LESS_EQUALS,    FLOAT,              CreateFCmpULE,     "lecmpftmp",   (llvm::MDNode *)  ),
+  XCC_BINOP(TOKEN_LESS,           INTEGER,            CreateICmpULT,     "ltcmptmp",    ()                ),
+  XCC_BINOP(TOKEN_LESS,           FLOAT,              CreateFCmpULT,     "ltcmpftmp",   (llvm::MDNode *)  ),
+  XCC_BINOP(TOKEN_AND,            NONE,               CreateLogicalAnd,  "landtmp",     ()                ),
+  XCC_BINOP(TOKEN_OR,             NONE,               CreateLogicalOr,   "lortmp",      ()                ),
+  XCC_BINOP(TOKEN_AMP,            NONE,               CreateAnd,         "andtmp",      ()                ),
+  XCC_BINOP(TOKEN_VERTICAL_LINE,  NONE,               CreateOr,          "ortmp",       ()                ),
 };
 
 Binary::Binary(Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
@@ -71,8 +71,34 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     common_type->getLLVMType(ctx)
   );
 
-  if (auto binop = findBinaryOperation(s_binops, BinaryOperationMeta::fromType(operation.type, common_type))) {
-    return binop->handler(ctx, lhs_val, rhs_val);
+#if 0
+
+  typedef llvm::Value* (*InstructionGenerator)(llvm::Value*, llvm::Value*, const llvm::Twine&, bool, bool);
+
+  selectMember<InstructionGenerator, decltype(ctx.ir_builder), ctx.ir_builder->CreateAdd>();
+  static_cast<InstructionGenerator>(ctx.ir_builder->CreateAdd);
+  auto x = &decltype(*ctx.ir_builder)::CreateAdd;
+#endif
+
+#if 0
+  auto f = &llvm::IRBuilder<>::CreateAdd;
+
+  auto f_res = ((*ctx.ir_builder).*f)(lhs_val, rhs_val, "test", false, false);
+
+  return f_res;
+#endif
+
+#if 0
+  using namespace std::placeholders;
+
+  auto y_bound = std::bind(y, ctx.ir_builder.get(), lhs_val, rhs_val, "test");
+  auto y_bound = std::bind(y, _1, _2, _3, _4);
+
+  y_bound(ctx.ir_builder.get(), lhs_val, rhs_val, "test");
+#endif
+
+  if (auto binop = findBinaryOperation(s_binops, binop::Meta::fromType(operation.type, common_type))) {
+    return binop->handler(ctx, lhs_val, rhs_val, binop->twine);
   }
 
   throw CodegenException(operation.line, "Unsupported binary expression operator or type (op=" + operation.toString() + " type=" + common_type->toString() + ")");
