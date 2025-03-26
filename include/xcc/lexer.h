@@ -125,7 +125,7 @@ struct Token {
   /**
    * Returns string representation of a token
    */
-  std::string toString() const;
+  [[nodiscard]] std::string toString() const;
 
   /**
    * Converts token type to string
