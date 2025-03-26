@@ -28,11 +28,11 @@ std::shared_ptr<Number> Number::createFloating(double value) {
   return number;
 }
 
-llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   return generateValueWithoutLoad(ctx, payload);
 }
 
-llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   int bits = 64;
 
   if (auto p = selectPayloadFirst(payload)) {
@@ -53,11 +53,11 @@ llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, std:
   throw CodegenException("Invalid number literal");
 }
 
-std::shared_ptr<xcc::meta::Type> Number::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> Number::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   return generateTypeForValueWithoutLoad(ctx, std::move(payload));
 }
 
-std::shared_ptr<xcc::meta::Type> Number::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> Number::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   int bits = 64;
 
   if (auto p = selectPayloadFirst(payload)) {

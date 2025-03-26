@@ -13,8 +13,8 @@ Node::Payload::Payload(NodeType type) : type(type) {}
 
 Node::Node(NodeType type) : type(type) {}
 
-std::vector<std::shared_ptr<Node::Payload>> Node::selectPayload(const std::vector<std::shared_ptr<Node::Payload>>& payload) {
-  std::vector<std::shared_ptr<Node::Payload>> result;
+Node::PayloadList Node::selectPayload(const PayloadList& payload) {
+  PayloadList result;
 
   for (const auto& element : payload) {
     if (element->type == type) {
@@ -25,7 +25,7 @@ std::vector<std::shared_ptr<Node::Payload>> Node::selectPayload(const std::vecto
   return result;
 }
 
-std::shared_ptr<Node::Payload> Node::selectPayloadFirst(const std::vector<std::shared_ptr<Node::Payload>>& payload) {
+std::shared_ptr<Node::Payload> Node::selectPayloadFirst(const PayloadList& payload) {
   for (const auto& element : payload) {
     if (element->type == type) {
       return element;
@@ -35,26 +35,27 @@ std::shared_ptr<Node::Payload> Node::selectPayloadFirst(const std::vector<std::s
   return {};
 }
 
-llvm::Value * Node::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
-  logger.warn("Warning: Default Node::generateValue is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
-  return nullptr;
-}
 
-llvm::Value * Node::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
-  return generateValue(ctx, std::move(payload));
-}
-
-llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   logger.warn("Warning: Default Node::generateFunction is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
-std::shared_ptr<meta::Type> Node::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * Node::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  logger.warn("Warning: Default Node::generateValue is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
+  return nullptr;
+}
+
+llvm::Value * Node::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
+  return generateValue(ctx, std::move(payload));
+}
+
+std::shared_ptr<meta::Type> Node::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   logger.warn("Warning: Default Node::generateType is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
-std::shared_ptr<meta::Type> Node::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<meta::Type> Node::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   return generateType(ctx, std::move(payload));
 }
 

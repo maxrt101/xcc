@@ -12,7 +12,7 @@ std::shared_ptr<FnDef> FnDef::create(std::shared_ptr<FnDecl> decl, std::shared_p
   return std::make_shared<FnDef>(std::move(decl), std::move(body));
 }
 
-llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   decl->generateFunction(ctx, {});
 
   auto meta_fn = ctx.globalContext.getMetaFunction(decl->name->value);

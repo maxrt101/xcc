@@ -11,7 +11,7 @@ std::shared_ptr<Unary> Unary::create(Token operation, std::shared_ptr<Node> rhs)
   return std::make_shared<Unary>(std::move(operation), std::move(rhs));
 }
 
-llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   switch (operation.type) {
     case TOKEN_STAR: {
       return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx, {})->getLLVMType(ctx), generateValueWithoutLoad(ctx, {}), "dereferenced");
@@ -22,7 +22,7 @@ llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, std::vector<std:
   }
 }
 
-llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   auto rhs_type = throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
 
   switch (operation.type) {
@@ -48,10 +48,10 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::
   throw CodegenException(operation.line, "Unsupported unary expression operator/type or can't generate without load (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + std::to_string((int)rhs_type->getTag()) + ")");
 }
 
-std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   return throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
 }
 
-std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   return throwIfNull(rhs->generateType(ctx, {})->getPointedType(), CodegenException("RHS Type is NULL"));
 }

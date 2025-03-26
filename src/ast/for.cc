@@ -11,7 +11,7 @@ std::shared_ptr<For> For::create(std::shared_ptr<VarDecl> init, std::shared_ptr<
   return std::make_shared<For>(std::move(init), std::move(cond), std::move(step), std::move(body));
 }
 
-llvm::Value * For::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
   auto var = meta::TypedValue::create(ctx, fn, init->generateType(ctx, {}), init->name->value);

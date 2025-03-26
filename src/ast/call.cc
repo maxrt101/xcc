@@ -11,7 +11,7 @@ std::shared_ptr<Call> Call::create(std::shared_ptr<Node> name, std::vector<std::
   return std::make_shared<Call>(std::move(name), std::move(args));
 }
 
-llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   std::string fn_name;
 
   switch (name->type) {
@@ -53,7 +53,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, std::vector<std::
   return ctx.ir_builder->CreateCall(fn, arg_vals, "calltmp");
 }
 
-std::shared_ptr<xcc::meta::Type> Call::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> Call::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
     std::string fn_name;
 
   switch (name->type) {

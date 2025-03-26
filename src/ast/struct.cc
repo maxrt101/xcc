@@ -19,11 +19,11 @@ std::shared_ptr<Struct> Struct::create(
 }
 
 
-std::shared_ptr<xcc::meta::Type> Struct::generateType(codegen::ModuleContext &ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> Struct::generateType(codegen::ModuleContext &ctx, PayloadList payload) {
   return generateTypeForValueWithoutLoad(ctx, payload);
 }
 
-std::shared_ptr<xcc::meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   meta::StructMembers members;
 
   for (auto & field : fields) {

@@ -9,7 +9,7 @@ std::shared_ptr<String> String::create(std::string value) {
   return std::make_shared<String>(std::move(value));
 }
 
-llvm::Value * String::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto hash = std::hash<std::string>{}(value);
   auto name = ".str." + std::to_string(hash);
 
@@ -36,10 +36,10 @@ llvm::Value * String::generateValue(codegen::ModuleContext& ctx, std::vector<std
   );
 }
 
-llvm::Value * String::generateValueWithoutLoad(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * String::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   return llvm::ConstantDataArray::getString(*ctx.globalContext.globalModule->llvm.ctx, value, true);
 }
 
-std::shared_ptr<xcc::meta::Type> String::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> String::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   return meta::Type::createPointer(meta::Type::createI8());
 }

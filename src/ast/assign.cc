@@ -25,7 +25,7 @@ std::shared_ptr<Assign> Assign::create(Token kind, std::shared_ptr<Node> lhs, st
   return std::make_shared<Assign>(std::move(kind), std::move(lhs), std::move(rhs));
 }
 
-llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   llvm::Value * value = nullptr;
 
   if (kind.type == TOKEN_EQUALS) {
@@ -48,7 +48,7 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, std::vector<std
   );
 }
 
-std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   if (lhs->is(ast::AST_EXPR_IDENTIFIER)) {
     auto name = ast::Node::cast<ast::Identifier>(lhs);
 

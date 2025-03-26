@@ -28,7 +28,7 @@ std::shared_ptr<FnDecl> FnDecl::create(
   return std::make_shared<FnDecl>(std::move(name), std::move(return_type), std::move(args), isExtern, isVariadic);
 }
 
-llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   std::string fn_name = name->value;
 
   OrderedMap<std::string, std::shared_ptr<xcc::meta::Type>> arg_meta_types;

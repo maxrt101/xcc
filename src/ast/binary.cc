@@ -42,7 +42,7 @@ std::shared_ptr<Binary> Binary::create(Token operation, std::shared_ptr<Node> lh
   return std::make_shared<Binary>(std::move(operation), std::move(lhs), std::move(rhs));
 }
 
-llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto common_type = meta::Type::alignTypes(
     throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL")),
     throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"))
@@ -78,7 +78,7 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, std::vector<std
   throw CodegenException(operation.line, "Unsupported binary expression operator or type (op=" + operation.toString() + " type=" + common_type->toString() + ")");
 }
 
-std::shared_ptr<meta::Type> Binary::generateType(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+std::shared_ptr<meta::Type> Binary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   auto lhs_type = throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS type is NULL"));
   auto rhs_type = throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS type is NULL"));
 

@@ -11,6 +11,6 @@ std::shared_ptr<While> While::create(std::shared_ptr<Node> condition, std::share
   return std::make_shared<While>(std::move(condition), std::move(body));
 }
 
-llvm::Value * While::generateValue(codegen::ModuleContext& ctx, std::vector<std::shared_ptr<Node::Payload>> payload) {
+llvm::Value * While::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   throw CodegenException("while loops are unsupported");
 }
