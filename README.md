@@ -116,7 +116,7 @@ When running XCC executable without argument - you will be dropped into the REPL
 REPL is a Read Eval Print Loop. You can type in statements and they will be executed.  
 REPL has some special commands, such as `/help`, `/quit` & `list`.  
 `/help` or `/h` - shows help message.  
-`/quit` or `/q` - exists the REPL.
-`/list` or `/l` - lists declared global functions.
+`/quit` or `/q` - exists the REPL.  
+`/list` or `/l` - lists declared global functions.  
 In REPL compiler behaves a bit differently, for example `;` is not required at the end  
 of the statement, otherwise everything else should work normally.  
