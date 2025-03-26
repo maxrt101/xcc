@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "xcc/parser.h"
 #include "xcc/util/log.h"
 #include "xcc/exceptions.h"
@@ -474,7 +472,6 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
     if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
       throw ParserException(current().line, "Expected ')' after expression");
     }
-    // TODO: ast::Group?
     return expr;
   }
 
@@ -496,7 +493,6 @@ std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
     return ast::MemberAccess::createByPointer(lhs, parseIdentifier("for member access"));
   }
 
-  // TODO: Fix this, what about dot separated sequences?
   if (next().type == TOKEN_LEFT_PAREN) {
     return parseCall();
   }
