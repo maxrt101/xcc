@@ -89,7 +89,7 @@ struct Token {
   /**
    * Returns true if token is of type `expected`
    */
-  [[nodiscard]] inline bool is(TokenType expected) const {
+  [[nodiscard]] bool is(TokenType expected) const {
     return type == expected;
   }
 
@@ -97,28 +97,28 @@ struct Token {
    * Returns true if token is of any type in `expected` list
    */
   template <typename... Types>
-  [[nodiscard]] inline bool isAnyOf(Types... expected) const {
+  [[nodiscard]] bool isAnyOf(Types... expected) const {
     return ((this->type == expected) || ...);
   }
 
   /**
    * Clones token (creates a new one) changing original type
    */
-  [[nodiscard]] inline Token clone(TokenType type) const {
+  [[nodiscard]] Token clone(TokenType type) const {
     return {type, this->value, this->line};
   }
 
   /**
    * Clones token (creates a new one) changing original value
    */
-  [[nodiscard]] inline Token clone(const std::string& value) const {
+  [[nodiscard]] Token clone(const std::string& value) const {
     return {this->type, value, this->line};
   }
 
   /**
    * Clones token (creates a new one) changing original line
    */
-  [[nodiscard]] inline Token clone(size_t line) const {
+  [[nodiscard]] Token clone(size_t line) const {
     return {this->type, this->value, line};
   }
 

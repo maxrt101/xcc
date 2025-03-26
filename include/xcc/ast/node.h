@@ -83,7 +83,7 @@ public:
      * @tparam T Class to convert generic payload into
      */
     template <typename T>
-    inline T * as() {
+    T * as() {
       return (T *)this;
     }
   };
@@ -113,7 +113,7 @@ public:
    * @tparam T Class to convert generic node into
    */
   template <typename T>
-  inline T* as() {
+  T* as() {
     return (T*)this;
   }
 
@@ -122,7 +122,7 @@ public:
    *
    * @param expected Node type to check against current node's type
    */
-  inline bool is(NodeType expected) const {
+  bool is(NodeType expected) const {
     return type == expected;
   }
 
@@ -132,7 +132,7 @@ public:
    * @param expected Node type list against current node's type
    */
   template <typename ...Types>
-  inline bool isAnyOf(Types... expected) const {
+  bool isAnyOf(Types... expected) const {
     return ((this->type == expected) || ...);
   }
 
@@ -153,7 +153,7 @@ public:
    * @param ptr Pointer to generic node
    */
   template <typename T>
-  static inline std::shared_ptr<T> cast(std::shared_ptr<Node>& ptr) {
+  static std::shared_ptr<T> cast(std::shared_ptr<Node>& ptr) {
     return std::dynamic_pointer_cast<T>(ptr);
   }
 
@@ -176,7 +176,7 @@ public:
    * @param ptr Pointer to node
    */
   template <typename T>
-  static inline std::shared_ptr<Node> cast(std::shared_ptr<T>& ptr) {
+  static std::shared_ptr<Node> cast(std::shared_ptr<T>& ptr) {
     return std::dynamic_pointer_cast<Node>(ptr);
   }
 

@@ -112,12 +112,12 @@ public:
    */
   llvm::Value * getDefault(codegen::ModuleContext& ctx) const;
 
-  inline bool is(TypeTag expected) const {
+  bool is(TypeTag expected) const {
     return tag == expected;
   }
 
   template <typename ...Types>
-  inline bool isAnyOf(Types... expected) const {
+  bool isAnyOf(Types... expected) const {
     return ((this->tag == expected) || ...);
   }
 

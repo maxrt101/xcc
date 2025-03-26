@@ -54,7 +54,7 @@ private:
    * Returns true if current token has any type in `expected` list
    */
   template<typename... Types>
-  inline bool checkAnyOf(Types... expected) {
+  bool checkAnyOf(Types... expected) {
     return current().isAnyOf(std::forward<Types>(expected)...);
   }
 
@@ -63,7 +63,7 @@ private:
    * If token type doesn't match - doesn't advance and return false
    */
   template<typename... Types>
-  inline bool checkAdvanceAnyOf(Types... expected) {
+  bool checkAdvanceAnyOf(Types... expected) {
     if (current().isAnyOf(std::forward<Types>(expected)...)) {
       advance();
       return true;

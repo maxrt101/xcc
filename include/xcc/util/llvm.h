@@ -95,7 +95,7 @@ inline bool compareTypes(llvm::Type * lhs, llvm::Type * rhs) {
  * @return Function return value
  */
 template<typename T>
-inline T call(llvm::orc::ExecutorSymbolDef& symbol) {
+T call(llvm::orc::ExecutorSymbolDef& symbol) {
   T (*sym)() = symbol.getAddress().toPtr<T (*)()>();
   return sym();
 }

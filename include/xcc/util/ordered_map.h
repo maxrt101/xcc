@@ -12,21 +12,21 @@ class OrderedMap {
   std::vector<K> order;
 
 public:
-  inline OrderedMap() = default;
-  virtual inline ~OrderedMap() = default;
+  OrderedMap() = default;
+  virtual ~OrderedMap() = default;
 
-  inline OrderedMap(const OrderedMap& rhs) {
+  OrderedMap(const OrderedMap& rhs) {
     data = rhs.data;
     order = rhs.order;
   }
 
-  inline OrderedMap(const std::initializer_list<std::pair<K, V>>& il) {
+  OrderedMap(const std::initializer_list<std::pair<K, V>>& il) {
     for (auto& item : il) {
       append(item.first, item.second);
     }
   }
 
-  inline V& operator [] (const K& key) {
+  V& operator [] (const K& key) {
     if (has(key)) {
       return data[key];
     }
@@ -35,7 +35,7 @@ public:
     return data[key];
   }
 
-  inline const V& operator [] (const K& key) const {
+  const V& operator [] (const K& key) const {
     if (has(key)) {
       return data.at(key);
     }
@@ -43,7 +43,7 @@ public:
     throw std::runtime_error("OrderedMap: key error");
   }
 
-  inline V& operator [] (const size_t index) {
+  V& operator [] (const size_t index) {
     if (index < order.size()) {
       return data[order[index]];
     }
@@ -51,7 +51,7 @@ public:
     throw std::runtime_error("OrderedMap: index error");
   }
 
-  inline const V& operator [] (const size_t index) const {
+  const V& operator [] (const size_t index) const {
     if (index < order.size()) {
       return data[order[index]];
     }
@@ -59,30 +59,30 @@ public:
     throw std::runtime_error("OrderedMap: index error");
   }
 
-  inline bool has(const K& key) const {
+  bool has(const K& key) const {
     return data.find(key) != data.end();
   }
 
-  inline bool empty() const {
+  bool empty() const {
     return order.empty();
   }
 
-  inline size_t size() const {
+  size_t size() const {
     return data.size();
   }
 
-  inline void append(const K& key, V value) {
+  void append(const K& key, V value) {
     (*this)[key] = value;
   }
 
-  inline void remove(const K& key) {
+  void remove(const K& key) {
     if (has(key)) {
       data.erase(key);
       order.erase(std::find(order.begin(), order.end(), key));
     }
   }
 
-  inline size_t get_order(const K& key) {
+  size_t get_order(const K& key) {
     if (has(key)) {
       return order.find(key) - order.begin();
     }
@@ -90,11 +90,11 @@ public:
     return -1U;
   }
 
-  inline std::vector<K>& keys() {
+  std::vector<K>& keys() {
     return order;
   }
 
-  inline std::vector<V> values() {
+  std::vector<V> values() {
     std::vector<V> result;
 
     for (auto& k : keys()) {
@@ -104,7 +104,7 @@ public:
     return result;
   }
 
-  inline K& front() {
+  K& front() {
     if (!order.empty()) {
       return data[order[0]];
     }
@@ -112,7 +112,7 @@ public:
     throw std::runtime_error("OrderedMap: empty");
   }
 
-  inline K& back() {
+  K& back() {
     if (!order.empty()) {
       return order[order.size()-1];
     }
@@ -120,7 +120,7 @@ public:
     throw std::runtime_error("OrderedMap: empty");
   }
 
-  inline const K& front() const {
+  const K& front() const {
     if (!order.empty()) {
       return order[0];
     }
@@ -128,7 +128,7 @@ public:
     throw std::runtime_error("OrderedMap: empty");
   }
 
-  inline const K& back() const {
+  const K& back() const {
     if (!order.empty()) {
       return order[order.size()-1];
     }
@@ -136,19 +136,19 @@ public:
     throw std::runtime_error("OrderedMap: empty");
   }
 
-  inline typename std::vector<K>::iterator begin() {
+  typename std::vector<K>::iterator begin() {
     return order.begin();
   }
 
-  inline typename std::vector<K>::iterator end() {
+  typename std::vector<K>::iterator end() {
     return order.end();
   }
 
-  inline typename std::vector<K>::const_iterator begin() const {
+  typename std::vector<K>::const_iterator begin() const {
     return order.begin();
   }
 
-  inline typename std::vector<K>::const_iterator end() const {
+  typename std::vector<K>::const_iterator end() const {
     return order.end();
   }
 };
