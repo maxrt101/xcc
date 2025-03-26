@@ -8,14 +8,14 @@ using namespace xcc::ast;
 using namespace xcc;
 
 static std::unordered_map<TokenType, TokenType> s_equal_to_op = {
-  {TOKEN_ADD_EQUALS, TOKEN_PLUS},
-  {TOKEN_MIN_EQUALS, TOKEN_MINUS},
-  {TOKEN_MUL_EQUALS, TOKEN_STAR},
-  {TOKEN_DIV_EQUALS, TOKEN_SLASH},
-  {TOKEN_AND_EQUALS, TOKEN_AMP},
-  {TOKEN_OR_EQUALS, TOKEN_VERTICAL_LINE},
-  {TOKEN_LOGICAL_AND_EQUALS, TOKEN_AND},
-  {TOKEN_LOGICAL_OR_EQUALS, TOKEN_OR},
+  {TOKEN_ADD_EQUALS,          TOKEN_PLUS},
+  {TOKEN_MIN_EQUALS,          TOKEN_MINUS},
+  {TOKEN_MUL_EQUALS,          TOKEN_STAR},
+  {TOKEN_DIV_EQUALS,          TOKEN_SLASH},
+  {TOKEN_AND_EQUALS,          TOKEN_AMP},
+  {TOKEN_OR_EQUALS,           TOKEN_VERTICAL_LINE},
+  {TOKEN_LOGICAL_AND_EQUALS,  TOKEN_AND},
+  {TOKEN_LOGICAL_OR_EQUALS,   TOKEN_OR},
 };
 
 Assign::Assign(Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
