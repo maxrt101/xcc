@@ -57,7 +57,7 @@
  *
  * Example:
  * @code{.c}
- *   BinaryOperations ops = {
+ *   binop::List ops = {
  *     XCC_BINOP(TOKEN_PLUS, INTEGER, CreateAdd,  (bool, bool)),
  *     XCC_BINOP(TOKEN_PLUS, FLOAT,   CreateFAdd, ())
  *   };
