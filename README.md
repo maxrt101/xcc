@@ -58,10 +58,16 @@ Here's a more complex program showing a bit more features:
 extern fn printf(fmt: i8*, ...): i32;
 extern fn malloc(size: u32): u8*;
 extern fn free(ptr: u8*): void;
+extern fn strlen(ptr: u8*): u32;
 
-struct test_type {
-  int_val: i32;
-  ptr_val: i8*;
+struct buffer_t {
+  data: i8*;
+  size: u32;
+}
+
+struct context_t {
+  status: u32;
+  buf: buffer_t;
 }
 
 fn memcopy(dest: i8*, src: i8*, size: u32): u32 {
@@ -71,18 +77,35 @@ fn memcopy(dest: i8*, src: i8*, size: u32): u32 {
   return 0;
 }
 
+fn context_init(ctx: context_t*, str: i8*): void {
+  ctx->buf.size = strlen(str) + 1;
+  ctx->buf.data = malloc(ctx->buf.size);
+
+  memcopy(ctx->buf.data, str, ctx->buf.size);
+
+  ctx->status = 1;
+}
+
+fn context_deinit(ctx: context_t *): void {
+  if (ctx->buf.data != 0) {
+    free(ctx->buf.data);
+  }
+}
+
 fn main(): i32 {
-  var s: i8* = "Hello, World!";
-  var t: test_type;
+  var s: context_t;
 
-  var tmp: i8* = malloc(14);
-  t.ptr_val = tmp;
+  s.status = 0;
 
-  memcopy(t.ptr_val, s, 16);
+  context_init(&s, "Hello, World!");
 
-  printf("%s\n", t.ptr_val);
+  if (s.status == 1) {
+    printf("%d %p '%s'\n", s.buf.size, s.buf.data, s.buf.data);
+  } else {
+    printf("Context is in an invalid state!\n");
+  }
 
-  free(t.ptr_val);
+  context_deinit(&s);
 
   return 0;
 }
