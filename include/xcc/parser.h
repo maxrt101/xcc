@@ -4,26 +4,64 @@
 
 namespace xcc {
 
+/**
+ * Parser context
+ *
+ * Parses token stream into an AST
+ */
 class Parser {
-  const std::vector<Token>& tokens;
-  size_t current_idx;
+  const std::vector<Token>& tokens; /** Token stream */
+  size_t current_idx;               /** Index into `tokens` */
 
 private:
+  /**
+   * Return true if current_idx is greater than tokens size
+   */
   bool isAtEnd() const;
 
+  /**
+   * 'Advance' by 1 token. Increments current_idx and return token at current_idx-1
+   */
   Token advance();
+
+  /**
+   * Returns previous token (at current_idx-1)
+   */
   Token previous();
+
+  /**
+   * Returns current token (at current_idx) without advancing
+   */
   Token current();
+
+  /**
+   * Returns current token (at current_idx+1) without advancing
+   */
   Token next();
 
+  /**
+   * Returns true if current token has type `expected`
+   */
   bool check(TokenType expected);
+
+  /**
+   * Returns true if current token has type `expected` and calls advance()
+   * If token type doesn't match - doesn't advance and return false
+   */
   bool checkAdvance(TokenType expected);
 
+  /**
+   * Returns true if current token has any type in `expected` list
+   */
   template<typename... Types>
   inline bool checkAnyOf(Types... expected) {
     return current().isAnyOf(std::forward<Types>(expected)...);
   }
 
+  /**
+   * Returns true if current token has any type in `expected` list and calls advance()
+   * If token type doesn't match - doesn't advance and return false
+   */
   template<typename... Types>
   inline bool checkAdvanceAnyOf(Types... expected) {
     if (current().isAnyOf(std::forward<Types>(expected)...)) {
@@ -34,10 +72,12 @@ private:
     return false;
   }
 
+  // Helper
   std::shared_ptr<ast::Identifier> parseIdentifier(const std::string& ex_msg);
   std::shared_ptr<ast::Type> parseType();
   std::shared_ptr<ast::TypedIdentifier> parseValueDecl();
 
+  // Statements
   std::shared_ptr<ast::Node> parseFunction();
   std::shared_ptr<ast::Block> parseBlock();
   std::shared_ptr<ast::Node> parseVar(bool global);
@@ -47,6 +87,7 @@ private:
   std::shared_ptr<ast::Node> parseWhile();
   std::shared_ptr<ast::Node> parseReturn();
 
+  // Generic
   std::shared_ptr<ast::Node> parseStmt();
   std::shared_ptr<ast::Node> parseExpr();
 
@@ -65,10 +106,14 @@ private:
   std::shared_ptr<ast::Node> parseRvalue();
   std::shared_ptr<ast::Node> parseLvalueAndCall();
 
-
 public:
   explicit Parser(const std::vector<Token>& tokens);
 
+  /**
+   * Performs parsing
+   *
+   * @param isRepl true if run in REPL mode
+   */
   std::shared_ptr<ast::Block> parse(bool isRepl);
 };
 

@@ -25,8 +25,15 @@
 
 namespace xcc::ast {
 
+/**
+ * Pretty print an AST
+ */
 void printAst(std::shared_ptr<Node> root);
 
+/**
+ * Return true if `node` is of `type` type,
+ * or if `node` is a block - if last node in block is of `type` type
+ */
 bool isOrIsLastInBlock(std::shared_ptr<Node> node, NodeType type);
 
 }

@@ -5,6 +5,9 @@
 
 namespace xcc::meta {
 
+/**
+ * Value - Type pair
+ */
 class TypedValue {
 public:
   std::shared_ptr<xcc::meta::Type> type;

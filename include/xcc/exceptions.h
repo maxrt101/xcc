@@ -8,6 +8,9 @@
 
 namespace xcc {
 
+/**
+ * User by Lexer to signal an error
+ */
 class LexerException : public std::exception {
   std::string msg;
 
@@ -23,6 +26,9 @@ public:
   }
 };
 
+/**
+ * User by Parser to signal an error
+ */
 class ParserException : public std::exception {
   std::string msg;
 
@@ -38,6 +44,9 @@ public:
   }
 };
 
+/**
+ * User by Node::generate* to signal an error
+ */
 class CodegenException : public std::exception {
   std::string msg;
 
@@ -65,6 +74,13 @@ public:
   }
 };
 
+/**
+ * Helper function to throw a specific exception if expr is false
+ *
+ * @tparam E Exception type. Usually inferred by the compiler from `ex`
+ * @param expr true - OK, false - will throw
+ * @param ex Exception to throw if check fails
+ */
 template <typename E>
 inline void assertThrow(bool expr, const E& ex) {
   if (!expr) {
@@ -72,6 +88,15 @@ inline void assertThrow(bool expr, const E& ex) {
   }
 }
 
+/**
+ * Helper function to throw a specific exception if expr is NULL
+ *
+ * @tparam T Type of expr. Usually inferred by the compiler from `expr`
+ * @tparam E Exception type. Usually inferred by the compiler from `ex`
+ * @param expr Value to check for being NULL
+ * @param ex Exception to throw if check fails
+ * @return expr, if it's not NULL
+ */
 template <typename T, typename E>
 inline T throwIfNull(T expr, const E& ex) {
   if (!expr) {

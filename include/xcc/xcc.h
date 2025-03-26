@@ -20,10 +20,25 @@ inline std::string getVersion() {
        + std::to_string(XCC_VERSION_PATCH);
 }
 
+/**
+ * Initializes compiler & LLVM
+ *
+ * @param autoCleanup if true will set atexit callback with xcc::cleanup function
+ */
 void init(bool autoCleanup = true);
 
+/**
+ * Deinitializes compiler & LLVM
+ */
 void cleanup();
 
+/**
+ * 'Driver' function - will tokenize, parse, lower AST & compile the source code
+ *
+ * @param globalContext GlobalContext
+ * @param src String containing code
+ * @param isRepl True if run in REPL mode
+ */
 void run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl = false);
 
 }

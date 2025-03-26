@@ -18,6 +18,9 @@
 
 namespace xcc::codegen {
 
+/**
+ * Just In Time compilation context
+ */
 class JIT {
 private:
   std::unique_ptr<llvm::orc::ExecutionSession> session;
