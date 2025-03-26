@@ -2,11 +2,6 @@
 
 #include "xcc/ast/node.h"
 #include "xcc/lexer.h"
-#include "xcc/ast/type.h"
-#include "xcc/ast/identifier.h"
-
-#include <string>
-#include <vector>
 
 namespace xcc::ast {
 
