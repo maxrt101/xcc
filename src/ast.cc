@@ -8,13 +8,13 @@ using namespace xcc::ast;
 
 static auto logger = xcc::util::log::Logger("AST");
 
-static void print_indent(int indent) {
+static void printIndent(int indent) {
   for (int i = 0; i < indent; ++i) {
     logger.print(" ");
   }
 }
 
-static void print_node(Node* node, Node* parent, int indent) {
+static void printNode(Node* node, Node* parent, int indent) {
   if (!node) {
     return;
   }
@@ -42,10 +42,10 @@ static void print_node(Node* node, Node* parent, int indent) {
 
     case AST_EXPR_CALL: {
       auto call = node->as<Call>();
-      print_node(call->name.get(), parent, indent);
+      printNode(call->name.get(), parent, indent);
       logger.print("(");
       for (auto& arg : call->args) {
-        print_node(arg.get(), call, indent);
+        printNode(arg.get(), call, indent);
         if (arg != call->args.back()) {
           logger.print(", ");
         }
@@ -56,39 +56,39 @@ static void print_node(Node* node, Node* parent, int indent) {
 
     case AST_EXPR_CAST: {
       auto cast = node->as<Cast>();
-      print_node(cast->expr.get(), parent, indent);
+      printNode(cast->expr.get(), parent, indent);
       logger.print(" as ");
-      print_node(cast->type.get(), parent, indent);
+      printNode(cast->type.get(), parent, indent);
       break;
     }
 
     case AST_EXPR_BINARY: {
       auto cast = node->as<Binary>();
-      print_node(cast->lhs.get(), cast, indent);
+      printNode(cast->lhs.get(), cast, indent);
       logger.print(" %s ", cast->operation.toString().c_str());
-      print_node(cast->rhs.get(), cast, indent);
+      printNode(cast->rhs.get(), cast, indent);
       break;
     }
 
     case AST_EXPR_UNARY: {
       auto cast = node->as<Unary>();
       logger.print("%s", cast->operation.toString().c_str());
-      print_node(cast->rhs.get(), cast, indent);
+      printNode(cast->rhs.get(), cast, indent);
       break;
     }
 
     case AST_EXPR_SUBSCRIPT: {
       auto subscript = node->as<Subscript>();
-      print_node(subscript->lhs.get(), subscript, indent);
+      printNode(subscript->lhs.get(), subscript, indent);
       logger.print("[");
-      print_node(subscript->rhs.get(), subscript, indent);
+      printNode(subscript->rhs.get(), subscript, indent);
       logger.print("]");
       break;
     }
 
     case AST_EXPR_TYPE: {
       auto type = node->as<Type>();
-      print_node(type->name.get(), type, indent);
+      printNode(type->name.get(), type, indent);
       if (type->pointer) {
         logger.print("*");
       }
@@ -97,21 +97,21 @@ static void print_node(Node* node, Node* parent, int indent) {
 
     case AST_EXPR_TYPED_IDENTIFIER: {
       auto typed = node->as<TypedIdentifier>();
-      print_node(typed->name.get(), typed, indent);
+      printNode(typed->name.get(), typed, indent);
       logger.print(": ");
-      print_node(typed->value_type.get(), typed, indent);
+      printNode(typed->value_type.get(), typed, indent);
       if (typed->value) {
         logger.print(" = ");
-        print_node(typed->value.get(), typed, indent);
+        printNode(typed->value.get(), typed, indent);
       }
       break;
     }
 
     case AST_EXPR_MEMBER_ACCESS: {
       auto access = node->as<MemberAccess>();
-      print_node(access->lhs.get(), access, indent);
+      printNode(access->lhs.get(), access, indent);
       logger.print(access->kind == MemberAccess::MEMBER_ACCESS_VALUE ? "." : "->");
-      print_node(access->rhs.get(), access, indent);
+      printNode(access->rhs.get(), access, indent);
       break;
     }
 
@@ -119,31 +119,31 @@ static void print_node(Node* node, Node* parent, int indent) {
       auto return_stmt = node->as<Return>();
       logger.print("return ");
       if (return_stmt->value) {
-        print_node(return_stmt->value.get(), return_stmt, indent);
+        printNode(return_stmt->value.get(), return_stmt, indent);
       }
       break;
     }
 
     case AST_EXPR_ASSIGN: {
       auto assign = node->as<Assign>();
-      print_node(assign->lhs.get(), assign, indent);
+      printNode(assign->lhs.get(), assign, indent);
       logger.print(" %s ", assign->kind.toString().c_str());
-      print_node(assign->rhs.get(), assign, indent);
+      printNode(assign->rhs.get(), assign, indent);
       break;
     }
 
     case AST_BLOCK: {
       auto block = node->as<Block>();
-      // print_indent(indent);
+      // printIndent(indent);
       logger.print(" {\n");
       for (auto& stmt : block->body) {
-        print_indent(indent + 2);
-        print_node(stmt.get(), block, indent + 2);
+        printIndent(indent + 2);
+        printNode(stmt.get(), block, indent + 2);
         if (!stmt->isAnyOf(AST_BLOCK, AST_FUNCTION_DECL, AST_FUNCTION_DEF, AST_IF, AST_FOR, AST_WHILE, AST_STRUCT)) {
           logger.print(";\n");
         }
       }
-      print_indent(indent);
+      printIndent(indent);
       logger.print("}");
       if (!parent->isAnyOf(AST_IF, AST_FOR, AST_WHILE)) {
         logger.print("\n");
@@ -154,12 +154,12 @@ static void print_node(Node* node, Node* parent, int indent) {
     case AST_VAR_DECL: {
       auto vardecl = node->as<VarDecl>();
       logger.print("var ");
-      print_node(vardecl->name.get(), vardecl, indent);
+      printNode(vardecl->name.get(), vardecl, indent);
       logger.print(": ");
-      print_node(vardecl->type.get(), vardecl, indent);
+      printNode(vardecl->type.get(), vardecl, indent);
       if (vardecl->value) {
         logger.print(" = ");
-        print_node(vardecl->value.get(), vardecl, indent);
+        printNode(vardecl->value.get(), vardecl, indent);
       }
       break;
     }
@@ -167,10 +167,10 @@ static void print_node(Node* node, Node* parent, int indent) {
     case AST_FUNCTION_DECL: {
       auto fndecl = node->as<FnDecl>();
       logger.print("fn ");
-      print_node(fndecl->name.get(), fndecl, indent);
+      printNode(fndecl->name.get(), fndecl, indent);
       logger.print("(");
       for (auto& arg : fndecl->args) {
-        print_node(arg.get(), fndecl, indent);
+        printNode(arg.get(), fndecl, indent);
         if (arg != fndecl->args.back()) {
           logger.print(", ");
         }
@@ -179,7 +179,7 @@ static void print_node(Node* node, Node* parent, int indent) {
         logger.print(", ...");
       }
       logger.print("): ");
-      print_node(fndecl->return_type.get(), fndecl, indent);
+      printNode(fndecl->return_type.get(), fndecl, indent);
       if (!parent->is(AST_FUNCTION_DEF)) {
         logger.print(";\n");
       }
@@ -188,22 +188,22 @@ static void print_node(Node* node, Node* parent, int indent) {
 
     case AST_FUNCTION_DEF: {
       auto fndef = node->as<FnDef>();
-      print_node(fndef->decl.get(), fndef, indent);
-      print_node(fndef->body.get(), fndef, indent);
+      printNode(fndef->decl.get(), fndef, indent);
+      printNode(fndef->body.get(), fndef, indent);
       break;
     }
 
     case AST_STRUCT: {
       auto _struct = node->as<Struct>();
       logger.print("struct ");
-      print_node(_struct->name.get(), _struct, indent);
+      printNode(_struct->name.get(), _struct, indent);
       logger.print(" {\n");
       for (auto& field : _struct->fields) {
-        print_indent(indent + 2);
-        print_node(field.get(), _struct, indent + 2);
+        printIndent(indent + 2);
+        printNode(field.get(), _struct, indent + 2);
         logger.print(";\n");
       }
-      print_indent(indent);
+      printIndent(indent);
       logger.print("}\n");
       break;
     }
@@ -211,12 +211,12 @@ static void print_node(Node* node, Node* parent, int indent) {
     case AST_IF: {
       auto if_stmt = node->as<If>();
       logger.print("if (");
-      print_node(if_stmt->condition.get(), if_stmt, indent);
+      printNode(if_stmt->condition.get(), if_stmt, indent);
       logger.print(") ");
-      print_node(if_stmt->then_branch.get(), if_stmt, indent);
+      printNode(if_stmt->then_branch.get(), if_stmt, indent);
       if (if_stmt->else_branch) {
         logger.print(" else");
-        print_node(if_stmt->else_branch.get(), if_stmt, indent);
+        printNode(if_stmt->else_branch.get(), if_stmt, indent);
       }
       logger.print("\n");
       break;
@@ -225,13 +225,13 @@ static void print_node(Node* node, Node* parent, int indent) {
     case AST_FOR: {
       auto for_stmt = node->as<For>();
       logger.print("for (");
-      print_node(for_stmt->init.get(), for_stmt, indent);
+      printNode(for_stmt->init.get(), for_stmt, indent);
       logger.print("; ");
-      print_node(for_stmt->cond.get(), for_stmt, indent);
+      printNode(for_stmt->cond.get(), for_stmt, indent);
       logger.print("; ");
-      print_node(for_stmt->step.get(), for_stmt, indent);
+      printNode(for_stmt->step.get(), for_stmt, indent);
       logger.print(") ");
-      print_node(for_stmt->body.get(), for_stmt, indent);
+      printNode(for_stmt->body.get(), for_stmt, indent);
       logger.print("\n");
       break;
     }
@@ -239,9 +239,9 @@ static void print_node(Node* node, Node* parent, int indent) {
     case AST_WHILE: {
       auto while_stmt = node->as<While>();
       logger.print("while (");
-      print_node(while_stmt->condition.get(), while_stmt, indent);
+      printNode(while_stmt->condition.get(), while_stmt, indent);
       logger.print(") ");
-      print_node(while_stmt->body.get(), while_stmt, indent);
+      printNode(while_stmt->body.get(), while_stmt, indent);
       break;
     }
 
@@ -252,7 +252,7 @@ static void print_node(Node* node, Node* parent, int indent) {
 }
 
 void xcc::ast::printAst(std::shared_ptr<Node> root) {
-  print_node(root.get(), root.get(), 0);
+  printNode(root.get(), root.get(), 0);
 }
 
 bool xcc::ast::isOrIsLastInBlock(std::shared_ptr<Node> node, NodeType type) {
