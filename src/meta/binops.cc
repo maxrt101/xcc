@@ -4,9 +4,9 @@
 using namespace xcc::binop::Conditions;
 
 static const std::unordered_map<uint8_t, std::string> s_binop_cond_str_map = {
-  {INTEGER, "INTEGER"},
-  {FLOAT, "FLOAT"},
-  {SIGNED, "SIGNED"},
+  {INTEGER,  "INTEGER"},
+  {FLOAT,    "FLOAT"},
+  {SIGNED,   "SIGNED"},
   {UNSIGNED, "UNSIGNED"},
 };
 
@@ -16,7 +16,7 @@ llvm::Value * xcc::binop::Handler::operator()(
     llvm::Value * rhs,
     const std::string& twine
 ) const {
-  return ((*ctx.ir_builder).*handler)(lhs, rhs, twine, XCC_BINIP_VARGS_DEFAULT_VALUES);
+  return ((*ctx.ir_builder).*handler)(lhs, rhs, twine, XCC_BINOP_VARGS_DEFAULT_VALUES);
 }
 
 bool xcc::binop::Meta::check(const Meta& rhs) const {
@@ -57,9 +57,9 @@ std::string xcc::binop::Meta::toString() const {
 xcc::binop::Meta xcc::binop::Meta::fromType(TokenType op, std::shared_ptr<meta::Type> type) {
   return {op,
     (uint8_t) (
-      (type->isInteger() ? INTEGER : 0) |
-      (type->isFloat() ? FLOAT : 0) |
-      (type->isSigned() ? SIGNED : 0) |
+      (type->isInteger()  ? INTEGER  : 0) |
+      (type->isFloat()    ? FLOAT    : 0) |
+      (type->isSigned()   ? SIGNED   : 0) |
       (type->isUnsigned() ? UNSIGNED : 0)
     )
   };

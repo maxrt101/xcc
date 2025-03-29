@@ -5,7 +5,6 @@
 #include "xcc/codegen.h"
 #include "xcc/lexer.h"
 #include <llvm/IR/IRBuilder.h>
-#include <functional>
 #include <vector>
 
 /**
@@ -27,7 +26,7 @@
  *
  * @warning Internal
  */
-#define XCC_BINOP_HANDLER_RETURN llvm::Value*
+#define XCC_BINOP_HANDLER_RETURN llvm::Value *
 
 /**
  * Arguments of a base instruction generators
@@ -83,7 +82,7 @@
  *
  * @warning Internal
  */
-#define XCC_BINIP_VARGS_DEFAULT_VALUES 0, 0
+#define XCC_BINOP_VARGS_DEFAULT_VALUES 0, 0
 
 namespace xcc::binop {
 
@@ -159,9 +158,9 @@ public:
    *
    * Has a special way of determining if condition is met, e.g. INTEGER gets special treatment
    * because if binop doesn't specify neither SIGNED nor UNSIGNED check should pass regardless
-   * of sign in `rhs`
+   * of signess in `rhs`
    *
-   * @param rhs BinaryOperationMeta to check condtion of
+   * @param rhs BinaryOperationMeta to check condition of
    */
   bool check(const Meta& rhs) const;
 
@@ -174,7 +173,7 @@ public:
    * Creates BinaryOperationMeta from operator and meta::Type
    *
    * @param op   Operator (represented by a token type)
-   * @param type Type metadata, from which cond is fotmed
+   * @param type Type metadata, from which cond is formed
    */
   static Meta fromType(TokenType op, std::shared_ptr<meta::Type> type);
 
