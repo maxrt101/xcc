@@ -49,15 +49,15 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 }
 
 std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (lhs->is(ast::AST_EXPR_IDENTIFIER)) {
-    auto name = ast::Node::cast<ast::Identifier>(lhs);
+  if (lhs->is(AST_EXPR_IDENTIFIER)) {
+    auto name = Node::cast<Identifier>(lhs);
 
     if (ctx.hasLocal(name->value)) {
       return ctx.getLocalType(name->value);
     }
 
     throw CodegenException("Unknown variable '" + name->value + "'");
-  } else {
-    return lhs->generateTypeForValueWithoutLoad(ctx, {});
   }
+
+  return lhs->generateTypeForValueWithoutLoad(ctx, {});
 }

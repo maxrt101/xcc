@@ -59,7 +59,6 @@ std::shared_ptr<Node::Payload> Node::selectPayloadFirst(const PayloadList& paylo
   return {};
 }
 
-
 llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   logger.warn("Warning: Default Node::generateFunction is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
   return nullptr;
