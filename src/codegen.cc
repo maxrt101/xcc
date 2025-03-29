@@ -14,7 +14,7 @@ static auto logger = xcc::util::log::Logger("CODEGEN");
 GlobalContext::GlobalContext() {
   jit = JIT::create();
 
-  globalModule = std::make_shared<ModuleContext>(*this, "<global>");
+  globalModule = ModuleContext::create(*this, "<global>");
 }
 
 std::unique_ptr<GlobalContext> GlobalContext::create() {
@@ -70,6 +70,10 @@ std::shared_ptr<meta::Type> GlobalContext::getGlobalType(const std::string& name
 }
 
 void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
+  if (!globalModule->llvm.ctx || !globalModule->llvm.module) {
+    globalModule = ModuleContext::create(*this, "<global>");
+  }
+
   std::shared_ptr<ast::Block> body;
 
   if (expr->is(ast::AST_BLOCK)) {
