@@ -1,6 +1,11 @@
 #pragma once
 
-#include <llvm/IR/DerivedTypes.h>
+#include <llvm/IR/Value.h>
+#include <llvm/IR/Type.h>
+#include <unordered_map>
+#include <vector>
+#include <string>
+#include "xcc/ast/node.h"
 
 namespace xcc::codegen {
 class ModuleContext;
@@ -140,6 +145,8 @@ public:
   static std::shared_ptr<Type> createFloating(int bits);
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
   static std::shared_ptr<Type> createStruct(StructMembers members);
+
+  static std::shared_ptr<Type> inferFromNode(codegen::ModuleContext& ctx, std::shared_ptr<ast::Node> node);
 
   /**
    * Saves user-defined type to customTypes

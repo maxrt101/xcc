@@ -6,7 +6,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 # Configurable params
-TEST_COUNT="${TEST_COUNT:=24}"
+TEST_COUNT="${TEST_COUNT:=25}"
 STOP_ON_FAILURE="${STOP_ON_FAILURE:=0}"
 QUIET="${QUIET:=1}"
 

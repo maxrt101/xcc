@@ -340,6 +340,10 @@ std::shared_ptr<Type> Type::createStruct(StructMembers members) {
   return type;
 }
 
+std::shared_ptr<Type> Type::inferFromNode(codegen::ModuleContext& ctx, std::shared_ptr<ast::Node> node) {
+  return node->generateType(ctx, {});
+}
+
 void Type::registerCustomType(const std::string& name, std::shared_ptr<Type> type) {
   customTypes[name] = std::move(type);
 }

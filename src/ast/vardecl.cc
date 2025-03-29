@@ -1,6 +1,7 @@
 #include "xcc/ast/vardecl.h"
 #include "xcc/ast/number.h"
 #include "xcc/codegen.h"
+#include "xcc/exceptions.h"
 
 using namespace xcc::ast;
 
@@ -25,7 +26,10 @@ std::shared_ptr<VarDecl> VarDecl::create(
 }
 
 llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto meta_type = type->generateType(ctx, {});
+  // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
+  assertThrow(type || value, CodegenException("Value and type is missing from variable declaration"));
+
+  auto meta_type = type ? type->generateType(ctx, {}) : meta::Type::inferFromNode(ctx, value);
 
   if (global) {
     // FIXME: Check if can convert to constant
