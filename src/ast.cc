@@ -98,8 +98,10 @@ static void printNode(Node* node, Node* parent, int indent) {
     case AST_EXPR_TYPED_IDENTIFIER: {
       auto typed = node->as<TypedIdentifier>();
       printNode(typed->name.get(), typed, indent);
-      logger.print(": ");
-      printNode(typed->value_type.get(), typed, indent);
+      if (typed->value_type && typed->value_type->name) {
+        logger.print(": ");
+        printNode(typed->value_type.get(), typed, indent);
+      }
       if (typed->value) {
         logger.print(" = ");
         printNode(typed->value.get(), typed, indent);
@@ -155,8 +157,10 @@ static void printNode(Node* node, Node* parent, int indent) {
       auto vardecl = node->as<VarDecl>();
       logger.print("var ");
       printNode(vardecl->name.get(), vardecl, indent);
-      logger.print(": ");
-      printNode(vardecl->type.get(), vardecl, indent);
+      if (vardecl->type && vardecl->type->name) {
+        logger.print(": ");
+        printNode(vardecl->type.get(), vardecl, indent);
+      }
       if (vardecl->value) {
         logger.print(" = ");
         printNode(vardecl->value.get(), vardecl, indent);
