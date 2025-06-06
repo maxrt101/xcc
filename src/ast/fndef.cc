@@ -1,9 +1,13 @@
 #include "xcc/ast/fndef.h"
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
+#include "xcc/util/log.h"
 
 using namespace xcc;
 using namespace xcc::ast;
+
+static auto logger = xcc::util::log::Logger("FN",
+  XCC_LOG_DEFAULT_FLAGS | xcc::util::log::Flag::SPLIT_ON_NEWLINE);
 
 FnDef::FnDef(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body)
   : Node(AST_FUNCTION_DEF), decl(std::move(decl)), body(std::move(body)) {}
@@ -52,6 +56,12 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 
   util::RawStreamCollector collector;
   if (llvm::verifyFunction(*fn, collector.stream())) {
+#if USE_PRINT_LLVM_IR_ON_VERIFY_FAIL
+    util::RawStreamCollector fn_collector;
+    fn->print(*fn_collector.stream());
+    logger.debug("Function {} IR:", meta_fn->name);
+    logger.print("{}", fn_collector.string());
+#endif
     throw CodegenException("Function '" + decl->name->value + "' didn't pass validation\n" + collector.string());
   }
 
