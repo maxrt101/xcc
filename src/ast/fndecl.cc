@@ -44,7 +44,9 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
   auto return_meta_type = return_type->generateType(ctx, {});
 
   auto llvm_fn_type = llvm::FunctionType::get(return_meta_type->getLLVMType(ctx), meta::Function::typesFromMetaArgs(ctx, arg_meta_types), isVariadic);
-  auto llvm_fn = llvm::Function::Create(llvm_fn_type, isExtern ? llvm::Function::ExternalLinkage : llvm::Function::CommonLinkage, fn_name, ctx.llvm.module.get());
+  // auto llvm_fn = llvm::Function::Create(llvm_fn_type, isExtern ? llvm::Function::ExternalLinkage : llvm::Function::CommonLinkage, fn_name, ctx.llvm.module.get());
+  // TODO: LLVM Disallows CommonLinkage
+  auto llvm_fn = llvm::Function::Create(llvm_fn_type, llvm::Function::ExternalLinkage, fn_name, ctx.llvm.module.get());
 
   size_t arg_idx = 0;
   for (auto& arg : llvm_fn->args()) {
