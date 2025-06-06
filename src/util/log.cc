@@ -1,28 +1,16 @@
 #include "xcc/util/log.h"
-#include "xcc/util/string.h"
 #include "xcc/exceptions.h"
 #include <fstream>
 
-#define LOG_LINE_BUFFER_SIZE 256
-
-#define LOG_LEVEL_CASE(_name, _color)       \
-  case Level::_name:                        \
-    index += snprintf(buffer,               \
-                    sizeof(buffer) - index, \
-                    "[%s" #_name,           \
-                    Color::_color);         \
-    break
-
-#define LOG_OUTPUT_STRING(_level, _fmt, _out) \
-  va_list args;                               \
-  va_start(args, _fmt);                       \
-  output(_level, _fmt, args);                 \
-  va_end(args)
-
+#define LOG_LEVEL_CASE(__name, __color)           \
+  case Level::__name:                             \
+    log_level_string = #__name;                   \
+    log_level_color = Color::__color;             \
+    break;
 
 using namespace xcc::util;
 
-static std::unordered_map<std::string, log::Logger*> * loggers = NULL;
+static std::unordered_map<std::string, log::Logger*> * loggers = nullptr;
 
 std::shared_ptr<log::outputs::OutputStdout> log::outputs::OutputStdout::instance;
 
@@ -101,117 +89,41 @@ std::string log::Logger::getName() {
   return name;
 }
 
-void log::Logger::print(std::string fmt, ...) {
-  char buffer[LOG_LINE_BUFFER_SIZE];
+std::string log::Logger::createLogHeader(Level level) {
+  std::string log_level_string;
+  std::string log_level_color;
 
-  va_list args;
-  va_start(args, fmt);
-  vsnprintf(buffer, sizeof(buffer), fmt.c_str(), args);
-  va_end(args);
+  switch (level) {
+    LOG_LEVEL_CASE(FATAL, RED_RED);
+    LOG_LEVEL_CASE(ERROR, RED);
+    LOG_LEVEL_CASE(WARN, YELLOW);
+    LOG_LEVEL_CASE(INFO, CYAN);
+    LOG_LEVEL_CASE(DEBUG, BLUE);
 
-  std::vector<std::string> msg_parts;
-
-  if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
-    msg_parts = strsplit({buffer}, "\n");
-  } else {
-    msg_parts.emplace_back(buffer);
-  }
-
-  for (auto& msg : msg_parts) {
-    for (auto & out : outputs) {
-      out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? "\n" : ""));
-    }
-  }
-}
-
-void log::Logger::debug(std::string fmt, ...) {
-  LOG_OUTPUT_STRING(Level::DEBUG, fmt, msg);
-}
-
-void log::Logger::info(std::string fmt, ...) {
-  LOG_OUTPUT_STRING(Level::INFO, fmt, msg);
-}
-
-void log::Logger::warn(std::string fmt, ...) {
-  LOG_OUTPUT_STRING(Level::WARN, fmt, msg);
-}
-
-void log::Logger::error(std::string fmt, ...) {
-  LOG_OUTPUT_STRING(Level::ERROR, fmt, msg);
-}
-
-void log::Logger::fatal(std::string fmt, ...) {
-  LOG_OUTPUT_STRING(Level::FATAL, fmt, msg);
-}
-
-std::string log::Logger::createLogString(Level level, const std::string& fmt, va_list args) {
-  char buffer[LOG_LINE_BUFFER_SIZE];
-  size_t index = 0;
-
-  if (hasFlag(Flag::ENABLE_COLOR)) {
-    switch (level) {
-      LOG_LEVEL_CASE(FATAL, RED_RED);
-      LOG_LEVEL_CASE(ERROR, RED);
-      LOG_LEVEL_CASE(WARN, YELLOW);
-      LOG_LEVEL_CASE(INFO, CYAN);
-      LOG_LEVEL_CASE(DEBUG, BLUE);
-
-      case Level::NONE:
-        break;
-
-      default:
-        index += snprintf(buffer, sizeof(buffer) - index, "<?>");
+    case Level::NONE:
       break;
-    }
-  } else {
-    index += snprintf(buffer, sizeof(buffer) - index, "[");
-  }
 
-  if (level != Level::NONE) {
-    if (hasFlag(Flag::ENABLE_COLOR)) {
-      index += snprintf(buffer + index, sizeof(buffer) - index, "%s]", Color::RESET);
-    } else {
-      index += snprintf(buffer, sizeof(buffer) - index, "]");
-    }
+    default:
+      log_level_string = "<?>";
+      break;
   }
 
   if (hasFlag(Flag::ENABLE_COLOR)) {
-    index += snprintf(buffer + index, sizeof(buffer) - index, "[%s%s%s]: ", Color::MAGENTA, name.c_str(), Color::RESET);
+    if (level != Level::NONE) {
+      return std::format(
+        "[{}{}{}][{}{}{}]: ",
+            log_level_color, log_level_string, Color::RESET,
+            Color::MAGENTA, name, Color::RESET);
+    } else {
+      return std::format(
+        "[{}{}{}]: ",
+            Color::MAGENTA, name, Color::RESET);
+    }
   } else {
-    index += snprintf(buffer + index, sizeof(buffer) - index, "[%s]: ", name.c_str());
-  }
-
-  index += vsnprintf(buffer + index, sizeof(buffer) - index, fmt.c_str(), args);
-
-  if (level != Level::NONE) {
-    index += snprintf(buffer + index, sizeof(buffer) - index, "\n");
-  }
-
-  buffer[index] = '\0';
-
-  return {buffer};
-}
-
-void log::Logger::output(Level level, const std::string& fmt, va_list args) {
-  if (!isEnabled()) {
-    return;
-  }
-
-  // TODO: this->level < level check
-
-  auto log_string = createLogString(level, fmt, args);
-
-  std::vector<std::string> msg_parts;
-
-  if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
-    msg_parts = strsplit({log_string}, "\n");
-  } else {
-    msg_parts.emplace_back(log_string);
-  }
-
-  for (auto& msg : msg_parts) {
-    for (auto & out : outputs) {
-      out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? "\n" : ""));
+    if (level != Level::NONE) {
+      return std::format("[{}][{}]: ", log_level_string, name);
+    } else {
+      return std::format("[{}]: ", name);
     }
   }
 }

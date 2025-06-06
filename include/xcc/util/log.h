@@ -1,11 +1,14 @@
 #pragma once
 
 #include <cstdint>
-#include <cstdarg>
-#include <memory>
+// #include <cstdarg>
+// #include <memory>
 #include <string>
+#include <format>
 #include <vector>
 #include <unordered_map>
+#include "xcc/util/string.h"
+
 
 #ifndef XCC_LOG_DEFAULT_FLAGS
 #define XCC_LOG_DEFAULT_FLAGS Flag::ENABLE_COLOR
@@ -196,60 +199,91 @@ public:
    * Raw print without additional formatting
    *
    * @param fmt Format string
-   * @param ... vargs for fmt
+   * @param args vargs for fmt
    */
-  void print(std::string fmt, ...);
+  template <typename... Args>
+  void print(const std::format_string<Args...> fmt, Args&&... args) {
+    auto string = std::format(fmt, std::forward<Args>(args)...);
+
+    std::vector<std::string> msg_parts;
+
+    if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
+      msg_parts = strsplit(string, "\n");
+    } else {
+      msg_parts.push_back(string);
+    }
+
+    for (auto& msg : msg_parts) {
+      for (auto & out : outputs) {
+        out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? "\n" : ""));
+        // out->output(msg + "\n");
+      }
+    }
+  }
 
   /**
    * Prints with DEBUG log level
    *
    * @param fmt Format string
-   * @param ... vargs for fmt
+   * @param args vargs for fmt
    */
-  void debug(std::string fmt, ...);
+  template <typename... Args>
+  void debug(const std::format_string<Args...> fmt, Args&&... args) {
+    output(Level::DEBUG, fmt, std::forward<Args>(args)...);
+  }
 
   /**
    * Prints with INFO log level
    *
    * @param fmt Format string
-   * @param ... vargs for fmt
+   * @param args vargs for fmt
    */
-  void info(std::string fmt, ...);
+  template <typename... Args>
+  void info(const std::format_string<Args...> fmt, Args&&... args) {
+    output(Level::INFO, fmt, std::forward<Args>(args)...);
+  }
 
   /**
    * Prints with WARN log level
    *
    * @param fmt Format string
-   * @param ... vargs for fmt
+   * @param args vargs for fmt
    */
-  void warn(std::string fmt, ...);
+  template <typename... Args>
+  void warn(const std::format_string<Args...> fmt, Args&&... args) {
+    output(Level::WARN, fmt, std::forward<Args>(args)...);
+  }
 
   /**
    * Prints with ERROR log level
    *
    * @param fmt Format string
-   * @param ... vargs for fmt
+   * @param args vargs for fmt
    */
-  void error(std::string fmt, ...);
+  template <typename... Args>
+  void error(const std::format_string<Args...> fmt, Args&&... args) {
+    output(Level::ERROR, fmt, std::forward<Args>(args)...);
+  }
 
   /**
    * Prints with FATAL log level
    *
    * @param fmt Format string
-   * @param ... vargs for fmt
+   * @param args vargs for fmt
    */
-  void fatal(std::string fmt, ...);
+  template <typename... Args>
+  void fatal(const std::format_string<Args...> fmt, Args&&... args) {
+    output(Level::FATAL, fmt, std::forward<Args>(args)...);
+  }
 
 private:
   /**
-   * Generates log string with log level, logger name and fmt+vargs passed by the user
+   * Generates log header with log level & logger name
    *
    * @param level Log level
-   * @param fmt Format string
-   * @param args vargs for fmt
-   * @return Complete log string
+   * @return Log header (level + module)
    */
-  std::string createLogString(Level level, const std::string& fmt, va_list args);
+  std::string createLogHeader(Level level);
 
   /**
    * Puts log entry into every output configured
@@ -258,7 +292,31 @@ private:
    * @param fmt Format string
    * @param args vargs for fmt
    */
-  void output(Level level, const std::string& fmt, va_list args);
+  template <typename... Args>
+  void output(Level level, const std::format_string<Args...> fmt, Args&&... args) {
+    if (!isEnabled()) {
+      return;
+    }
+
+    // TODO: this->level < level check
+
+    auto header = createLogHeader(level);
+    auto log_string = std::format(fmt, std::forward<Args>(args)...);
+
+    std::vector<std::string> msg_parts;
+
+    if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
+      msg_parts = strsplit({log_string}, "\n");
+    } else {
+      msg_parts.push_back(log_string);
+    }
+
+    for (auto& msg : msg_parts) {
+      for (auto & out : outputs) {
+        out->output(header + msg + "\n");
+      }
+    }
+  }
 };
 
 /**
