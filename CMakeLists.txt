@@ -28,6 +28,10 @@ set(CMAKE_CXX_FLAGS "-I ${PROJECT_DIR}/include")
 
 project(xcc)
 
+add_compile_options(
+    -ggdb -Og
+)
+
 project_add_inc_recursive(${PROJECT_DIR}/include)
 project_add_src_recursive(${PROJECT_DIR}/src)
 
