@@ -23,7 +23,7 @@ endmacro()
 ################################    PROJECT    ################################
 
 set(PROJECT_DIR "${CMAKE_CURRENT_LIST_DIR}")
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_FLAGS "-I ${PROJECT_DIR}/include")
 
 project(xcc)
