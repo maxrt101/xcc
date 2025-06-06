@@ -7,6 +7,10 @@
 #include <vector>
 #include <unordered_map>
 
+#ifndef XCC_LOG_DEFAULT_FLAGS
+#define XCC_LOG_DEFAULT_FLAGS Flag::ENABLE_COLOR
+#endif
+
 namespace xcc::util::log {
 
 namespace outputs {
@@ -66,6 +70,15 @@ public:
 }
 
 /**
+ * Logger flags. Basically feature toggles
+ */
+struct Flag {
+  static constexpr uint32_t NONE             = 0;
+  static constexpr uint32_t ENABLE_COLOR     = 1 << 0;
+  static constexpr uint32_t SPLIT_ON_NEWLINE = 1 << 1;
+};
+
+/**
  * ANSI Color Codes
  */
 namespace Color {
@@ -121,6 +134,9 @@ private:
   /** Is enabled */
   bool enabled;
 
+  /** Flags */
+  uint32_t flags = Flag::NONE;
+
   /** Outputs */
   std::vector<std::shared_ptr<outputs::OutputBase>> outputs;
 
@@ -131,7 +147,7 @@ public:
    * @param name Logger (module) name
    * @param outputs Outputs list (by default only stdout output is configured)
    */
-  explicit Logger(std::string name,
+  explicit Logger(std::string name, uint32_t flags = XCC_LOG_DEFAULT_FLAGS,
                   const std::initializer_list<std::shared_ptr<outputs::OutputBase>>& outputs
                     = {outputs::OutputStdout::get()});
 
@@ -155,6 +171,21 @@ public:
    * Returns true if logger is enabled
    */
   bool isEnabled();
+
+  /**
+   * Sets flag
+   */
+  void setFlag(uint32_t flag);
+
+  /**
+   * Clears flag
+   */
+  void clearFlag(uint32_t flag);
+
+  /**
+   * Return value of a flag
+   */
+  bool hasFlag(uint32_t flag);
 
   /**
    * Return logger (module) name

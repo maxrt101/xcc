@@ -1,4 +1,5 @@
 #include "xcc/util/log.h"
+#include "xcc/util/string.h"
 #include "xcc/exceptions.h"
 #include <fstream>
 
@@ -62,8 +63,8 @@ std::shared_ptr<log::outputs::OutputFile> log::outputs::OutputFile::get(std::str
   return instances[filename];
 }
 
-log::Logger::Logger(std::string name, const std::initializer_list<std::shared_ptr<outputs::OutputBase>>& outputs)
-  : level(Level::NONE), name(std::move(name)), enabled(true)
+log::Logger::Logger(std::string name, uint32_t flags, const std::initializer_list<std::shared_ptr<outputs::OutputBase>>& outputs)
+  : level(Level::NONE), name(std::move(name)), enabled(true), flags((uint32_t) flags)
 {
   for (auto out = outputs.begin(); out != outputs.end(); out++) {
     this->outputs.push_back(*out);
@@ -84,6 +85,18 @@ bool log::Logger::isEnabled() {
   return enabled;
 }
 
+void log::Logger::setFlag(uint32_t flag) {
+  flags |= flag;
+}
+
+void log::Logger::clearFlag(uint32_t flag) {
+  flags &= ~flag;
+}
+
+bool log::Logger::hasFlag(uint32_t flag) {
+  return flags & flag;
+}
+
 std::string log::Logger::getName() {
   return name;
 }
@@ -96,10 +109,18 @@ void log::Logger::print(std::string fmt, ...) {
   vsnprintf(buffer, sizeof(buffer), fmt.c_str(), args);
   va_end(args);
 
-  std::string msg {buffer};
+  std::vector<std::string> msg_parts;
 
-  for (auto & out : outputs) {
-    out->output(msg);
+  if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
+    msg_parts = strsplit({buffer}, "\n");
+  } else {
+    msg_parts.emplace_back(buffer);
+  }
+
+  for (auto& msg : msg_parts) {
+    for (auto & out : outputs) {
+      out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? "\n" : ""));
+    }
   }
 }
 
@@ -127,26 +148,39 @@ std::string log::Logger::createLogString(Level level, const std::string& fmt, va
   char buffer[LOG_LINE_BUFFER_SIZE];
   size_t index = 0;
 
-  switch (level) {
-    LOG_LEVEL_CASE(FATAL, RED_RED);
-    LOG_LEVEL_CASE(ERROR, RED);
-    LOG_LEVEL_CASE(WARN, YELLOW);
-    LOG_LEVEL_CASE(INFO, CYAN);
-    LOG_LEVEL_CASE(DEBUG, BLUE);
+  if (hasFlag(Flag::ENABLE_COLOR)) {
+    switch (level) {
+      LOG_LEVEL_CASE(FATAL, RED_RED);
+      LOG_LEVEL_CASE(ERROR, RED);
+      LOG_LEVEL_CASE(WARN, YELLOW);
+      LOG_LEVEL_CASE(INFO, CYAN);
+      LOG_LEVEL_CASE(DEBUG, BLUE);
 
-    case Level::NONE:
-      break;
+      case Level::NONE:
+        break;
 
-    default:
-      snprintf(buffer, sizeof(buffer) - index, "<?>");
+      default:
+        index += snprintf(buffer, sizeof(buffer) - index, "<?>");
       break;
+    }
+  } else {
+    index += snprintf(buffer, sizeof(buffer) - index, "[");
   }
 
   if (level != Level::NONE) {
-    index += snprintf(buffer + index, sizeof(buffer) - index, "%s]", Color::RESET);
+    if (hasFlag(Flag::ENABLE_COLOR)) {
+      index += snprintf(buffer + index, sizeof(buffer) - index, "%s]", Color::RESET);
+    } else {
+      index += snprintf(buffer, sizeof(buffer) - index, "]");
+    }
   }
 
-  index += snprintf(buffer + index, sizeof(buffer) - index, "[%s%s%s]: ", Color::MAGENTA, name.c_str(), Color::RESET);
+  if (hasFlag(Flag::ENABLE_COLOR)) {
+    index += snprintf(buffer + index, sizeof(buffer) - index, "[%s%s%s]: ", Color::MAGENTA, name.c_str(), Color::RESET);
+  } else {
+    index += snprintf(buffer + index, sizeof(buffer) - index, "[%s]: ", name.c_str());
+  }
+
   index += vsnprintf(buffer + index, sizeof(buffer) - index, fmt.c_str(), args);
 
   if (level != Level::NONE) {
@@ -165,10 +199,20 @@ void log::Logger::output(Level level, const std::string& fmt, va_list args) {
 
   // TODO: this->level < level check
 
-  auto msg = createLogString(level, fmt, args);
+  auto log_string = createLogString(level, fmt, args);
 
-  for (auto & out : outputs) {
-    out->output(msg);
+  std::vector<std::string> msg_parts;
+
+  if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
+    msg_parts = strsplit({log_string}, "\n");
+  } else {
+    msg_parts.emplace_back(log_string);
+  }
+
+  for (auto& msg : msg_parts) {
+    for (auto & out : outputs) {
+      out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? "\n" : ""));
+    }
   }
 }
 
