@@ -12,7 +12,7 @@ void xcc::init(bool autoCleanup) {
     std::atexit(xcc::cleanup);
   }
 
-  logger.info("XCC v%s initialized", getVersion().c_str());
+  logger.info("XCC v{} initialized", getVersion().c_str());
 }
 
 void xcc::cleanup() {
@@ -30,7 +30,8 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
     if (token.is(TokenType::TOKEN_STRING)) {
       value = util::strescseq(value, false);
     }
-    logger.print("%-20s '%s'\n", Token::typeToString(token.type).c_str(), value.c_str());
+    // TODO: Check if works with new logger
+    logger.print("{:-20s} '{}'\n", Token::typeToString(token.type), value);
   }
 #endif
 
@@ -84,7 +85,6 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
       globalContext->runExpr(ast::Block::create(expr_nodes));
     }
   } else {
-    // globalContext->runExpr(ast::Call::create(ast::Identifier::create("main"), {}));
     globalContext->runFunction("main");
   }
 }

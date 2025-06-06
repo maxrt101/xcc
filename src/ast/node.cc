@@ -60,12 +60,12 @@ std::shared_ptr<Node::Payload> Node::selectPayloadFirst(const PayloadList& paylo
 }
 
 llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
-  logger.warn("Warning: Default Node::generateFunction is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
+  logger.warn("Warning: Default Node::generateFunction is called on node with type '{}' ({})", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
 llvm::Value * Node::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  logger.warn("Warning: Default Node::generateValue is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
+  logger.warn("Warning: Default Node::generateValue is called on node with type '{}' ({})", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 
@@ -74,7 +74,7 @@ llvm::Value * Node::generateValueWithoutLoad(codegen::ModuleContext& ctx, Payloa
 }
 
 std::shared_ptr<meta::Type> Node::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  logger.warn("Warning: Default Node::generateType is called on node with type '%s' (%d)", Node::typeToString(type).c_str(), int(type));
+  logger.warn("Warning: Default Node::generateType is called on node with type '{}' ({})", Node::typeToString(type).c_str(), int(type));
   return nullptr;
 }
 

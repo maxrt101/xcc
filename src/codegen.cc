@@ -91,7 +91,7 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   auto type = expr->generateType(*globalModule, {});
 
   if (!type) {
-    logger.warn("Warning: Can't infer %s return type, resorting to i32", ANONYMOUS_EXPR_FN_NAME);
+    logger.warn("Warning: Can't infer {} return type, resorting to i32", ANONYMOUS_EXPR_FN_NAME);
     type = meta::Type::createI32();
   }
 
@@ -116,6 +116,15 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 }
 
 void GlobalContext::runFunction(const std::string& name) {
+  auto fn = getMetaFunction(name);
+
+  // TODO: Exception or log?
+  // assertThrow(fn.get(), CodegenException(std::format("runFunction can't find '{}'", name)));
+  if (!fn) {
+    logger.error("Can't find meta-function '{}'", name);
+    return;
+  }
+
   auto type = getMetaFunction(name)->returnType;
 
   auto rt = jit->getMainJitDylib().createResourceTracker();
@@ -123,10 +132,13 @@ void GlobalContext::runFunction(const std::string& name) {
 
   CodegenException::throwIfError(jit->addModule(std::move(tsm), rt));
 
+  // jit->dump();
+
   auto symbol = jit->lookup(name);
 
+  // TODO: Exception or log?
   if (!symbol) {
-    logger.error("Can't find '%s'", name.c_str());
+    logger.error("Can't find symbol '{}'", name);
     return;
   }
 
@@ -135,15 +147,15 @@ void GlobalContext::runFunction(const std::string& name) {
 #if USE_PRINT_EXPR_RESULT
   switch (result.tag) {
     case util::GenericValueContainer::SIGNED_INTEGER:
-      logger.debug("Result: %lld", result.value.signed_integer);
+      logger.debug("Result: {}", result.value.signed_integer);
       break;
 
     case util::GenericValueContainer::UNSIGNED_INTEGER:
-      logger.debug("Result: %llu", result.value.unsigned_integer);
+      logger.debug("Result: {}", result.value.unsigned_integer);
       break;
 
     case util::GenericValueContainer::FLOATING:
-      logger.debug("Result: %g", result.value.floating);
+      logger.debug("Result: {}", result.value.floating);
       break;
 
     default:

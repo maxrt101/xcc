@@ -5,7 +5,8 @@
 #include "xcc/xcc.h"
 #include "xcc/util/string.h"
 
-static auto logger = xcc::util::log::Logger("MAIN", xcc::util::log::Flag::SPLIT_ON_NEWLINE);
+static auto logger = xcc::util::log::Logger("MAIN",
+  xcc::util::log::Flag::ENABLE_COLOR | xcc::util::log::Flag::SPLIT_ON_NEWLINE);
 
 #if USE_LEGACY_XCC_EXTERN_FUNCTIONS
 extern "C" [[maybe_unused]] int32_t xcc_putc(int32_t c) {
@@ -43,7 +44,7 @@ int main(int argc, char ** argv) {
     std::ifstream fs(argv[1]);
 
     if (!fs.is_open()) {
-      logger.fatal("Failed to open file '%s'", argv[1]);
+      logger.fatal("Failed to open file '{}'", argv[1]);
       return 1;
     }
 
@@ -56,7 +57,7 @@ int main(int argc, char ** argv) {
       xcc::run(globalContext, ss.str(), false);
 #if USE_CATCH_EXCEPTIONS
     } catch (std::exception& e) {
-      logger.fatal("%s", e.what());
+      logger.fatal("{}", e.what());
       return 1;
     }
 #endif
@@ -64,7 +65,7 @@ int main(int argc, char ** argv) {
     return 0;
   }
 
-  logger.print("xcc (experimental) repl %s by maxrt\n", xcc::getVersion().c_str());
+  logger.print("xcc (experimental) repl {} by maxrt\n", xcc::getVersion());
 
   while (true) {
     logger.print("-> ");
@@ -96,7 +97,7 @@ int main(int argc, char ** argv) {
 
     if (tokens[0] == "/list") {
       for (auto& [name, fn] : globalContext->functions) {
-        logger.print("%s\n", fn->toString().c_str());
+        logger.print("{}\n", fn->toString());
       }
       continue;
     }
@@ -107,7 +108,7 @@ int main(int argc, char ** argv) {
       xcc::run(globalContext, line, true);
 #if USE_CATCH_EXCEPTIONS
     } catch (std::exception& e) {
-      logger.error("%s\n", e.what());
+      logger.error("{}\n", e.what());
     }
 #endif
   }
