@@ -52,7 +52,9 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
       return llvm::Type::getDoubleTy(*ctx.llvm.ctx);
 
     case TypeTag::PTR:
-      return pointedType->getLLVMType(ctx)->getPointerTo();
+      // TODO: AddressSpace?
+      return llvm::PointerType::get(pointedType->getLLVMType(ctx), 0);
+      // return pointedType->getLLVMType(ctx)->getPointerTo();
 
     case TypeTag::STRUCT: {
       std::vector<llvm::Type*> elements;

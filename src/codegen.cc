@@ -112,15 +112,21 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   }
 #endif
 
+  return runFunction(ANONYMOUS_EXPR_FN_NAME);
+}
+
+void GlobalContext::runFunction(const std::string& name) {
+  auto type = getMetaFunction(name)->returnType;
+
   auto rt = jit->getMainJitDylib().createResourceTracker();
   auto tsm = llvm::orc::ThreadSafeModule(std::move(globalModule->llvm.module), std::move(globalModule->llvm.ctx));
 
   CodegenException::throwIfError(jit->addModule(std::move(tsm), rt));
 
-  auto symbol = jit->lookup(ANONYMOUS_EXPR_FN_NAME);
+  auto symbol = jit->lookup(name);
 
   if (!symbol) {
-    logger.error("Can't find '%s'", ANONYMOUS_EXPR_FN_NAME);
+    logger.error("Can't find '%s'", name.c_str());
     return;
   }
 
@@ -151,6 +157,8 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 ModuleContext::ModuleContext(GlobalContext& global, const std::string& name) : globalContext(global) {
   llvm.ctx = std::make_unique<llvm::LLVMContext>();
   llvm.module = std::make_unique<llvm::Module>(name, *llvm.ctx);
+
+  llvm.module->setDataLayout(global.jit->getDataLayout());
 
   ir_builder = std::make_unique<llvm::IRBuilder<>>(*llvm.ctx);
 

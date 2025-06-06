@@ -84,6 +84,7 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
       globalContext->runExpr(ast::Block::create(expr_nodes));
     }
   } else {
-    globalContext->runExpr(ast::Call::create(ast::Identifier::create("main"), {}));
+    // globalContext->runExpr(ast::Call::create(ast::Identifier::create("main"), {}));
+    globalContext->runFunction("main");
   }
 }

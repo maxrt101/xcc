@@ -77,6 +77,8 @@ public:
   std::shared_ptr<meta::Type> getGlobalType(const std::string& name);
 
   void runExpr(std::shared_ptr<ast::Node> expr);
+
+  void runFunction(const std::string& name);
 };
 
 /**
