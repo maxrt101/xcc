@@ -5,7 +5,7 @@
 #include "xcc/xcc.h"
 #include "xcc/util/string.h"
 
-static auto logger = xcc::util::log::Logger("MAIN");
+static auto logger = xcc::util::log::Logger("MAIN", xcc::util::log::Flag::SPLIT_ON_NEWLINE);
 
 #if USE_LEGACY_XCC_EXTERN_FUNCTIONS
 extern "C" [[maybe_unused]] int32_t xcc_putc(int32_t c) {
