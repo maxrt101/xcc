@@ -50,8 +50,9 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 
   ctx.globalContext.clearCurrentFunction();
 
-  if (!llvm::verifyFunction(*fn)) {
-    throw CodegenException("Function '" + decl->name->value + "' didn't pass validation");
+  util::RawStreamCollector collector;
+  if (llvm::verifyFunction(*fn, collector.stream())) {
+    throw CodegenException("Function '" + decl->name->value + "' didn't pass validation\n" + collector.string());
   }
 
   return fn;

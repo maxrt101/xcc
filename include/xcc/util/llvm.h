@@ -43,6 +43,27 @@ public:
 };
 
 /**
+ * Helper class for collecting logs from LLVM dump() functions
+ */
+class RawStreamCollector {
+private:
+  llvm::raw_string_ostream raw_stream;
+  std::string buffer;
+
+public:
+  RawStreamCollector() : raw_stream(buffer) {}
+  ~RawStreamCollector() = default;
+
+  llvm::raw_ostream * stream() {
+    return &raw_stream;
+  }
+
+  std::string& string() {
+    return buffer;
+  }
+};
+
+/**
  * Checks if LLVM Type is floating or double
  *
  * @param type LLVM Type
