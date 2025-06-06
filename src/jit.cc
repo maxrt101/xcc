@@ -1,10 +1,15 @@
 #include "xcc/jit.h"
 #include "xcc/util/log.h"
+#include "xcc/util/llvm.h"
 #include "xcc/exceptions.h"
+
+#include <llvm/ExecutionEngine/Orc/AbsoluteSymbols.h>
+#include <llvm/ExecutionEngine/SectionMemoryManager.h>
 
 using namespace xcc::codegen;
 
-static auto logger = xcc::util::log::Logger("JIT");
+static auto logger = xcc::util::log::Logger("JIT",
+  xcc::util::log::Flag::ENABLE_COLOR | xcc::util::log::Flag::SPLIT_ON_NEWLINE);
 
 class SymbolResolverGenerator : public llvm::orc::DefinitionGenerator {
 public:
@@ -26,8 +31,8 @@ public:
 
       if (sym) {
 #if USE_REPORT_SYMBOL_RESOLVER_SUCCESS
-        logger.info("Found symbol '%s' (mangled '%s')", name.c_str(),
-               llvm::orc::SymbolStringPoolEntryUnsafe::from(mangle(name)).rawPtr()->first().str().c_str());
+        logger.info("Found symbol '{}' (mangled '{}')", name,
+               llvm::orc::SymbolStringPoolEntryUnsafe::from(mangle(name)).rawPtr()->first().str());
 #endif
 
         llvm::orc::SymbolMap symbols;
@@ -106,5 +111,11 @@ llvm::Error JIT::addModule(llvm::orc::ThreadSafeModule tsm, llvm::orc::ResourceT
 }
 
 llvm::Expected<llvm::orc::ExecutorSymbolDef> JIT::lookup(llvm::StringRef name) {
-  return session->lookup({&main_jd}, name.str());
+  return session->lookup({&main_jd}, name);
+}
+
+void JIT::dump() {
+  util::RawStreamCollector collector;
+  session->dump(*collector.stream());
+  logger.debug("Dump of ExecutionSession:\n{}", collector.string());
 }
