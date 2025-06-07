@@ -101,6 +101,7 @@ public:
   /* Named values (variables/args) */
   std::map<std::string, std::shared_ptr<meta::TypedValue>> locals;
 
+#if USE_OPTIMIZATION
   /* Optimization Contexts */
   struct {
     std::unique_ptr<llvm::FunctionPassManager> fpm;
@@ -111,6 +112,7 @@ public:
     std::unique_ptr<llvm::PassInstrumentationCallbacks> pic;
     std::unique_ptr<llvm::StandardInstrumentations> si;
   } opt;
+#endif
 
 public:
   explicit ModuleContext(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME);
