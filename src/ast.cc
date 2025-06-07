@@ -266,7 +266,7 @@ bool xcc::ast::isOrIsLastInBlock(std::shared_ptr<Node> node, NodeType type) {
 
   if (node->is(AST_BLOCK)) {
     auto block = node->as<Block>();
-    return block->body.back()->is(type);
+    return isOrIsLastInBlock(block->body.back(), type);
   }
 
   return false;
