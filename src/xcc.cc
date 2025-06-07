@@ -30,8 +30,7 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
     if (token.is(TokenType::TOKEN_STRING)) {
       value = util::strescseq(value, false);
     }
-    // TODO: Check if works with new logger
-    logger.print("{:-20s} '{}'\n", Token::typeToString(token.type), value);
+    logger.print("{:<20} '{}'\n", Token::typeToString(token.type), value);
   }
 #endif
 
