@@ -213,7 +213,6 @@ public:
     for (auto& msg : msg_parts) {
       for (auto & out : outputs) {
         out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? "\n" : ""));
-        // out->output(msg + "\n");
       }
     }
   }
