@@ -105,11 +105,13 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   auto fn = fndef->generateFunction(*globalModule, {});
 
 #if USE_PRINT_LLVM_IR
-  fn->print(llvm::outs());
+  util::RawStreamCollector collector;
+  fn->print(*collector.stream());
   for (auto &global : globalModule->llvm.module->globals()) {
-    global.print(llvm::outs());
-    llvm::outs() << "\n";
+    global.print(*collector.stream());
+    *collector.stream() << "\n";
   }
+  logger.debug("IR:\n{}", collector.string());
 #endif
 
   return runFunction(ANONYMOUS_EXPR_FN_NAME);
@@ -132,7 +134,9 @@ void GlobalContext::runFunction(const std::string& name) {
 
   CodegenException::throwIfError(jit->addModule(std::move(tsm), rt));
 
-  // jit->dump();
+#if USE_DUMP_JIT
+  jit->dump();
+#endif
 
   auto symbol = jit->lookup(name);
 
