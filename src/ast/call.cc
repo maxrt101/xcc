@@ -23,12 +23,9 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
       throw CodegenException("Can't retrieve function name (call code generation)");
   }
 
-  llvm::Function * fn = ctx.getFunction(fn_name);
-  auto meta_fn = ctx.globalContext.getMetaFunction(fn_name);
+  llvm::Function * fn = throwIfNull(ctx.getFunction(fn_name), CodegenException("Unknown function to call ('" + fn_name + "')"));
 
-  if (!fn) {
-    throw CodegenException("Unknown function to call ('" + fn_name + "')");
-  }
+  auto meta_fn = ctx.globalContext.getMetaFunction(fn_name);
 
   if (!meta_fn->decl->isVariadic && fn->arg_size() != args.size()) {
     throw CodegenException("Argument mismatch (function: '" + fn_name + "', expected: " + std::to_string(fn->arg_size()) + ", got: " + std::to_string(args.size()) + ")");
@@ -50,11 +47,16 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
     arg_vals.push_back(val);
   }
 
+  if (meta_fn->returnType->isVoid()) {
+    // Don't name a temporary return value, as there is no value
+    return ctx.ir_builder->CreateCall(fn, arg_vals);
+  }
+
   return ctx.ir_builder->CreateCall(fn, arg_vals, "calltmp");
 }
 
 std::shared_ptr<xcc::meta::Type> Call::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-    std::string fn_name;
+  std::string fn_name;
 
   switch (name->type) {
     case AST_EXPR_IDENTIFIER:
