@@ -52,16 +52,17 @@ endmacro()
 
 set(PROJECT_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_FLAGS "-I ${PROJECT_DIR}/include")
 
 project(xcc)
+
+include_directories(${PROJECT_DIR}/include)
+
+add_inc_recursive(${PROJECT_DIR}/include)
+add_src_recursive(${PROJECT_DIR}/src)
 
 add_compile_options(
     -ggdb -Og
 )
-
-add_inc_recursive(${PROJECT_DIR}/include)
-add_src_recursive(${PROJECT_DIR}/src)
 
 add_executable(xcc
   ${PROJECT_INCLUDES}
