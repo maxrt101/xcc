@@ -40,7 +40,7 @@ endmacro()
 
 macro(feature_get_value feature value)
     if (DEFINED ${feature})
-        set(${value} ${feature})
+        set(${value} ${${feature}})
     elseif (DEFINED ENV{${feature}})
         set(${value} $ENV{${feature}})
     else()
