@@ -2,8 +2,7 @@
 #include "xcc/exceptions.h"
 #include "xcc/util/prefix_tree.h"
 #include "xcc/util/string.h"
-
-#include <cctype>
+#include <ctype.h>
 
 using namespace xcc;
 
