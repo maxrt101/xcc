@@ -1,0 +1,244 @@
+[
+  {
+    "id": 1,
+    "name": "Main function + return",
+    "file": "1.txt",
+    "expect": {
+      "retcode": 42
+    }
+  },
+  {
+    "id": 2,
+    "name": "Basic functions + extern",
+    "file": "2.txt",
+    "expect": {
+      "stdout": ["xy"],
+      "retcode": 30
+    }
+  },
+  {
+    "id": 3,
+    "name": "Basic conditions",
+    "file": "3.txt",
+    "expect": {
+      "stdout": ["yx"],
+      "retcode": 20
+    }
+  },
+  {
+    "id": 4,
+    "name": "C extern functions",
+    "file": "4.txt",
+    "expect": {
+      "stdout": ["y"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 5,
+    "name": "For loop",
+    "file": "5.txt",
+    "expect": {
+      "stdout": ["abcdefghijklmnopqrstuvwxyz"],
+      "retcode": 42
+    }
+  },
+  {
+    "id": 6,
+    "name": "For loop + conditions",
+    "file": "6.txt",
+    "expect": {
+      "stdout": ["0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n42\n42\n42\n42\n42"],
+      "retcode": 42
+    }
+  },
+  {
+    "id": 7,
+    "name": "xcc_putd",
+    "file": "7.txt",
+    "expect": {
+      "stdout": ["42"],
+      "retcode": 42
+    }
+  },
+  {
+    "id": 8,
+    "name": "For loop + conditions + returns",
+    "file": "8.txt",
+    "expect": {
+      "stdout": ["0\n1\n2\n3\n4\n5\n6\n7\n8\n9\n42"],
+      "retcode": 800
+    }
+  },
+  {
+    "id": 9,
+    "name": "Pointers",
+    "file": "9.txt",
+    "expect": {
+      "stdout": ["128", "25"],
+      "retcode": "*"
+    }
+  },
+  {
+    "id": 10,
+    "name": "Pass pointers to functions",
+    "file": "10.txt",
+    "expect": {
+      "stdout": ["128", "256"],
+      "retcode": "*"
+    }
+  },
+  {
+    "id": 11,
+    "name": "malloc/free",
+    "file": "11.txt",
+    "expect": {
+      "stdout": ["128", "256"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 12,
+    "name": "Array subscript",
+    "file": "12.txt",
+    "expect": {
+      "stdout": ["12\n13\n14\n15"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 13,
+    "name": "Array subscript + pointer dereference",
+    "file": "13.txt",
+    "expect": {
+      "stdout": ["255\n255\n0\n0"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 14,
+    "name": "String literals",
+    "file": "14.txt",
+    "expect": {
+      "stdout": ["Hello, World!\n"],
+      "retcode": 255
+    }
+  },
+  {
+    "id": 15,
+    "name": "Printf",
+    "file": "15.txt",
+    "expect": {
+      "stdout": ["XCC Test 0xff\n"],
+      "retcode": 14
+    }
+  },
+  {
+    "id": 16,
+    "name": "Memory copy",
+    "file": "16.txt",
+    "expect": {
+      "stdout": ["original: 'Hello, World!' copied: 'Hello, World!'\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 17,
+    "name": "Global variable",
+    "file": "17.txt",
+    "expect": {
+      "stdout": ["125\n12"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 18,
+    "name": "Global string",
+    "file": "18.txt",
+    "expect": {
+      "stdout": ["'Test String'"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 19,
+    "name": "Global string modify",
+    "file": "19.txt",
+    "expect": {
+      "stdout": ["'X' 88\n'e' 101\n's' 115\n't' 116\n' ' 32\n'S' 83\n't' 116\n'r' 114\n'i' 105\n'n' 110\n'g' 103\n'Xest String'"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 20,
+    "name": "Basic structs",
+    "file": "20.txt",
+    "expect": {
+      "stdout": ["Test 100\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 21,
+    "name": "Pass struct pointers to functions",
+    "file": "21.txt",
+    "expect": {
+      "stdout": ["0x.+ Hello, World!\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 22,
+    "name": "Pass struct pointers to functions + malloc",
+    "file": "22.txt",
+    "expect": {
+      "stdout": ["14 0x.+ 'Hello, World!'\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 23,
+    "name": "Bitwise AND",
+    "file": "23.txt",
+    "expect": {
+      "stdout": ["5\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 24,
+    "name": "Modify-assign operators",
+    "file": "24.txt",
+    "expect": {
+      "stdout": ["65\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 25,
+    "name": "Return string literal",
+    "file": "25.txt",
+    "expect": {
+      "stdout": ["Hello, World!\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 26,
+    "name": "Struct methods",
+    "file": "26.txt",
+    "expect": {
+      "stdout": ["4\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 27,
+    "name": "Recursive pointers (i8***)",
+    "file": "27.txt",
+    "expect": {
+      "stdout": ["Dereferences: 15 15 15\n"],
+      "retcode": 0
+    }
+  }
+]
