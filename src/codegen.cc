@@ -235,6 +235,27 @@ llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Ty
     throw CodegenException("codegen::cast received nullptr");
   }
 
+  // TODO: "Can't perform cast" can mean that invalid action is performed on a variable (e.g. struct s {...}; var x: s; x += 1;)
+#if 0
+  util::RawStreamCollector val_collector;
+  val->print(*val_collector.stream());
+
+  util::RawStreamCollector val_type_collector;
+  val->getType()->print(*val_type_collector.stream());
+
+  util::RawStreamCollector type_collector;
+  target_type->print(*type_collector.stream());
+
+  logger.debug("cast: val=({} {})",
+    (void *) val, val_collector.string());
+
+  logger.debug("cast: val_type=({} {})",
+    (void *) val->getType(), val_type_collector.string());
+
+  logger.debug("cast: target_type=({} {}) {}",
+    (void *) target_type, type_collector.string(), target_type->isPointerTy());
+#endif
+
   if (util::isInteger(val->getType()) && util::isFloatOrDouble(target_type)) {
     return ctx.ir_builder->CreateSIToFP(val, target_type);
   }

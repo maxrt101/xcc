@@ -28,6 +28,7 @@ enum TokenType {
   TOKEN_WHILE,
   TOKEN_RETURN,
   TOKEN_AS,
+  TOKEN_SELF,
 
   // Braces/Parenthesis
   TOKEN_LEFT_BRACE,

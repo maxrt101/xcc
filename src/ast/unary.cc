@@ -49,7 +49,10 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
 }
 
 std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  return throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
+  /* If dereferencing - should return TypeForValueWithoutLoad */
+  return operation.type == TOKEN_STAR
+      ? generateTypeForValueWithoutLoad(ctx, payload)
+      : throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
 }
 
 std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {

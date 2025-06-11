@@ -45,7 +45,7 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
 
   auto llvm_fn_type = llvm::FunctionType::get(return_meta_type->getLLVMType(ctx), meta::Function::typesFromMetaArgs(ctx, arg_meta_types), isVariadic);
   // auto llvm_fn = llvm::Function::Create(llvm_fn_type, isExtern ? llvm::Function::ExternalLinkage : llvm::Function::CommonLinkage, fn_name, ctx.llvm.module.get());
-  // TODO: LLVM Disallows CommonLinkage
+  // TODO: LLVM Disallows CommonLinkage, maybe replace with Private?
   auto llvm_fn = llvm::Function::Create(llvm_fn_type, llvm::Function::ExternalLinkage, fn_name, ctx.llvm.module.get());
 
   size_t arg_idx = 0;

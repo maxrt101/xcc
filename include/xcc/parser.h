@@ -10,8 +10,23 @@ namespace xcc {
  * Parses token stream into an AST
  */
 class Parser {
-  const std::vector<Token>& tokens; /** Token stream */
-  size_t current_idx;               /** Index into `tokens` */
+  /**
+   * Context for Node (part of MemberAccess)
+   */
+  struct MemberAccessContext {
+    std::shared_ptr<ast::Node> node;
+    bool pointer;
+
+    /**
+     * Creates MemberAccess AST Node from 2 contexts
+     */
+    static std::shared_ptr<ast::MemberAccess> from(const MemberAccessContext& a, const MemberAccessContext& b);
+  };
+
+private:
+  const std::vector<Token>& tokens;     /** Token stream */
+  size_t current_idx;                   /** Index into `tokens` */
+  std::vector<std::string> structStack; /** Stack of currently parsing struct definitions */
 
 private:
   /**
@@ -72,13 +87,18 @@ private:
     return false;
   }
 
+  /**
+   * Returns true if next token has type `expected`
+   */
+  bool checkNext(TokenType expected);
+
   // Helper
   std::shared_ptr<ast::Identifier> parseIdentifier(const std::string& ex_msg);
   std::shared_ptr<ast::Type> parseType();
   std::shared_ptr<ast::TypedIdentifier> parseValueDecl();
 
   // Statements
-  std::shared_ptr<ast::Node> parseFunction();
+  std::shared_ptr<ast::Node> parseFunction(bool isMethod);
   std::shared_ptr<ast::Block> parseBlock();
   std::shared_ptr<ast::Node> parseVar(bool global);
   std::shared_ptr<ast::Node> parseStruct();
@@ -99,7 +119,7 @@ private:
   std::shared_ptr<ast::Node> parseTerm();
   std::shared_ptr<ast::Node> parseFactor();
   std::shared_ptr<ast::Node> parseCast();
-  std::shared_ptr<ast::Node> parseCall();
+  std::shared_ptr<ast::Node> parseCall(std::shared_ptr<ast::Node> callee);
   std::shared_ptr<ast::Node> parseUnary();
   std::shared_ptr<ast::Node> parseSubscript();
   std::shared_ptr<ast::Node> parseNumber();

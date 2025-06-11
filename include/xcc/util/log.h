@@ -7,9 +7,9 @@
 #include <unordered_map>
 #include "xcc/util/string.h"
 
-#ifndef XCC_LOG_DEFAULT_FLAGS
-#define XCC_LOG_DEFAULT_FLAGS xcc::util::log::Flag::ENABLE_COLOR
-#endif
+// #ifndef XCC_LOG_DEFAULT_FLAGS
+// #define XCC_LOG_DEFAULT_FLAGS xcc::util::log::Flag::ENABLE_COLOR | xcc::util::log::Flag::ADD_NEWLINE
+// #endif
 
 namespace xcc::util::log {
 
@@ -74,8 +74,9 @@ public:
  */
 struct Flag {
   static constexpr uint32_t NONE             = 0;
-  static constexpr uint32_t ENABLE_COLOR     = 1 << 0;
+  static constexpr uint32_t DISABLE_COLOR    = 1 << 0;
   static constexpr uint32_t SPLIT_ON_NEWLINE = 1 << 1;
+  static constexpr uint32_t DONT_ADD_NEWLINE = 1 << 2;
 };
 
 /**
@@ -147,7 +148,7 @@ public:
    * @param name Logger (module) name
    * @param outputs Outputs list (by default only stdout output is configured)
    */
-  explicit Logger(std::string name, uint32_t flags = XCC_LOG_DEFAULT_FLAGS,
+  explicit Logger(std::string name, uint32_t flags = Flag::NONE,
                   const std::initializer_list<std::shared_ptr<outputs::OutputBase>>& outputs
                     = {outputs::OutputStdout::get()});
 
@@ -212,7 +213,7 @@ public:
 
     for (auto& msg : msg_parts) {
       for (auto & out : outputs) {
-        out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? "\n" : ""));
+        out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? (hasFlag(Flag::DONT_ADD_NEWLINE) ? "" : "\n") : ""));
       }
     }
   }
@@ -309,7 +310,7 @@ private:
 
     for (auto& msg : msg_parts) {
       for (auto & out : outputs) {
-        out->output(header + msg + "\n");
+        out->output(header + msg + (hasFlag(Flag::DONT_ADD_NEWLINE) ? "" : "\n"));
       }
     }
   }

@@ -51,6 +51,9 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
       node->generateValue(*globalContext->globalModule, {});
     } else if (node->is(ast::AST_STRUCT)) {
       node->generateType(*globalContext->globalModule, {});
+      for (auto& method : node->as<ast::Struct>()->methods) {
+        fn_nodes.push_back(method);
+      }
     } else {
       if (isRepl) {
         expr_nodes.push_back(node);
@@ -60,18 +63,16 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
     }
   }
 
-#if USE_PRINT_LLVM_IR
-  logger.info("LLVM IR:");
-  fflush(stdout);
-#endif
-
   for (auto& node : fn_nodes) {
     auto ctx = globalContext->createModule();
 
     if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
       auto fn = node->generateFunction(*ctx, {});
 #if USE_PRINT_LLVM_IR
-      fn->print(llvm::outs());
+      logger.info("LLVM IR for function {}:", fn->getName().str());
+      util::RawStreamCollector collector;
+      fn->print(*collector.stream());
+      logger.print("{}", collector.string());
 #endif
       globalContext->addModule(ctx);
     } else {

@@ -42,7 +42,7 @@ static void printNode(Node* node, Node* parent, int indent) {
 
     case AST_EXPR_CALL: {
       auto call = node->as<Call>();
-      printNode(call->name.get(), parent, indent);
+      printNode(call->callee.get(), parent, indent);
       logger.print("(");
       for (auto& arg : call->args) {
         printNode(arg.get(), call, indent);
@@ -206,6 +206,10 @@ static void printNode(Node* node, Node* parent, int indent) {
         printIndent(indent + 2);
         printNode(field.get(), _struct, indent + 2);
         logger.print(";\n");
+      }
+      for (auto& method : _struct->methods) {
+        printIndent(indent + 2);
+        printNode(method.get(), _struct, indent + 2);
       }
       printIndent(indent);
       logger.print("}}\n");

@@ -6,8 +6,7 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-static auto logger = xcc::util::log::Logger("FN",
-  XCC_LOG_DEFAULT_FLAGS | xcc::util::log::Flag::SPLIT_ON_NEWLINE);
+static auto logger = xcc::util::log::Logger("FN", util::log::Flag::SPLIT_ON_NEWLINE);
 
 FnDef::FnDef(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body)
   : Node(AST_FUNCTION_DEF), decl(std::move(decl)), body(std::move(body)) {}

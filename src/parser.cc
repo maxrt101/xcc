@@ -6,6 +6,12 @@ using namespace xcc;
 
 static auto logger = xcc::util::log::Logger("PARSER");
 
+std::shared_ptr<ast::MemberAccess> Parser::MemberAccessContext::from(const MemberAccessContext& a, const MemberAccessContext& b) {
+  return a.pointer || b.pointer
+      ? ast::MemberAccess::createByPointer(a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node))
+      : ast::MemberAccess::createByValue(a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node));
+}
+
 bool Parser::isAtEnd() const {
   return current_idx >= tokens.size();
 }
@@ -47,7 +53,15 @@ bool Parser::checkAdvance(TokenType expected) {
   return false;
 }
 
+bool Parser::checkNext(TokenType expected) {
+  return next().type == expected;
+}
+
 std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_msg) {
+  if (checkAdvance(TOKEN_SELF)) {
+    return ast::Identifier::create("self");
+  }
+
   if (!checkAdvance(TOKEN_IDENTIFIER)) {
     throw ParserException(current().line, "Expected identifier " + ex_msg);
   }
@@ -57,11 +71,18 @@ std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_m
 
 std::shared_ptr<ast::Type> Parser::parseType() {
   auto id = parseIdentifier("for type name");
-  // TODO: Check if ternary can be used without consequence
-  if (checkAdvance(TOKEN_STAR)) {
-    return ast::Type::create(ast::Node::cast(id), true);
+
+  std::shared_ptr<ast::Type> type;
+
+  while (checkAdvance(TOKEN_STAR)) {
+    type = type ? ast::Type::create(type, true) : ast::Type::create(ast::Node::cast(id), true);
   }
-  return ast::Type::create(ast::Node::cast(id), false);
+
+  if (!type) {
+    type = ast::Type::create(ast::Node::cast(id), false);
+  }
+
+  return type;
 }
 
 std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl() {
@@ -80,7 +101,7 @@ std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl() {
   return ast::TypedIdentifier::create(name, type, value);
 }
 
-std::shared_ptr<ast::Node> Parser::parseFunction() {
+std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   bool is_extern = false;
   bool is_variadic = false;
 
@@ -94,6 +115,11 @@ std::shared_ptr<ast::Node> Parser::parseFunction() {
   }
 
   auto name = parseIdentifier("for function name");
+
+  if (isMethod) {
+    name->value = structStack.back() + "_" + name->value;
+  }
+
   std::vector<std::shared_ptr<ast::TypedIdentifier>> args;
   std::shared_ptr<ast::Type> return_type;
 
@@ -101,14 +127,23 @@ std::shared_ptr<ast::Node> Parser::parseFunction() {
     throw ParserException(current().line, "Expected '(' after function name");
   }
 
+  if (isMethod && checkAdvance(TOKEN_SELF)) {
+    args.push_back(ast::TypedIdentifier::create(
+    ast::Identifier::create("self"),
+      ast::Type::create(ast::Identifier::create(structStack.back()), true)
+    ));
+
+    checkAdvance(TOKEN_COMMA);
+  }
+
   if (!check(TOKEN_RIGHT_PAREN)) {
     do {
       if (checkAdvance(TOKEN_3_DOTS)) {
         is_variadic = true;
         break;
-      } else {
-        args.push_back(parseValueDecl());
       }
+
+      args.push_back(parseValueDecl());
     } while (checkAdvance(TOKEN_COMMA));
   }
 
@@ -182,6 +217,9 @@ std::shared_ptr<ast::Node> Parser::parseStruct() {
   }
 
   std::vector<std::shared_ptr<ast::TypedIdentifier>> fields;
+  std::vector<std::shared_ptr<ast::FnDef>> methods;
+
+  structStack.push_back(name->value);
 
   bool shouldContinue = true;
 
@@ -189,15 +227,23 @@ std::shared_ptr<ast::Node> Parser::parseStruct() {
     if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
       break;
     }
-    fields.push_back(parseValueDecl());
+
+    if (check(TOKEN_FN)) {
+      methods.push_back(std::dynamic_pointer_cast<ast::FnDef>(parseFunction(true)));
+    } else {
+      fields.push_back(parseValueDecl());
+    }
+
     shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_SEMICOLON);
   } while (shouldContinue);
+
+  structStack.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
     throw ParserException(current().line, "Expected '}' after struct definition");
   }
 
-  return ast::Struct::create(name, fields);
+  return ast::Struct::create(name, fields, methods);
 }
 
 std::shared_ptr<ast::Node> Parser::parseIf() {
@@ -292,20 +338,14 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseStmt() {
-  if (check(TOKEN_VAR)) {
-    return parseVar(false);
-  } else if (check(TOKEN_IF)) {
-    return parseIf();
-  } else if (check(TOKEN_FOR)) {
-    return parseFor();
-  } else if (check(TOKEN_WHILE)) {
-    return parseWhile();
-  } else if (check(TOKEN_RETURN)) {
-    return parseReturn();
-  } else if (check(TOKEN_LEFT_BRACE)) {
-    return parseBlock();
-  } else {
-    return parseExpr();
+  switch (current().type) {
+    case TOKEN_VAR:         return parseVar(false);
+    case TOKEN_IF:          return parseIf();
+    case TOKEN_FOR:         return parseFor();
+    case TOKEN_WHILE:       return parseWhile();
+    case TOKEN_RETURN:      return parseReturn();
+    case TOKEN_LEFT_BRACE:  return parseBlock();
+    default:                return parseExpr();
   }
 }
 
@@ -406,7 +446,7 @@ std::shared_ptr<ast::Node> Parser::parseUnary() {
   if (checkAdvanceAnyOf(TOKEN_NOT, TOKEN_MINUS,
                         TOKEN_AMP, TOKEN_STAR)) {
     Token op = previous();
-    return ast::Unary::create(op, parseSubscript());
+    return ast::Unary::create(op, parseUnary());
   }
 
   return parseSubscript();
@@ -419,10 +459,6 @@ std::shared_ptr<ast::Node> Parser::parseSubscript() {
     auto rhs = parseExpr();
     assertThrow(checkAdvance(TOKEN_RIGHT_SQUARE_BRACE), ParserException("Missing closing ']' after '[' in subscript operator"));
     return ast::Subscript::create(lhs, rhs);
-  } else if (checkAdvance(TOKEN_DOT)) {
-    return ast::MemberAccess::createByValue(lhs, parseIdentifier("for member access"));
-  } else if (checkAdvance(TOKEN_RIGHT_ARROW)) {
-    return ast::MemberAccess::createByPointer(lhs, parseIdentifier("for member access"));
   }
 
   return lhs;
@@ -431,27 +467,27 @@ std::shared_ptr<ast::Node> Parser::parseSubscript() {
 std::shared_ptr<ast::Node> Parser::parseNumber() {
   if (previous().value.find('.') != std::string::npos) {
     return ast::Number::createFloating(std::stod(previous().value));
-  } else {
-    std::string value = previous().value;
-    int base = 10;
-    int prefix_len = 2;
-
-    if (value.size() > 2 && value[0] == '0') {
-      if (value[1] == 'x') {
-        base = 16;
-      } else if (value[1] == 'b') {
-        base = 2;
-      } else if (value[1] == 'o') {
-        base = 8;
-      } else {
-        base = 8;
-        prefix_len = 1;
-      }
-      value = value.substr(prefix_len);
-    }
-
-    return ast::Number::createInteger(std::stol(value, nullptr, base));
   }
+
+  std::string value = previous().value;
+  int base = 10;
+  int prefix_len = 2;
+
+  if (value.size() > 2 && value[0] == '0') {
+    if (value[1] == 'x') {
+      base = 16;
+    } else if (value[1] == 'b') {
+      base = 2;
+    } else if (value[1] == 'o') {
+      base = 8;
+    } else {
+      base = 8;
+      prefix_len = 1;
+    }
+    value = value.substr(prefix_len);
+  }
+
+  return ast::Number::createInteger(std::stol(value, nullptr, base));
 }
 
 std::shared_ptr<ast::Node> Parser::parseRvalue() {
@@ -479,31 +515,52 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
-  if (current().type != TOKEN_IDENTIFIER) {
-    throw ParserException(current().line, "Unexpected token '" + current().value + "'(" + Token::typeToString(current().type) + "), expected identifier");
+  if (!check(TOKEN_IDENTIFIER) && !check(TOKEN_SELF)) {
+    throw ParserException(current().line, "Unexpected token '" + current().value + "'(" + Token::typeToString(current().type) + "), expected identifier or self");
   }
 
-  if (next().type == TOKEN_DOT) {
-    auto lhs = parseIdentifier("for member access");
-    advance();
-    return ast::MemberAccess::createByValue(lhs, parseIdentifier("for member access"));
-  } else if (next().type == TOKEN_RIGHT_ARROW) {
-    auto lhs = parseIdentifier("for member access");
-    advance();
-    return ast::MemberAccess::createByPointer(lhs, parseIdentifier("for member access"));
+  /* Parse Member Access */
+  if (checkNext(TOKEN_DOT) || checkNext(TOKEN_RIGHT_ARROW)) {
+    std::vector<MemberAccessContext> nodes;
+
+    do {
+      if (!checkAnyOf(TOKEN_IDENTIFIER, TOKEN_SELF)) {
+        break;
+      }
+
+      nodes.push_back({parseIdentifier("for member access"), current().is(TOKEN_RIGHT_ARROW)});
+    } while (checkAdvance(TOKEN_DOT) || checkAdvance(TOKEN_RIGHT_ARROW));
+
+    /* Very specific error, shouldn't happen */
+    assertThrow(!nodes.empty(), ParserException("Invalid member access state (nodes.size=0)"));
+
+    /* If do-while loop finished without triggering ParserException("Expected identifier ...")
+     * it is guaranteed that at least 2 elements will be present in nodes */
+    std::shared_ptr<ast::MemberAccess> memberAccess = MemberAccessContext::from(nodes[0], nodes[1]);;
+
+    /* Recursively reduce the rest of nodes into single MemberAccess tree. If only 2 nodes are present -
+     * won't get executed */
+    for (size_t i = 2; i < nodes.size(); ++i) {
+      memberAccess = MemberAccessContext::from({memberAccess, false}, nodes[i]);
+    }
+
+    /* Method Call */
+    if (check(TOKEN_LEFT_PAREN)) {
+      return parseCall(memberAccess);
+    }
+
+    return memberAccess;
   }
 
-  if (next().type == TOKEN_LEFT_PAREN) {
-    return parseCall();
+  if (checkNext(TOKEN_LEFT_PAREN)) {
+    /* Function Call */
+    return parseCall(parseIdentifier("for function name"));
   }
 
   return std::dynamic_pointer_cast<ast::Node>(parseIdentifier(""));
 }
 
-
-std::shared_ptr<ast::Node> Parser::parseCall() {
-  auto name = parseIdentifier("(function call)");
-
+std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) {
   std::vector<std::shared_ptr<ast::Node>> args;
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
@@ -515,6 +572,7 @@ std::shared_ptr<ast::Node> Parser::parseCall() {
       if (isAtEnd() || check(TOKEN_RIGHT_PAREN)) {
         break;
       }
+
       args.push_back(parseExpr());
     } while (checkAdvance(TOKEN_COMMA));
   }
@@ -523,7 +581,7 @@ std::shared_ptr<ast::Node> Parser::parseCall() {
     throw ParserException(current().line, "Expected ')' after function arguments (function call)");
   }
 
-  return ast::Call::create(std::dynamic_pointer_cast<ast::Node>(name), args);
+  return ast::Call::create(callee, args);
 }
 
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens), current_idx(0) {}
@@ -533,7 +591,7 @@ std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
 
   while (!isAtEnd()) {
     if (checkAnyOf(TOKEN_FN, TOKEN_EXTERN)) {
-      block->body.push_back(parseFunction());
+      block->body.push_back(parseFunction(false));
     } else if (check(TOKEN_VAR)) {
       block->body.push_back(parseVar(true));
       if (!checkAdvance(TOKEN_SEMICOLON)) {

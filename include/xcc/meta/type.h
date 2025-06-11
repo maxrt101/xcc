@@ -46,7 +46,7 @@ using StructMembers = std::vector<std::pair<std::string, std::shared_ptr<Type>>>
 /**
  * Type metadata
  */
-class Type {
+class Type : public std::enable_shared_from_this<Type> {
 private:
   TypeTag tag;
 
@@ -54,6 +54,7 @@ private:
   std::shared_ptr<Type> pointedType;
 
   /** For TypeTag::STRUCT */
+  std::string   name;
   StructMembers members;
 
   /** Global static storage for all user-defined types */
@@ -77,6 +78,11 @@ public:
   [[nodiscard]] std::shared_ptr<Type> getPointedType() const;
 
   /**
+   * Returns base type of a recursive pointer type ('i8***' -> 'i8')
+   */
+  [[nodiscard]] std::shared_ptr<Type> getBaseType();
+
+  /**
    * If type is a struct - check if it has member with name `name`
    */
   [[nodiscard]] bool hasMember(const std::string& name) const;
@@ -95,6 +101,11 @@ public:
    * Generate LLVM type from a valid meta type, needs ModuleContext
    */
   [[nodiscard]] llvm::Type * getLLVMType(codegen::ModuleContext& ctx) const;
+
+  /**
+   * Returns type name. If struct - struct name, otherwise - just type name
+   */
+  [[nodiscard]] std::string getName() const;
 
   /**
    * Generate pretty string for a type
@@ -144,7 +155,7 @@ public:
   static std::shared_ptr<Type> createUnsigned(int bits);
   static std::shared_ptr<Type> createFloating(int bits);
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
-  static std::shared_ptr<Type> createStruct(StructMembers members);
+  static std::shared_ptr<Type> createStruct(std::string name, StructMembers members);
 
   static std::shared_ptr<Type> inferFromNode(codegen::ModuleContext& ctx, std::shared_ptr<ast::Node> node);
 

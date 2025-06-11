@@ -24,6 +24,14 @@ std::shared_ptr<Type> Type::getPointedType() const {
   return pointedType;
 }
 
+std::shared_ptr<Type> Type::getBaseType() {
+  if (isPointer()) {
+    return pointedType->getBaseType();
+  }
+
+  return shared_from_this();
+}
+
 llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
   switch (tag) {
     case TypeTag::VOID:
@@ -52,9 +60,7 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
       return llvm::Type::getDoubleTy(*ctx.llvm.ctx);
 
     case TypeTag::PTR:
-      // TODO: AddressSpace?
       return llvm::PointerType::get(pointedType->getLLVMType(ctx), 0);
-      // return pointedType->getLLVMType(ctx)->getPointerTo();
 
     case TypeTag::STRUCT: {
       std::vector<llvm::Type*> elements;
@@ -70,6 +76,14 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     default:
       throw CodegenException("Unknown type");
   }
+}
+
+std::string Type::getName() const {
+  if (tag == TypeTag::STRUCT) {
+    return name;
+  }
+
+  return toString();
 }
 
 std::string Type::toString() const {
@@ -205,8 +219,6 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
       return llvm::Constant::getNullValue(getLLVMType(ctx));
 
     case TypeTag::STRUCT: {
-      // llvm::StructType * llvm_type = (llvm::StructType *) getLLVMType(ctx);
-
       std::vector<llvm::Constant *> initializers;
 
       for (auto & member : members) {
@@ -336,8 +348,9 @@ std::shared_ptr<Type> Type::createPointer(std::shared_ptr<Type> pointedType) {
   return t;
 }
 
-std::shared_ptr<Type> Type::createStruct(StructMembers members) {
+std::shared_ptr<Type> Type::createStruct(std::string name, StructMembers members) {
   auto type = create(TypeTag::STRUCT);
+  type->name    = std::move(name);
   type->members = std::move(members);
   return type;
 }

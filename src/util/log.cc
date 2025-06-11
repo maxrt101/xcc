@@ -108,7 +108,7 @@ std::string log::Logger::createLogHeader(Level level) {
       break;
   }
 
-  if (hasFlag(Flag::ENABLE_COLOR)) {
+  if (!hasFlag(Flag::DISABLE_COLOR)) {
     if (level != Level::NONE) {
       return std::format(
         "[{}{}{}][{}{}{}]: ",

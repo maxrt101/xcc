@@ -9,7 +9,7 @@
 using namespace xcc::codegen;
 
 static auto logger = xcc::util::log::Logger("JIT",
-  XCC_LOG_DEFAULT_FLAGS | xcc::util::log::Flag::SPLIT_ON_NEWLINE);
+  xcc::util::log::Flag::SPLIT_ON_NEWLINE);
 
 class SymbolResolverGenerator : public llvm::orc::DefinitionGenerator {
 public:
