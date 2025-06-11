@@ -83,21 +83,28 @@ int main(int argc, char ** argv) {
 
     auto tokens = xcc::util::strsplit(line);
 
-    if (tokens[0] == "/quit" || tokens[0] == "/q") {
-      break;
-    }
+    if (!tokens.empty() && tokens[0].starts_with("/")) {
+      auto command = tokens[0].substr(1);
 
-    if (tokens[0] == "/help" || tokens[0] == "/h") {
-      logger.print("/help or /h - Prints this message\n");
-      logger.print("/quit or /q - Exits from REPL\n");
-      logger.print("/list or /l - List global function symbols\n");
-      continue;
-    }
-
-    if (tokens[0] == "/list") {
-      for (auto& [name, fn] : globalContext->functions) {
-        logger.print("{}\n", fn->toString());
+      if (command == "quit" || command == "q") {
+        break;
       }
+
+      if (command == "help" || command == "h") {
+        logger.print("/help or /h - Prints this message\n");
+        logger.print("/quit or /q - Exits from REPL\n");
+        logger.print("/list or /l - List global function symbols\n");
+        continue;
+      }
+
+      if (command == "list" || command == "l") {
+        for (auto& [name, fn] : globalContext->functions) {
+          logger.print("{}\n", fn->toString());
+        }
+        continue;
+      }
+
+      logger.error("Unknown command '{}'", command);
       continue;
     }
 
