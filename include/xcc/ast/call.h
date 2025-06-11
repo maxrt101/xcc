@@ -1,10 +1,9 @@
 #pragma once
 
 #include "xcc/ast/node.h"
-#include "xcc/ast/typed_identifier.h"
 
-#include <string>
 #include <vector>
+#include <string>
 
 namespace xcc::ast {
 
@@ -16,7 +15,7 @@ public:
 
 public:
   Call(std::shared_ptr<Node> callee, std::vector<std::shared_ptr<Node>> args);
-  virtual ~Call() override = default;
+  ~Call() override = default;
 
   static std::shared_ptr<Call> create(std::shared_ptr<Node> callee, std::vector<std::shared_ptr<Node>> args);
 
