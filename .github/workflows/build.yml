@@ -13,6 +13,9 @@ on:
       - '**.h'
   workflow_dispatch:
     inputs:
+      features:
+        description: "Space-separated list of key-value feature toggles"
+        required: false
       omit_tests:
         description: "Omit tests"
         required: false
@@ -21,9 +24,6 @@ on:
         required: false
       tests_print_output:
         description: "Run testrunner with print output (stdout/stderr) flag"
-        required: false
-      features:
-        description: "Space-separated list of key-value feature toggles"
         required: false
 
 jobs:
