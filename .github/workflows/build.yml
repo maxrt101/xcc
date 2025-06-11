@@ -64,7 +64,7 @@ jobs:
     - name: Install LLVM and Clang
       uses: KyleMayes/install-llvm-action@v2
       with:
-        version: "20.1.5"
+        version: "20.1.4"
 
     - name: Configure
       run: |
@@ -86,15 +86,3 @@ jobs:
       with:
         name: xcc-executable-linux
         path: build/xcc
-
-    - name: Archive HEX artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: grain-section-hex
-        path: build/GrainSection.hex
-
-    - name: Archive BIN artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: grain-section-bin
-        path: build/GrainSection.bin
