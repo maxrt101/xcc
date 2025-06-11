@@ -2,9 +2,21 @@
 
 cmake_minimum_required(VERSION 3.27)
 
+#################################    COLORS    ################################
+
+string(ASCII 27 ESC)
+set(COLOR_RESET     "${ESC}[m")
+set(COLOR_RED       "${ESC}[31m")
+set(COLOR_GREEN     "${ESC}[32m")
+set(COLOR_YELLOW    "${ESC}[33m")
+set(COLOR_BLUE      "${ESC}[34m")
+set(COLOR_MAGENTA   "${ESC}[35m")
+set(COLOR_CYAN      "${ESC}[36m")
+set(COLOR_WHITE     "${Esc}[37m")
+
 #################################    MACROS    ################################
 
-macro(project_add_inc_recursive)
+macro(add_inc_recursive)
     foreach (path ${ARGV})
         unset(found_inc)
         file(GLOB_RECURSE found_inc ${path} *.h)
@@ -12,12 +24,28 @@ macro(project_add_inc_recursive)
     endforeach ()
 endmacro()
 
-macro(project_add_src_recursive)
+macro(add_src_recursive)
     foreach (path ${ARGV})
         unset(found_src)
         file(GLOB_RECURSE found_src ${path} *.cc)
         list(APPEND PROJECT_SOURCES ${found_src})
     endforeach ()
+endmacro()
+
+macro(feature_parse_name_value feature name value)
+    string(REPLACE "=" ";" feature_tokens ${feature})
+    list(GET feature_tokens 0 ${name})
+    list(GET feature_tokens 1 ${value})
+endmacro()
+
+macro(feature_get_value feature value)
+    if (DEFINED ${feature})
+        set(${value} ${feature})
+    elseif (DEFINED ENV{${feature}})
+        set(${value} $ENV{${feature}})
+    else()
+        set(${value} UNDEFINED)
+    endif ()
 endmacro()
 
 ################################    PROJECT    ################################
@@ -32,26 +60,41 @@ add_compile_options(
     -ggdb -Og
 )
 
-project_add_inc_recursive(${PROJECT_DIR}/include)
-project_add_src_recursive(${PROJECT_DIR}/src)
+add_inc_recursive(${PROJECT_DIR}/include)
+add_src_recursive(${PROJECT_DIR}/src)
 
-add_compile_definitions(
+add_executable(xcc
+  ${PROJECT_INCLUDES}
+  ${PROJECT_SOURCES}
+)
+
+################################    FEATURES    ################################
+
+set(FEATURE_TOGGLES
         USE_OPTIMIZATION=0
-        USE_CATCH_EXCEPTIONS=0
+        USE_CATCH_EXCEPTIONS=1
         USE_PRINT_TOKENS=0
         USE_PRINT_AST=0
         USE_PRINT_LLVM_IR=0
         USE_PRINT_EXPR_RESULT=1
         USE_PRINT_LLVM_IR_ON_VERIFY_FAIL=1
         USE_DUMP_JIT=0
-        USE_REPORT_SYMBOL_RESOLVER_SUCCESS=1
+        USE_REPORT_SYMBOL_RESOLVER_SUCCESS=0
         USE_LEGACY_XCC_EXTERN_FUNCTIONS=1
 )
 
-add_executable(xcc
-  ${PROJECT_INCLUDES}
-  ${PROJECT_SOURCES}
-)
+foreach (feature ${FEATURE_TOGGLES})
+    feature_parse_name_value(${feature} name default)
+    feature_get_value(${name} val)
+
+    if (${val} STREQUAL UNDEFINED)
+        message(STATUS "${COLOR_BLUE}Feature ${name} using default value ${default}${COLOR_RESET}")
+        add_compile_definitions(${feature})
+    else ()
+        message(STATUS "${COLOR_YELLOW}Feature ${name} overridden, value ${val}${COLOR_RESET}")
+        add_compile_definitions(${name}=${val})
+    endif ()
+endforeach ()
 
 ##################################    LLVM    #################################
 
