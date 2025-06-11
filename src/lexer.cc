@@ -2,7 +2,6 @@
 #include "xcc/exceptions.h"
 #include "xcc/util/prefix_tree.h"
 #include "xcc/util/string.h"
-#include <ctype.h>
 
 using namespace xcc;
 
@@ -166,8 +165,8 @@ static const std::unordered_map<TokenType, std::string> s_token_type_value_map {
     {TOKEN_NOT,                 "!"},
 };
 
-static inline bool isBase16Char(char c) {
-  return isnumber(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+static bool isBase16Char(char c) {
+  return isdigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
 }
 
 std::string Token::toString() const {
@@ -299,7 +298,7 @@ void Lexer::tokenizeNumber() {
     }
   }
 
-  while (isnumber(current())
+  while (isdigit(current())
          || current() == '.'
          || allow_base_16_chars && isBase16Char(current())) {
     if (isAtEnd()) {
@@ -336,7 +335,7 @@ std::vector<Token> Lexer::tokenize() {
       tokenizeString();
     } else if (check('\'')) {
       tokenizeChar();
-    } else if (isnumber(current())) {
+    } else if (isdigit(current())) {
       // TODO: add hex, floating point, octal, bin, etc
       tokenizeNumber();
     }
