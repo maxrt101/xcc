@@ -1,0 +1,100 @@
+name: Build XCC
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - '**.cc'
+      - '**.h'
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - '**.cc'
+      - '**.h'
+  workflow_dispatch:
+    inputs:
+      optimization:
+        description: USE_OPTIMIZATION
+        required: false
+      catch_exceptions:
+        description: USE_CATCH_EXCEPTIONS
+        required: false
+      print_tokens:
+        description: USE_PRINT_TOKENS
+        required: false
+      print_ast:
+        description: USE_PRINT_AST
+        required: false
+      print_llvm_ir:
+        description: USE_PRINT_LLVM_IR
+        required: false
+      print_expr_result:
+        description: USE_PRINT_EXPR_RESULT
+        required: false
+      print_llvm_ir_on_verify_fail:
+        description: USE_PRINT_LLVM_IR_ON_VERIFY_FAIL
+        required: false
+      dump_jit_state:
+        description: USE_DUMP_JIT
+        required: false
+      report_symbol_resolver_success:
+        description: USE_REPORT_SYMBOL_RESOLVER_SUCCESS
+        required: false
+      use_legacy_extern_functions:
+        description: USE_LEGACY_XCC_EXTERN_FUNCTIONS
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
+      with:
+        cmake-version: '3.28.x'
+
+    - name: Install LLVM and Clang
+      uses: KyleMayes/install-llvm-action@v2
+      with:
+        version: "20.1.5"
+
+    - name: Configure
+      run: |
+        ARGS=""
+        if [ -n "${{ inputs.dump_jit_state }}" ]; then
+            ARGS="$ARGS -DUSE_DUMP_JIT=${{ inputs.dump_jit_state }}"
+        fi
+        cmake -B build -S . -G "Unix Makefiles" $ARGS
+#export PATH="$PATH:$(pwd)/${{env.GCC_DIR}}/bin"
+
+    - name: Build
+      run: cmake --build build --target xcc
+
+    - name: Run tests
+      run: python3 -c tests/tests.json -e build/xcc
+
+    - name: Archive executable artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: xcc-executable-linux
+        path: build/xcc
+
+    - name: Archive HEX artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: grain-section-hex
+        path: build/GrainSection.hex
+
+    - name: Archive BIN artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: grain-section-bin
+        path: build/GrainSection.bin
