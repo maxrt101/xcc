@@ -120,12 +120,7 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 void GlobalContext::runFunction(const std::string& name) {
   auto fn = getMetaFunction(name);
 
-  // TODO: Exception or log?
-  // assertThrow(fn.get(), CodegenException(std::format("runFunction can't find '{}'", name)));
-  if (!fn) {
-    logger.error("Can't find meta-function '{}'", name);
-    return;
-  }
+  assertThrow(fn.get(), CodegenException(std::format("Can't find meta-function '{}'", name)));
 
   auto type = getMetaFunction(name)->returnType;
 
@@ -140,11 +135,7 @@ void GlobalContext::runFunction(const std::string& name) {
 
   auto symbol = jit->lookup(name);
 
-  // TODO: Exception or log?
-  if (!symbol) {
-    logger.error("Can't find symbol '{}'", name);
-    return;
-  }
+  assertThrow(bool(symbol), CodegenException(std::format("Can't find symbol '{}'", name)));
 
   auto result = util::call(type, symbol.get());
 
