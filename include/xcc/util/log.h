@@ -1,15 +1,13 @@
 #pragma once
 
-#include <cstdint>
 #include <string>
 #include <format>
+#include <memory>
 #include <vector>
+#include <cstdint>
 #include <unordered_map>
 #include "xcc/util/string.h"
 
-// #ifndef XCC_LOG_DEFAULT_FLAGS
-// #define XCC_LOG_DEFAULT_FLAGS xcc::util::log::Flag::ENABLE_COLOR | xcc::util::log::Flag::ADD_NEWLINE
-// #endif
 
 namespace xcc::util::log {
 
