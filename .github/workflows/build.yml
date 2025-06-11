@@ -73,6 +73,9 @@ jobs:
             ARGS="$ARGS -DUSE_DUMP_JIT=${{ inputs.dump_jit_state }}"
         fi
         cmake -B build -S . -G "Unix Makefiles" $ARGS
+      env:
+        CC: clang
+        CXX: clang++
 #export PATH="$PATH:$(pwd)/${{env.GCC_DIR}}/bin"
 
     - name: Build
