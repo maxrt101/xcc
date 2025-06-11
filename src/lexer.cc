@@ -3,6 +3,8 @@
 #include "xcc/util/prefix_tree.h"
 #include "xcc/util/string.h"
 
+#include <cctype>
+
 using namespace xcc;
 
 static const PrefixTree<TokenType> s_token_patterns(TOKEN_EOF, {
