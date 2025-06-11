@@ -22,35 +22,8 @@ on:
       tests_print_output:
         description: "Run testrunner with print output (stdout/stderr) flag"
         required: false
-      optimization:
-        description: USE_OPTIMIZATION
-        required: false
-      catch_exceptions:
-        description: USE_CATCH_EXCEPTIONS
-        required: false
-      print_tokens:
-        description: USE_PRINT_TOKENS
-        required: false
-      print_ast:
-        description: USE_PRINT_AST
-        required: false
-      print_llvm_ir:
-        description: USE_PRINT_LLVM_IR
-        required: false
-      print_expr_result:
-        description: USE_PRINT_EXPR_RESULT
-        required: false
-      print_llvm_ir_on_verify_fail:
-        description: USE_PRINT_LLVM_IR_ON_VERIFY_FAIL
-        required: false
-      dump_jit_state:
-        description: USE_DUMP_JIT
-        required: false
-      report_symbol_resolver_success:
-        description: USE_REPORT_SYMBOL_RESOLVER_SUCCESS
-        required: false
-      use_legacy_extern_functions:
-        description: USE_LEGACY_XCC_EXTERN_FUNCTIONS
+      features:
+        description: "Space-separated list of key-value feature toggles"
         required: false
 
 jobs:
@@ -78,36 +51,13 @@ jobs:
     - name: Configure
       run: |
         ARGS=""
-        if [ -n "${{ inputs.optimization }}" ]; then
-            ARGS="$ARGS -DUSE_OPTIMIZATION=${{ inputs.optimization }}"
+        if [ -n "${{ inputs.features }}" ]; then
+            for feature in ${{ inputs.features }}
+            do
+              ARGS="$ARGS -D$feature"
+            done
         fi
-        if [ -n "${{ inputs.catch_exceptions }}" ]; then
-            ARGS="$ARGS -DUSE_CATCH_EXCEPTIONS=${{ inputs.catch_exceptions }}"
-        fi
-        if [ -n "${{ inputs.print_tokens }}" ]; then
-            ARGS="$ARGS -DUSE_PRINT_TOKENS=${{ inputs.print_tokens }}"
-        fi
-        if [ -n "${{ inputs.print_ast }}" ]; then
-            ARGS="$ARGS -DUSE_PRINT_AST=${{ inputs.print_ast }}"
-        fi
-        if [ -n "${{ inputs.print_llvm_ir }}" ]; then
-            ARGS="$ARGS -DUSE_PRINT_LLVM_IR=${{ inputs.print_llvm_ir }}"
-        fi
-        if [ -n "${{ inputs.print_expr_result }}" ]; then
-            ARGS="$ARGS -DUSE_PRINT_EXPR_RESULT=${{ inputs.print_expr_result }}"
-        fi
-        if [ -n "${{ inputs.print_llvm_ir_on_verify_fail }}" ]; then
-            ARGS="$ARGS -DUSE_PRINT_LLVM_IR_ON_VERIFY_FAIL=${{ inputs.print_llvm_ir_on_verify_fail }}"
-        fi
-        if [ -n "${{ inputs.dump_jit_state }}" ]; then
-            ARGS="$ARGS -DUSE_DUMP_JIT=${{ inputs.dump_jit_state }}"
-        fi
-        if [ -n "${{ inputs.report_symbol_resolver_success }}" ]; then
-            ARGS="$ARGS -DUSE_REPORT_SYMBOL_RESOLVER_SUCCESS=${{ inputs.report_symbol_resolver_success }}"
-        fi
-        if [ -n "${{ inputs.use_legacy_extern_functions }}" ]; then
-            ARGS="$ARGS -DUSE_LEGACY_XCC_EXTERN_FUNCTIONS=${{ inputs.use_legacy_extern_functions }}"
-        fi
+        
         cmake -B build -S . -G "Unix Makefiles" $ARGS
       env:
         CC: clang
