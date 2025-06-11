@@ -1,6 +1,7 @@
 #include "xcc/meta/type.h"
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
+#include "xcc/util/string.h"
 
 using namespace xcc::meta;
 
@@ -239,79 +240,70 @@ std::shared_ptr<Type> Type::create(TypeTag tag) {
 }
 
 std::shared_ptr<Type> Type::fromTypeName(const std::string& name) {
-  if (name == "void") {
-    return Type::createVoid();
-  } else if (name == "i8") {
-    return Type::createI8();
-  } else if (name == "i16") {
-    return Type::createI16();
-  } else if (name == "i32") {
-    return Type::createI32();
-  } else if (name == "i64") {
-    return Type::createI64();
-  } else if (name == "u8") {
-    return Type::createU8();
-  } else if (name == "u16") {
-    return Type::createU16();
-  } else if (name == "u32") {
-    return Type::createU32();
-  } else if (name == "u64") {
-    return Type::createU64();
-  } else if (name == "f32") {
-    return Type::createF32();
-  } else if (name == "f64") {
-    return Type::createF64();
-  } else {
-    if (customTypes.find(name) != customTypes.end()) {
-      return customTypes[name];
+  switch (util::strhash(name.c_str())) {
+    case util::strhash("void"): return createVoid();
+    case util::strhash("i8"):   return createI8();
+    case util::strhash("i16"):  return createI16();
+    case util::strhash("i32"):  return createI32();
+    case util::strhash("i64"):  return createI64();
+    case util::strhash("u8"):   return createU8();
+    case util::strhash("u16"):  return createU16();
+    case util::strhash("u32"):  return createU32();
+    case util::strhash("u64"):  return createU64();
+    case util::strhash("f32"):  return createF32();
+    case util::strhash("f64"):  return createF64();
+    default: {
+      if (customTypes.find(name) != customTypes.end()) {
+        return customTypes[name];
+      }
+
+      throw CodegenException("Unknown type '" + name + "'");
     }
   }
-
-  throw CodegenException("Unknown type '" + name + "'");
 }
 
 std::shared_ptr<Type> Type::createVoid() {
-  return Type::create(TypeTag::VOID);
+  return create(TypeTag::VOID);
 }
 
 std::shared_ptr<Type> Type::createI8() {
-  return Type::create(TypeTag::I8);
+  return create(TypeTag::I8);
 }
 
 std::shared_ptr<Type> Type::createI16() {
-  return Type::create(TypeTag::I16);
+  return create(TypeTag::I16);
 }
 
 std::shared_ptr<Type> Type::createI32() {
-  return Type::create(TypeTag::I32);
+  return create(TypeTag::I32);
 }
 
 std::shared_ptr<Type> Type::createI64() {
-  return Type::create(TypeTag::I64);
+  return create(TypeTag::I64);
 }
 
 std::shared_ptr<Type> Type::createU8() {
-  return Type::create(TypeTag::U8);
+  return create(TypeTag::U8);
 }
 
 std::shared_ptr<Type> Type::createU16() {
-  return Type::create(TypeTag::U16);
+  return create(TypeTag::U16);
 }
 
 std::shared_ptr<Type> Type::createU32() {
-  return Type::create(TypeTag::U32);
+  return create(TypeTag::U32);
 }
 
 std::shared_ptr<Type> Type::createU64() {
-  return Type::create(TypeTag::U64);
+  return create(TypeTag::U64);
 }
 
 std::shared_ptr<Type> Type::createF32() {
-  return Type::create(TypeTag::F32);
+  return create(TypeTag::F32);
 }
 
 std::shared_ptr<Type> Type::createF64() {
-  return Type::create(TypeTag::F64);
+  return create(TypeTag::F64);
 }
 
 std::shared_ptr<Type> Type::createSigned(int bits) {

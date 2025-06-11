@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace xcc::util {
 /**
@@ -39,5 +40,22 @@ void strreplace(std::string& str, const std::string& from, const std::string& to
  *            if false - will replace with actual ascii special characters
  */
 std::string strescseq(const std::string& str, bool add = true);
+
+/**
+ * Compile-time djb2 string hash function
+ *
+ * @param s String
+ * @return Hash
+ */
+constexpr uint64_t strhash(const char * s) {
+  uint64_t hash = 5381;
+  int c;
+
+  while ((c = *s++)) {
+    hash = (hash << 5) + hash + c;
+  }
+
+  return hash;
+}
 
 }
