@@ -46,7 +46,7 @@ jobs:
     - name: Install LLVM and Clang
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: clang llvm
+        packages: llvm-toolchain-20
         version: 1.0
 
     - name: Configure
