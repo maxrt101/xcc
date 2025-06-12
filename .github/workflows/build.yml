@@ -46,7 +46,7 @@ jobs:
     - name: Add LLVM unstable dev repo
       uses: myci-actions/add-deb-repo@11
       with:
-        repo: http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
+        repo: http://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/ noble main
         repo-name: llvm-toolchain-noble-20
         keys-asc: https://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/Release.gpg
 
