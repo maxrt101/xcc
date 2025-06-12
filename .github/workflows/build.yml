@@ -52,11 +52,19 @@ jobs:
 #        repo-name: llvm-toolchain-noble-20
 #        key-url: https://apt.llvm.org/llvm-snapshot.gpg.key
 
-    - name: Install LLVM and Clang
-      run: |
-        deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
-        deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
-        apt install llvm-toolchain-20 llvm-20-dev
+#    - name: Install LLVM and Clang
+#      run: |
+#        deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
+#        deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
+#        apt install llvm-toolchain-20 llvm-20-dev
+
+    - uses: gerlero/add-apt-repository@v1
+      with:
+        uri: https://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/
+        key: https://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/Release.gpg
+    - uses: gerlero/apt-install@v1
+      with:
+        packages: llvm-toolchain-20 llvm-20-dev
 
     - name: Configure
       run: |
