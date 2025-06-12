@@ -20,12 +20,12 @@ class Test:
 
         @classmethod
         def from_json(cls, config):
-            strings = {'stdout': [], 'stderr': []}
+            args = {'stdout': [], 'stderr': [], 'retcode': config['retcode']}
             for out in ['stdout', 'stderr']:
                 if out in config:
                     for line in config[out]:
-                        strings[out].append(re.compile(line, re.MULTILINE))
-            return cls(strings['stdout'], strings['stderr'], config['retcode'])
+                        args[out].append(re.compile(line, re.MULTILINE))
+            return cls(**args)
 
     id: int
     name: str
