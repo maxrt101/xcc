@@ -58,13 +58,18 @@ jobs:
 #        deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
 #        apt install llvm-toolchain-20 llvm-20-dev
 
-    - uses: gerlero/add-apt-repository@v1
-      with:
-        uri: https://apt.llvm.org/noble
-        key: https://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/Release.gpg
-    - uses: gerlero/apt-install@v1
-      with:
-        packages: llvm-toolchain-20 llvm-20-dev
+#    - uses: gerlero/add-apt-repository@v1
+#      with:
+#        uri: https://apt.llvm.org/noble
+#        key: https://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/Release.gpg
+#    - uses: gerlero/apt-install@v1
+#      with:
+#        packages: llvm-toolchain-20 llvm-20-dev
+    - name: Install LLVM & Clang
+      run: |
+        wget https://apt.llvm.org/llvm.sh
+        chmod +x llvm.sh
+        ./llvm.sh 20.1.5
 
     - name: Configure
       run: |
