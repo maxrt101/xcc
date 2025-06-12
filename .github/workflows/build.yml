@@ -60,7 +60,7 @@ jobs:
 
     - uses: gerlero/add-apt-repository@v1
       with:
-        uri: https://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/
+        uri: https://apt.llvm.org/noble
         key: https://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/Release.gpg
     - uses: gerlero/apt-install@v1
       with:
