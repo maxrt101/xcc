@@ -44,9 +44,10 @@ jobs:
         cmake-version: '3.28.x'
 
     - name: Install LLVM and Clang
-      uses: KyleMayes/install-llvm-action@v2
+      uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        version: "20.1.4"
+        packages: clang llvm
+        version: 1.0
 
     - name: Configure
       run: |
