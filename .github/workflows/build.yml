@@ -33,42 +33,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-
-    - name: Setup apt dependencies
+    - name: Setup Dependencies
       run: |
-        sudo apt install cmake make wget lsb-release software-properties-common gnupg zlib1g-dev libzstd-dev libdwarf-dev
-
-#    - name: Setup CMake
-#      uses: jwlawson/actions-setup-cmake@v2
-#      with:
-#        cmake-version: '3.28.x'
-
-#    - name: Add LLVM unstable dev repo
-#      uses: myci-actions/add-deb-repo@11
-#      with:
-#        repo: |
-#          deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
-#          deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
-#        repo-name: llvm-toolchain-noble-20
-#        key-url: https://apt.llvm.org/llvm-snapshot.gpg.key
-
-#    - name: Install LLVM and Clang
-#      run: |
-#        deb http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
-#        deb-src http://apt.llvm.org/noble/ llvm-toolchain-noble-20 main
-#        apt install llvm-toolchain-20 llvm-20-dev
-
-#    - uses: gerlero/add-apt-repository@v1
-#      with:
-#        uri: https://apt.llvm.org/noble
-#        key: https://apt.llvm.org/noble/dists/llvm-toolchain-noble-20/Release.gpg
-#    - uses: gerlero/apt-install@v1
-#      with:
-#        packages: llvm-toolchain-20 llvm-20-dev
+        sudo apt install python3 cmake make wget lsb-release software-properties-common gnupg zlib1g-dev libzstd-dev libdwarf-dev
 
     - name: Install LLVM & Clang
       run: |
@@ -90,6 +57,7 @@ jobs:
       env:
         CC: clang-20
         CXX: clang++-20
+        LLVM_DIR: /usr/lib/llvm-20/lib/cmake/
 
     - name: Build
       run: cmake --build build --target xcc
