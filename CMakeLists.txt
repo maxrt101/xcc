@@ -52,7 +52,6 @@ endmacro()
 
 set(PROJECT_DIR "${CMAKE_CURRENT_LIST_DIR}")
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_VERBOSE_MAKEFILE on CACHE BOOL "Verbose makefile" FORCE)
 
 project(xcc)
 
@@ -66,6 +65,10 @@ add_compile_options(
 )
 
 add_link_options(
+    # Has no effect on macos, but without this on linux
+    # xcc won't resolve symbols from running process as
+    # linux doesn't export host binary symbols into the
+    # process
     -rdynamic
 )
 
@@ -102,6 +105,14 @@ foreach (feature ${FEATURE_TOGGLES})
     endif ()
 endforeach ()
 
+##################################    VERBOSE    #################################
+
+feature_get_value(VERBOSE verbose)
+if ("${verbose}" STREQUAL "1")
+    message(STATUS "${COLOR_MAGENTA}Verbose makefiles ON${COLOR_RESET}")
+    set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Verbose makefile" FORCE)
+endif ()
+
 ##################################    LLVM    #################################
 
 find_package(LLVM REQUIRED CONFIG)
@@ -121,4 +132,8 @@ llvm_map_components_to_libnames(llvm_libs
 
 target_link_libraries(xcc ${llvm_libs})
 
-message(STATUS "LLVM version: ${LLVM_PACKAGE_VERSION}")
+##################################    STATUS    #################################
+
+message(STATUS "${COLOR_CYAN}Compiler:     ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} (${CMAKE_CXX_COMPILER})${COLOR_RESET}")
+message(STATUS "${COLOR_CYAN}Linker:       ${CMAKE_CXX_COMPILER_LINKER_ID} ${CMAKE_CXX_COMPILER_LINKER_VERSION} (${CMAKE_CXX_COMPILER_LINKER})${COLOR_RESET}")
+message(STATUS "${COLOR_CYAN}LLVM version: ${LLVM_PACKAGE_VERSION} ($ENV{LLVM_DIR})${COLOR_RESET}")
