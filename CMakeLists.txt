@@ -64,6 +64,10 @@ add_compile_options(
     -ggdb -Og
 )
 
+add_link_options(
+    -rdynamic
+)
+
 add_executable(xcc
   ${PROJECT_INCLUDES}
   ${PROJECT_SOURCES}
