@@ -1,7 +1,7 @@
 #pragma once
 
 #include <llvm/IR/Type.h>
-#include <llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h>
+#include <llvm/ExecutionEngine/Orc/Core.h>
 
 #include "xcc/meta/type.h"
 
