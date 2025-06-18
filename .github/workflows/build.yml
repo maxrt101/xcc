@@ -105,7 +105,7 @@ jobs:
                 ARGS="$ARGS -D$feature"
               done
           fi
-          cmake -B build -S . -G "Unix Makefiles" $ARGS
+          cmake -B build -S . -G "Unix Makefiles" $ARGS -DCMAKE_CXX_FLAGS="-isystem /usr/local/opt/llvm/include/c++/v1"
         env:
           CC: /usr/local/opt/llvm/bin/clang
           CXX: /usr/local/opt/llvm/bin/clang++
