@@ -105,7 +105,9 @@ jobs:
                 ARGS="$ARGS -D$feature"
               done
           fi
-          
+          echo "export PATH=/usr/local/opt/llvm/bin:\$PATH" >> $GITHUB_ENV
+          echo "export LDFLAGS=-L/usr/local/opt/llvm/lib" >> $GITHUB_ENV
+          echo "export CPPFLAGS=-I/usr/local/opt/llvm/include" >> $GITHUB_ENV
           cmake -B build -S . -G "Unix Makefiles" $ARGS
         env:
           CC: /usr/local/opt/llvm/bin/clang
