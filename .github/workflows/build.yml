@@ -104,7 +104,7 @@ jobs:
             ARGS="$ARGS -p"
         fi
         if [ -z "${{ inputs.omit_tests }}" ]; then
-          python3 -c tests/tests.json -e build/xcc $ARGS
+          python3 tests/testrun.py -c tests/tests.json -e build/xcc $ARGS
         else
           echo "Omit tests"
         fi
