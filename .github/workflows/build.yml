@@ -40,7 +40,7 @@ jobs:
 
     - name: Setup apt dependencies
       run: |
-        apt install cmake make wget lsb-release software-properties-common gnupg zlib1g-dev libzstd-dev libdwarf-dev
+        sudo apt install cmake make wget lsb-release software-properties-common gnupg zlib1g-dev libzstd-dev libdwarf-dev
 
 #    - name: Setup CMake
 #      uses: jwlawson/actions-setup-cmake@v2
