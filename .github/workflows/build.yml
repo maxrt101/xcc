@@ -94,7 +94,7 @@ jobs:
         uses: Homebrew/actions/setup-homebrew@main
 
       - name: Install Dependencies
-        run: brew install cmake make zstd llvm@20
+        run: brew install cmake make zstd llvm@20 || true
 
       - name: Configure
         run: |
