@@ -106,13 +106,13 @@ jobs:
               done
           fi
           echo "export PATH=/usr/local/opt/llvm/bin:\$PATH" >> $GITHUB_ENV
-          echo "export LDFLAGS=-L/usr/local/opt/llvm/lib" >> $GITHUB_ENV
-          echo "export CPPFLAGS=-I/usr/local/opt/llvm/include" >> $GITHUB_ENV
           cmake -B build -S . -G "Unix Makefiles" $ARGS
         env:
           CC: /usr/local/opt/llvm/bin/clang
           CXX: /usr/local/opt/llvm/bin/clang++
           LLVM_DIR: /usr/local/opt/llvm/lib/cmake/
+          LDFLAGS: -L/usr/local/opt/llvm/lib -L/usr/local/opt/llvm/lib/c++ -L/usr/local/opt/llvm/lib/unwind -lunwind
+          CPPFLAGS: -I/usr/local/opt/llvm/include
 
       - name: Build
         run: cmake --build build --target xcc
