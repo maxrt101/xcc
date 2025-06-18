@@ -38,10 +38,14 @@ jobs:
       with:
         python-version: '3.13'
 
-    - name: Setup CMake
-      uses: jwlawson/actions-setup-cmake@v2
-      with:
-        cmake-version: '3.28.x'
+    - name: Setup apt dependencies
+      run: |
+        apt install cmake make wget lsb-release software-properties-common gnupg zlib1g-dev libzstd-dev libdwarf-dev
+
+#    - name: Setup CMake
+#      uses: jwlawson/actions-setup-cmake@v2
+#      with:
+#        cmake-version: '3.28.x'
 
 #    - name: Add LLVM unstable dev repo
 #      uses: myci-actions/add-deb-repo@11
@@ -65,6 +69,7 @@ jobs:
 #    - uses: gerlero/apt-install@v1
 #      with:
 #        packages: llvm-toolchain-20 llvm-20-dev
+
     - name: Install LLVM & Clang
       run: |
         wget https://apt.llvm.org/llvm.sh
@@ -83,8 +88,8 @@ jobs:
         
         cmake -B build -S . -G "Unix Makefiles" $ARGS
       env:
-        CC: clang
-        CXX: clang++
+        CC: clang-20
+        CXX: clang++-20
 
     - name: Build
       run: cmake --build build --target xcc
