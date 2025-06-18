@@ -96,9 +96,6 @@ jobs:
       - name: Install Dependencies
         run: brew install cmake make zstd llvm@20
 
-      - name: Select Xcode 16.0
-        run: sudo xcode-select -switch /Applications/Xcode_16.0.app
-
       - name: Configure
         run: |
           ARGS=""
@@ -110,6 +107,8 @@ jobs:
           fi
           cmake -B build -S . -G "Unix Makefiles" $ARGS
         env:
+          CC: /usr/local/opt/llvm/bin/clang
+          CXX: /usr/local/opt/llvm/bin/clang++
           LLVM_DIR: /usr/local/opt/llvm/lib/cmake/
 
       - name: Build
