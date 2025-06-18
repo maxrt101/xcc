@@ -16,6 +16,9 @@ on:
       features:
         description: "Space-separated list of key-value feature toggles"
         required: false
+      verbose_build:
+          description: "Verbose build logs"
+          required: false
       omit_tests:
         description: "Omit tests"
         required: false
@@ -46,11 +49,16 @@ jobs:
     - name: Configure
       run: |
         ARGS=""
+
         if [ -n "${{ inputs.features }}" ]; then
-            for feature in ${{ inputs.features }}
-            do
-              ARGS="$ARGS -D$feature"
-            done
+          for feature in ${{ inputs.features }}
+          do
+            ARGS="$ARGS -D$feature"
+          done
+        fi
+
+        if [ -n "${{ inputs.verbose_build }}" ]; then
+          ARGS="$ARGS -DVERBOSE=1"
         fi
         
         cmake -B build -S . -G "Unix Makefiles" $ARGS
@@ -65,12 +73,15 @@ jobs:
     - name: Run tests
       run: |
         ARGS=""
+
         if [ -n "${{ inputs.tests_verbose }}" ]; then
-            ARGS="$ARGS -v"
+          ARGS="$ARGS -v"
         fi
+
         if [ -n "${{ inputs.tests_print_output }}" ]; then
-            ARGS="$ARGS -p"
+          ARGS="$ARGS -p"
         fi
+
         if [ -z "${{ inputs.omit_tests }}" ]; then
           python3 tests/testrun.py -c tests/tests.json -e build/xcc $ARGS
         else
@@ -99,12 +110,18 @@ jobs:
       - name: Configure
         run: |
           ARGS=""
+
           if [ -n "${{ inputs.features }}" ]; then
-              for feature in ${{ inputs.features }}
-              do
-                ARGS="$ARGS -D$feature"
-              done
+            for feature in ${{ inputs.features }}
+            do
+              ARGS="$ARGS -D$feature"
+            done
           fi
+
+          if [ -n "${{ inputs.verbose_build }}" ]; then
+            ARGS="$ARGS -DVERBOSE=1"
+          fi
+
           cmake -B build -S . -G "Unix Makefiles" $ARGS -DCMAKE_CXX_FLAGS="-nostdinc++ -isysroot $(xcrun --show-sdk-path) -isystem /usr/local/opt/llvm/include/c++/v1 -isystem /usr/local/opt/llvm/lib/clang/20/include"
         env:
           CC: /usr/local/opt/llvm/bin/clang
@@ -117,12 +134,15 @@ jobs:
       - name: Run tests
         run: |
           ARGS=""
+
           if [ -n "${{ inputs.tests_verbose }}" ]; then
               ARGS="$ARGS -v"
           fi
+
           if [ -n "${{ inputs.tests_print_output }}" ]; then
               ARGS="$ARGS -p"
           fi
+
           if [ -z "${{ inputs.omit_tests }}" ]; then
             python3 tests/testrun.py -c tests/tests.json -e build/xcc $ARGS
           else
