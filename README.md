@@ -1,5 +1,7 @@
 # XCC - Programming Language
 
+[![Build XCC](https://github.com/maxrt101/xcc/actions/workflows/build.yml/badge.svg)](https://github.com/maxrt101/xcc/actions/workflows/build.yml)
+
 A strongly-typed compiled programming language with Rust/C inspired syntax.  
 Uses LLVM as a backend because of its vast support of platforms, JIT, and other features.  
 XCC is a working name, it may be changed later.  
