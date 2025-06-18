@@ -115,3 +115,5 @@ llvm_map_components_to_libnames(llvm_libs
 )
 
 target_link_libraries(xcc ${llvm_libs})
+
+message(STATUS "LLVM version: ${LLVM_PACKAGE_VERSION}")
