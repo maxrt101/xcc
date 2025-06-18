@@ -105,14 +105,8 @@ jobs:
                 ARGS="$ARGS -D$feature"
               done
           fi
-          echo "export PATH=/usr/local/opt/llvm/bin:\$PATH" >> $GITHUB_ENV
-          echo "export SDKROOT=\$(xcrun --show-sdk-path)" >> $GITHUB_ENV
-          echo "CXXFLAGS='-stdlib=libc++ -I/usr/local/opt/llvm/include/c++/v1'" >> $GITHUB_ENV
-          echo "LDFLAGS='-L/usr/local/opt/llvm/lib -lunwind'" >> $GITHUB_ENV
           cmake -B build -S . -G "Unix Makefiles" $ARGS
         env:
-          CC: /usr/local/opt/llvm/bin/clang
-          CXX: /usr/local/opt/llvm/bin/clang++
           LLVM_DIR: /usr/local/opt/llvm/lib/cmake/
 
       - name: Build
