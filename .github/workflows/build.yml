@@ -94,7 +94,7 @@ jobs:
         uses: Homebrew/actions/setup-homebrew@main
 
       - name: Install Dependencies
-        run: brew install python3 wget cmake make libzstd-dev libdwarf-dev llvm@20
+        run: brew install python3 cmake make zstd llvm@20
 
       - name: Configure
         run: |
