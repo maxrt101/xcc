@@ -27,13 +27,13 @@ on:
         required: false
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-24.04
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Setup Dependencies
+    - name: Install Dependencies
       run: |
         sudo apt install python3 cmake make wget lsb-release software-properties-common gnupg zlib1g-dev libzstd-dev libdwarf-dev
 
@@ -82,3 +82,57 @@ jobs:
       with:
         name: xcc-linux
         path: build/xcc
+
+  build-macos:
+    runs-on: macos-13
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Install Dependencies
+        run: brew python3 python3 wget cmake make zlib1g-dev libzstd-dev libdwarf-dev llvm@20
+
+      - name: Configure
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.features }}" ]; then
+              for feature in ${{ inputs.features }}
+              do
+                ARGS="$ARGS -D$feature"
+              done
+          fi
+          
+          cmake -B build -S . -G "Unix Makefiles" $ARGS
+        env:
+          CC: /usr/local/opt/llvm/bin/clang
+          CXX: /usr/local/opt/llvm/bin/clang++
+          LLVM_DIR: /usr/local/opt/llvm/lib/cmake/
+
+      - name: Build
+        run: cmake --build build --target xcc
+
+      - name: Run tests
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.tests_verbose }}" ]; then
+              ARGS="$ARGS -v"
+          fi
+          if [ -n "${{ inputs.tests_print_output }}" ]; then
+              ARGS="$ARGS -p"
+          fi
+          if [ -z "${{ inputs.omit_tests }}" ]; then
+            python3 tests/testrun.py -c tests/tests.json -e build/xcc $ARGS
+          else
+            echo "Omit tests"
+          fi
+
+      - name: Archive executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcc-macos
+          path: build/xcc
+
