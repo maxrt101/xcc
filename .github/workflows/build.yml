@@ -124,9 +124,9 @@ jobs:
 
           cmake -B build -S . -G "Unix Makefiles" $ARGS -DCMAKE_CXX_FLAGS="-nostdinc++ -isysroot $(xcrun --show-sdk-path) -isystem /usr/local/opt/llvm/include/c++/v1 -isystem /usr/local/opt/llvm/lib/clang/20/include"
         env:
-          CC: /usr/local/opt/llvm/bin/clang
-          CXX: /usr/local/opt/llvm/bin/clang++
-          LLVM_DIR: /usr/local/opt/llvm/lib/cmake/
+          CC: /usr/local/opt/llvm@20/bin/clang
+          CXX: /usr/local/opt/llvm@20/bin/clang++
+          LLVM_DIR: /usr/local/opt/llvm@20/lib/cmake/
 
       - name: Build
         run: cmake --build build --target xcc
