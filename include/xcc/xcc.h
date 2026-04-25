@@ -61,6 +61,11 @@ void cleanup();
 CompilationResult compile(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl = false);
 
 /**
+ *
+ */
+void compile_to_object(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, const std::string& filename);
+
+/**
  * 'Driver' function - will tokenize, parse, lower AST, compile the source code and run main() function, or if in REPL
  * mode - top-level expression
  *

@@ -1,5 +1,8 @@
 #include "xcc/xcc.h"
+#include "xcc/util/fs.h"
 #include "xcc/util/string.h"
+
+#include <llvm/IR/LegacyPassManager.h>
 
 static auto logger = xcc::util::log::Logger("XCC");
 
@@ -92,6 +95,31 @@ xcc::CompilationResult xcc::compile(std::unique_ptr<codegen::GlobalContext>& glo
   }
 
   return result;
+}
+
+void xcc::compile_to_object(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, const std::string& filename) {
+  std::error_code error;
+  llvm::raw_fd_ostream dest(filename, error, llvm::sys::fs::OF_None);
+
+  if (error) {
+    logger.error("Could not open file {}: {}", filename, error.message());
+    throw std::runtime_error("Failed to open output file");
+  }
+
+  llvm::legacy::PassManager pass;
+  auto file_type = llvm::CodeGenFileType::ObjectFile;
+
+  if (globalContext->target.machine->addPassesToEmitFile(pass, dest, nullptr, file_type)) {
+    logger.error("TargetMachine can't emit an object file");
+    throw std::runtime_error("TargetMachine can't emit an object file");
+  }
+
+  compile(globalContext, src, false);
+
+  globalContext->mergeModules();
+
+  pass.run(*globalContext->globalModule->llvm.module);
+  dest.flush();
 }
 
 void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl) {

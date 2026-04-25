@@ -5,6 +5,8 @@
 #include "xcc/xcc.h"
 #include "xcc/args.h"
 #include "xcc/util/string.h"
+#include "xcc/util/env.h"
+#include "xcc/util/fs.h"
 
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/TargetParser/Host.h>
@@ -38,20 +40,6 @@ extern "C" [[maybe_unused]] int32_t xcc_puts(int8_t * s) {
   return 0;
 }
 #endif
-
-static std::string readFile(const std::string& filename) {
-  std::ifstream fs(filename);
-
-  if (!fs.is_open()) {
-    logger.fatal("Failed to open file '{}'", filename);
-    throw std::runtime_error("Failed to open the file");
-  }
-
-  std::stringstream ss;
-  ss << fs.rdbuf();
-
-  return ss.str();
-}
 
 static int help() {
   logger.println("XCC Compiler");
@@ -112,44 +100,74 @@ static int list_machines(xcc::args::Arguments& args) {
 }
 
 static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
-  if (!args.compile) {
-    logger.error("Linking isn't supported for now");
-    return 1;
+  if (args.files.size() > 1) {
+    logger.warn("Ignoring input files after '{}'", args.files[0]);
+    logger.info("xcc in 'object-compile' mode accept only one file");
   }
 
-  std::error_code error;
-  llvm::raw_fd_ostream dest(args.output, error, llvm::sys::fs::OF_None);
+  auto filename = args.files[0];
+  auto src = xcc::fs::readFile(filename);
+  auto out = args.output.empty() ? filename + ".o" : args.output;
 
-  if (error) {
-    logger.error("Could not open file {}: {}", args.output, error.message());
-    return 1;
-  }
+  logger.info("Compiling '{}' into '{}'", filename, out);
 
-  llvm::legacy::PassManager pass;
-  auto file_type = llvm::CodeGenFileType::ObjectFile;
-
-  if (globalContext->target.machine->addPassesToEmitFile(pass, dest, nullptr, file_type)) {
-    logger.error("TargetMachine can't emit a file of this type");
-    return 1;
-  }
-
-  xcc::compile(globalContext, readFile(args.files[0]), false);
-
-  globalContext->mergeModules();
-
-  globalContext->globalModule->llvm.module->print(llvm::errs(), nullptr);
-
-  pass.run(*globalContext->globalModule->llvm.module);
-  dest.flush();
+  xcc::compile_to_object(globalContext, src, out);
 
   return 0;
 }
 
+static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
+  std::vector<std::string> files_to_link;
+
+  for (auto & filename : args.files) {
+    auto file = xcc::fs::readFile(filename);
+
+    auto magic = llvm::identify_magic(file);
+
+    if (magic.is_object()) {
+      logger.info("Found object file '{}'", filename);
+      files_to_link.push_back(filename);
+    } else {
+      auto out = filename + ".o";
+
+      logger.info("Compiling '{}' into '{}'", filename, out);
+
+      xcc::compile_to_object(globalContext, file, out);
+
+      auto target = globalContext->target;
+      globalContext = xcc::codegen::GlobalContext::create();
+      globalContext->setTarget(target);
+      files_to_link.push_back(out);
+    }
+  }
+
+  auto ld = xcc::env::get("XCC_LD", "/usr/bin/ld");
+  auto out = args.output.empty() ? "a.out" : args.output;
+  auto cmd = std::format("{} -o {} ", ld, out);
+
+  for (auto& filename : files_to_link) {
+    cmd += filename + " ";
+  }
+
+  logger.info("Linker is '{}'", ld);
+  logger.info("Linking {} objects into '{}'", files_to_link.size(), out);
+  logger.debug("Linker command: {}", cmd);
+
+  return std::system(cmd.c_str());
+}
+
 static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
+  if (args.files.size() > 1) {
+    logger.warn("Ignoring input files after '{}'", args.files[0]);
+    logger.info("xcc in 'run' (jit) mode accept only one file");
+  }
+
+  logger.info("Running file '{}'", args.files[0]);
+
 #if USE_CATCH_EXCEPTIONS
   try {
 #endif
-    xcc::run(globalContext, readFile(args.files[0]), false);
+    xcc::run(globalContext, xcc::fs::readFile(args.files[0]), false);
 #if USE_CATCH_EXCEPTIONS
   } catch (std::exception& e) {
     logger.fatal("{}", e.what());
@@ -238,8 +256,8 @@ int main(int argc, char ** argv) {
     return list_machines(args);
   }
 
-  if ((args.compile && args.run) || (args.link && args.run)) {
-    logger.error("--run cannot be used with --compile or --link");
+  if (args.compile && args.run) {
+    logger.error("--run cannot be used with --compile");
     return 1;
   }
 
@@ -254,7 +272,11 @@ int main(int argc, char ** argv) {
       return run(std::move(globalContext), args);
     }
 
-    return compile(std::move(globalContext), args);
+    if (args.compile) {
+      return compile(std::move(globalContext), args);
+    }
+
+    return link(std::move(globalContext), args);
   }
 
   return repl(std::move(globalContext), args);

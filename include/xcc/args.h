@@ -13,7 +13,6 @@ struct Arguments {
   bool                     version;
   bool                     verbose;
   bool                     compile;
-  bool                     link;
   bool                     run;
   std::string              target;
   std::string              machine;
