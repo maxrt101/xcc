@@ -125,12 +125,12 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
     auto magic = llvm::identify_magic(file);
 
     if (magic.is_object()) {
-      logger.info("Found object file '{}'", filename);
+      logger.info("Found object file '{}'", xcc::fs::path::getFileName(filename));
       files_to_link.push_back(filename);
     } else {
       auto out = filename + ".o";
 
-      logger.info("Compiling '{}' into '{}'", filename, out);
+      logger.info("Compiling '{}' into '{}'", xcc::fs::path::getFileName(filename), xcc::fs::path::getFileName(out));
 
       xcc::compile_to_object(globalContext, file, out);
 
@@ -150,7 +150,7 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
   }
 
   logger.info("Linker is '{}'", ld);
-  logger.info("Linking {} objects into '{}'", files_to_link.size(), out);
+  logger.info("Linking {} objects into '{}'", files_to_link.size(), xcc::fs::path::getFileName(out));
   logger.debug("Linker command: {}", cmd);
 
   return std::system(cmd.c_str());
@@ -162,7 +162,7 @@ static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::
     logger.info("xcc in 'run' (jit) mode accept only one file");
   }
 
-  logger.info("Running file '{}'", args.files[0]);
+  logger.info("Running file '{}'", xcc::fs::path::getFileName(args.files[0]));
 
 #if USE_CATCH_EXCEPTIONS
   try {

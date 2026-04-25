@@ -1,5 +1,6 @@
 #include "xcc/util/fs.h"
 #include "xcc/util/log.h"
+#include "xcc/util/string.h"
 
 #include <iostream>
 #include <fstream>
@@ -20,4 +21,24 @@ std::string xcc::fs::readFile(const std::string& filename) {
   ss << fs.rdbuf();
 
   return ss.str();
+}
+
+std::vector<std::string> xcc::fs::path::split(const std::string& path) {
+  auto res = util::strsplit(path, "/");
+
+  std::erase_if(res, [](auto& x) { return x.empty(); });
+
+  return res;
+}
+
+std::string xcc::fs::path::getParent(const std::string& path) {
+  auto pos = path.rfind("/");
+
+  return pos == std::string::npos ? path : path.substr(0, pos);
+}
+
+std::string xcc::fs::path::getFileName(const std::string& path) {
+  auto pos = path.rfind("/");
+
+  return pos == std::string::npos ? path : path.substr(pos+1);
 }
