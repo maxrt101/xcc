@@ -3,16 +3,22 @@
 
 static auto logger = xcc::util::log::Logger("XCC");
 
-void xcc::init(bool autoCleanup) {
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
-  llvm::InitializeNativeTargetAsmParser();
+xcc::util::Target xcc::init(const std::string& target, const std::string& machine, bool autoCleanup) {
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
+  llvm::InitializeAllAsmPrinters();
 
   if (autoCleanup) {
     std::atexit(xcc::cleanup);
   }
 
-  logger.info("XCC v{} initialized", getVersion().c_str());
+  auto target_info = util::Target(target, machine);
+
+  logger.info("XCC v{} initialized for {}", getVersion().c_str(), target_info.target_triple);
+
+  return target_info;
 }
 
 void xcc::cleanup() {
@@ -20,7 +26,7 @@ void xcc::cleanup() {
   util::log::cleanup();
 }
 
-void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl) {
+xcc::CompilationResult xcc::compile(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl) {
   auto tokens = Lexer(src).tokenize();
 
 #if USE_PRINT_TOKENS
@@ -41,38 +47,43 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
   ast::printAst(ast);
 #endif
 
-  std::vector<std::shared_ptr<ast::Node>> fn_nodes;
-  std::vector<std::shared_ptr<ast::Node>> expr_nodes;
+  CompilationResult result;
 
   for (auto& node : ast->body) {
     if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
-      fn_nodes.push_back(node);
+      result.nodes.fn.push_back(node);
     } else if (node->is(ast::AST_VAR_DECL)) {
       node->generateValue(*globalContext->globalModule, {});
     } else if (node->is(ast::AST_STRUCT)) {
       node->generateType(*globalContext->globalModule, {});
       for (auto& method : node->as<ast::Struct>()->methods) {
-        fn_nodes.push_back(method);
+        result.nodes.fn.push_back(method);
       }
     } else {
       if (isRepl) {
-        expr_nodes.push_back(node);
+        result.nodes.expr.push_back(node);
       } else {
         throw std::runtime_error("Unexpected node at top-level scope: " + ast::Node::typeToString(node->type));
       }
     }
   }
 
-  for (auto& node : fn_nodes) {
-    auto ctx = globalContext->createModule();
+  for (auto& node : result.nodes.fn) {
 
     if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
-      auto fn = node->generateFunction(*ctx, {});
+      auto decl = node->is(ast::AST_FUNCTION_DEF) ? node->as<ast::FnDef>()->decl.get() : node->as<ast::FnDecl>();
+      auto name = decl->name->as<ast::Identifier>()->value;
+
+      auto ctx = globalContext->createModule(name);
+
 #if USE_PRINT_LLVM_IR
+      auto fn = node->generateFunction(*ctx, {});
       logger.info("LLVM IR for function {}:", fn->getName().str());
       util::RawStreamCollector collector;
       fn->print(*collector.stream());
       logger.print("{}", collector.string());
+#else
+      node->generateFunction(*ctx, {});
 #endif
       globalContext->addModule(ctx);
     } else {
@@ -80,9 +91,17 @@ void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std:
     }
   }
 
+  return result;
+}
+
+void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl) {
+  auto result = compile(globalContext, src, isRepl);
+
+  globalContext->flushModulesToJIT();
+
   if (isRepl) {
-    if (!expr_nodes.empty()) {
-      globalContext->runExpr(ast::Block::create(expr_nodes));
+    if (!result.nodes.expr.empty()) {
+      globalContext->runExpr(ast::Block::create(result.nodes.expr));
     }
   } else {
     globalContext->runFunction("main");

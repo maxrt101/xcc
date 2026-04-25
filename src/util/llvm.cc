@@ -1,7 +1,27 @@
 #include "xcc/util/llvm.h"
+#include "xcc/util/log.h"
+
+#include <llvm/Target/TargetOptions.h>
+
+static auto logger = xcc::util::log::Logger("LLVM");
 
 using namespace xcc::util;
 using namespace xcc::meta;
+
+Target::Target(const std::string& target_name, const std::string& machine_name) : target_triple(target_name) {
+  std::string error;
+  target = llvm::TargetRegistry::lookupTarget(target_name, error);
+
+  if (!target) {
+    logger.error("Failed to find target '{}': {}", target_name, error);
+    throw std::runtime_error("Failed to find requested target");
+  }
+
+  llvm::TargetOptions opt;
+
+  // TODO: Configurable PIC?
+  machine = target->createTargetMachine(target_name, machine_name, "", opt, llvm::Reloc::PIC_);
+}
 
 GenericValueContainer::GenericValueContainer(Tag tag) : tag(tag) {}
 

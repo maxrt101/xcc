@@ -4,6 +4,8 @@
 #include "xcc/util/llvm.h"
 #include "xcc/ast.h"
 
+#include <llvm/Linker/Linker.h>
+
 using namespace xcc;
 using namespace xcc::codegen;
 
@@ -13,6 +15,8 @@ static auto logger = xcc::util::log::Logger("CODEGEN");
 
 GlobalContext::GlobalContext() {
   jit = JIT::create();
+
+  tsc = std::make_unique<llvm::LLVMContext>();
 
   globalModule = ModuleContext::create(*this, "<global>");
 }
@@ -26,7 +30,35 @@ std::unique_ptr<ModuleContext> GlobalContext::createModule(const std::string& na
 }
 
 void GlobalContext::addModule(std::unique_ptr<ModuleContext>& module) {
-  CodegenException::throwIfError(jit->addModule(llvm::orc::ThreadSafeModule(std::move(module->llvm.module), std::move(module->llvm.ctx))));
+  pendingModules.push_back(std::move(module));
+}
+
+void GlobalContext::flushModulesToJIT() {
+  for (auto& mod : pendingModules) {
+    auto tsm = llvm::orc::ThreadSafeModule(std::move(mod->llvm.module), tsc);
+    CodegenException::throwIfError(jit->addModule(std::move(tsm)));
+  }
+
+  pendingModules.clear();
+}
+
+void GlobalContext::mergeModules() const {
+  for (auto& mod : pendingModules) {
+    if (llvm::Linker::linkModules(*globalModule->llvm.module, std::move(mod->llvm.module))) {
+      logger.error("Failed to link modules <global> and {}", mod->name);
+      throw std::runtime_error("Failed to link modules");
+    }
+  }
+
+  // TODO: ?
+  // pendingModules.clear();
+}
+
+void GlobalContext::setTarget(util::Target target) {
+  this->target = target;
+
+  globalModule->llvm.module->setDataLayout(target.machine->createDataLayout());
+  globalModule->llvm.module->setTargetTriple(target.target_triple);
 }
 
 void GlobalContext::addFunction(const std::string& name, std::shared_ptr<meta::Function> fn) {
@@ -102,9 +134,9 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 
   auto fndef = ast::FnDef::create(fndecl, body);
 
-  auto fn = fndef->generateFunction(*globalModule, {});
 
 #if USE_PRINT_LLVM_IR
+  auto fn = fndef->generateFunction(*globalModule, {});
   util::RawStreamCollector collector;
   fn->print(*collector.stream());
   for (auto &global : globalModule->llvm.module->globals()) {
@@ -112,6 +144,8 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
     *collector.stream() << "\n";
   }
   logger.debug("IR:\n{}", collector.string());
+#else
+  fndef->generateFunction(*globalModule, {});
 #endif
 
   return runFunction(ANONYMOUS_EXPR_FN_NAME);
@@ -125,7 +159,7 @@ void GlobalContext::runFunction(const std::string& name) {
   auto type = getMetaFunction(name)->returnType;
 
   auto rt = jit->getMainJitDylib().createResourceTracker();
-  auto tsm = llvm::orc::ThreadSafeModule(std::move(globalModule->llvm.module), std::move(globalModule->llvm.ctx));
+  auto tsm = llvm::orc::ThreadSafeModule(std::move(globalModule->llvm.module), tsc);
 
   CodegenException::throwIfError(jit->addModule(std::move(tsm), rt));
 
@@ -161,8 +195,8 @@ void GlobalContext::runFunction(const std::string& name) {
   CodegenException::throwIfError(rt->remove());
 }
 
-ModuleContext::ModuleContext(GlobalContext& global, const std::string& name) : globalContext(global) {
-  llvm.ctx = std::make_unique<llvm::LLVMContext>();
+ModuleContext::ModuleContext(GlobalContext& global, const std::string& name) : name(name), globalContext(global) {
+  llvm.ctx = globalContext.tsc.getContext();
   llvm.module = std::make_unique<llvm::Module>(name, *llvm.ctx);
 
   llvm.module->setDataLayout(global.jit->getDataLayout());

@@ -217,6 +217,21 @@ public:
   }
 
   /**
+   * Print a raw line without additional formatting. Disregards flags
+   *
+   * @param fmt Format string
+   * @param args vargs for fmt
+   */
+  template <typename... Args>
+  void println(const std::format_string<Args...> fmt, Args&&... args) {
+    auto string = std::format(fmt, std::forward<Args>(args)...);
+
+    for (auto & out : outputs) {
+      out->output(string + "\n");
+    }
+  }
+
+  /**
    * Prints with DEBUG log level
    *
    * @param fmt Format string

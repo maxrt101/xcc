@@ -105,7 +105,8 @@ class Runner:
         self.run_range(list(self.tests.keys()))
 
     def __run(self, test: Test) -> TestRun:
-        result = subprocess.run([self.executable, os.path.join(self.test_dir, test.file)], capture_output=True, text=True)
+        # TODO: Add option into json, such as "exec_mode", with possible values "run", "compile", ...
+        result = subprocess.run([self.executable, '-r', os.path.join(self.test_dir, test.file)], capture_output=True, text=True)
         run = TestRun(True, result.returncode, 0, result.stdout, result.stderr, [])
 
         if match := self.RESULT_REGEX.search(run.stdout):

@@ -68,7 +68,7 @@ add_link_options(
     # Has no effect on macos, but without this on linux
     # xcc won't resolve symbols from running process as
     # linux doesn't export host binary symbols into the
-    # process
+    # process by default
     -rdynamic
 )
 
@@ -126,9 +126,15 @@ llvm_map_components_to_libnames(llvm_libs
         support
         irreader
         orcjit
-        x86codegen
-        x86asmparser
+
+        ${LLVM_TARGETS_TO_BUILD}
+
+        AllTargetsDescs
+        AllTargetsAsmParsers
+        AllTargetsInfos
 )
+
+message(STATUS "${COLOR_MAGENTA}LLVM Components: ${llvm_libs}${COLOR_RESET}")
 
 target_link_libraries(xcc ${llvm_libs})
 

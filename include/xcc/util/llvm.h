@@ -1,11 +1,33 @@
 #pragma once
 
 #include <llvm/IR/Type.h>
+#include <llvm/MC/TargetRegistry.h>
 #include <llvm/ExecutionEngine/Orc/Core.h>
+
+#include <string>
 
 #include "xcc/meta/type.h"
 
 namespace xcc::util {
+
+/**
+ * Contains initialized target contexts
+ */
+struct Target {
+  const llvm::Target *  target;
+  llvm::TargetMachine * machine;
+  std::string           target_triple;
+
+  Target() = default;
+
+  /**
+   * Creates LLVM target contexts
+   *
+   * @param target_name  Target Triple
+   * @param machine_name Machine (CPU) name
+   */
+  Target(const std::string& target_name, const std::string& machine_name);
+};
 
 /**
  * Generic container for function result, when function type is not known beforehand
@@ -29,8 +51,8 @@ public:
    */
   union Value {
     uint64_t unsigned_integer;
-    int64_t signed_integer;
-    double floating;
+    int64_t  signed_integer;
+    double   floating;
   } value;
 
 public:

@@ -40,8 +40,22 @@ class ModuleContext;
  */
 class GlobalContext {
 public:
+  /* Target Info (with all LLVM contexts) */
+  util::Target target;
+
   /* JIT Context */
   std::unique_ptr<JIT> jit;
+
+  /* Single context for all modules */
+  llvm::orc::ThreadSafeContext tsc;
+
+  /* Global Module */
+  std::shared_ptr<ModuleContext> globalModule;
+
+  std::vector<std::unique_ptr<ModuleContext>> pendingModules;
+
+  /* Global Variable Types */
+  std::unordered_map<std::string, std::shared_ptr<meta::Type>> globals;
 
   /* Functions */
   std::unordered_map<std::string, std::shared_ptr<meta::Function>> functions;
@@ -49,21 +63,41 @@ public:
   /* Current Function Name */
   std::string current_function;
 
-  /* Global Module */
-  std::shared_ptr<ModuleContext> globalModule;
-
-  /* Global Variable Types */
-  std::unordered_map<std::string, std::shared_ptr<meta::Type>> globals;
-
 public:
   GlobalContext();
   ~GlobalContext() = default;
 
+  /**
+   * Creates GlobalContext. Should be used instead of raw constructor
+   */
   static std::unique_ptr<GlobalContext> create();
 
+  /**
+   * Creates new module (e.g. for a new function) tied to global context
+   *
+   * @param name Module name
+   */
   std::unique_ptr<ModuleContext> createModule(const std::string& name = DEFAULT_MODULE_NAME);
 
+  /**
+   * Adds module to global context. Should be called, when module is ready
+   */
   void addModule(std::unique_ptr<ModuleContext>& module);
+
+  /**
+   * Flushes all added modules to JIT
+   */
+  void flushModulesToJIT();
+
+  /**
+   * Merges all added modules into global module from global context
+   */
+  void mergeModules() const;
+
+  /**
+   * Set target
+   */
+  void setTarget(util::Target target);
 
   void addFunction(const std::string& name, std::shared_ptr<meta::Function> fn);
   std::shared_ptr<meta::Function> getMetaFunction(const std::string& name);
@@ -86,12 +120,15 @@ public:
  */
 class ModuleContext {
 public:
+  /* Module name */
+  std::string name;
+
   /* Global Context Handle */
   GlobalContext& globalContext;
 
   /* Top-Level LLVM Contexts */
   struct {
-    std::unique_ptr<llvm::LLVMContext> ctx;
+    llvm::LLVMContext *           ctx; // Must be set to globalContext.tsc.getContext()
     std::unique_ptr<llvm::Module> module;
   } llvm;
 
