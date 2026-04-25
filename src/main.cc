@@ -1,7 +1,6 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <stdexcept>
 
 #include "xcc/xcc.h"
 #include "xcc/args.h"

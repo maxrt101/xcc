@@ -1,5 +1,5 @@
 #include "xcc/args.h"
-#include <exception>
+#include <stdexcept>
 #include <cstring>
 #include <llvm/TargetParser/Host.h>
 
