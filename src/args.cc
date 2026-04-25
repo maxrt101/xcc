@@ -10,7 +10,8 @@ xcc::args::Arguments::Arguments()
   : help(false),
     version(false),
     verbose(false),
-    compile_only(false),
+    compile(false),
+    link(false),
     run(false),
     target(llvm::sys::getDefaultTargetTriple()),
     machine("generic") {}
@@ -26,7 +27,9 @@ xcc::args::Arguments xcc::args::parse(int argc, char ** argv) {
     } else if (!strcmp(argv[i], "--verbose")) {
       args.verbose = true;
     } else if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) {
-      args.compile_only = true;
+      args.compile = true;
+    } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--link")) {
+      args.link = true;
     } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--run")) {
       args.run = true;
     } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {

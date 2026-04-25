@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <stdexcept>
 
 #include "xcc/xcc.h"
 #include "xcc/args.h"
@@ -48,9 +49,6 @@ static std::string readFile(const std::string& filename) {
   std::stringstream ss;
   ss << fs.rdbuf();
 
-  logger.debug("Read file {}", filename);
-  logger.print("{}", ss.str());
-
   return ss.str();
 }
 
@@ -68,7 +66,7 @@ static void help() {
 }
 
 static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
-  if (!args.compile_only) {
+  if (!args.compile) {
     logger.error("Linking isn't supported for now");
     return 1;
   }
@@ -186,6 +184,11 @@ int main(int argc, char ** argv) {
   if (args.version) {
     logger.println("xcc {}", xcc::getVersion());
     return 0;
+  }
+
+  if ((args.compile && args.run) || (args.link && args.run)) {
+    logger.error("--run cannot be used with --compile or --link");
+    return 1;
   }
 
   auto target = xcc::init(args.target, args.machine);
