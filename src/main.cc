@@ -7,6 +7,8 @@
 #include "xcc/util/string.h"
 
 #include <llvm/IR/LegacyPassManager.h>
+#include <llvm/TargetParser/Host.h>
+#include <llvm/MC/MCSubtargetInfo.h>
 
 static auto logger = xcc::util::log::Logger("MAIN");
 
@@ -51,7 +53,7 @@ static std::string readFile(const std::string& filename) {
   return ss.str();
 }
 
-static void help() {
+static int help() {
   logger.println("XCC Compiler");
   logger.println("Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-t TARGET] [-m MACHINE] [-o OUT_FILE] IN_FILE...");
   logger.println("  -h, --help            - Print this message");
@@ -59,9 +61,54 @@ static void help() {
   logger.println("  -c, --compile         - Compile into object file");
   logger.println("  -r, --run             - Run file using JIT");
   logger.println("  -t, --target TARGET   - Specify target triple");
+  logger.println("                          with 'list' as TARGET - will list all targets");
   logger.println("  -m, --machine MACHINE - Specify target machine (cpu)");
+  logger.println("                          with 'list' as MACHINE - will list all machines");
   logger.println("  -o, --output OUT_FILE - Set output file name (for -c)");
   logger.println("  IN_FILE...            - Input (source) files");
+  return 0;
+}
+
+static int version() {
+  logger.println("xcc {}", xcc::getVersion());
+  return 0;
+}
+
+static int list_targets(xcc::args::Arguments& args) {
+  xcc::init(llvm::sys::getDefaultTargetTriple(), args.machine);
+
+  std::vector<std::tuple<std::string, std::string>> targets;
+  size_t width = 0;
+
+  for (const llvm::Target& t : llvm::TargetRegistry::targets()) {
+    targets.push_back({t.getName(), t.getShortDescription()});
+    width = std::max(width, strlen(t.getName()));
+  }
+
+  for (auto & [name, desc] : targets) {
+    logger.println("{:{}} - {}", name, width, desc);
+  }
+
+  return 0;
+}
+
+static int list_machines(xcc::args::Arguments& args) {
+  auto target = xcc::init(args.target, "generic");
+
+  std::unique_ptr<llvm::MCSubtargetInfo> sti(target.target->createMCSubtargetInfo(args.target, "", ""));
+
+  if (!sti) {
+    logger.error("Could not get subtarget info for triple {}", args.target);
+    return 1;
+  }
+
+  for (auto & cpu : sti->getAllProcessorDescriptions()) {
+    if (std::string(cpu.Key) != "generic") {
+      logger.println("  {}", cpu.Key);
+    }
+  }
+
+  return 0;
 }
 
 static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
@@ -176,13 +223,19 @@ int main(int argc, char ** argv) {
   auto args = xcc::args::parse(argc, argv);
 
   if (args.help) {
-    help();
-    return 0;
+    return help();
   }
 
   if (args.version) {
-    logger.println("xcc {}", xcc::getVersion());
-    return 0;
+    return version();
+  }
+
+  if (args.target == "list") {
+    return list_targets(args);
+  }
+
+  if (args.machine == "list") {
+    return list_machines(args);
   }
 
   if ((args.compile && args.run) || (args.link && args.run)) {

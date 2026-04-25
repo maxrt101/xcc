@@ -31,7 +31,9 @@ Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-t TARGET] [-m MACHINE] [-o OUT_FILE
   -c, --compile         - Compile into object file
   -r, --run             - Run file using JIT
   -t, --target TARGET   - Specify target triple
+                          with 'list' as TARGET - will list all targets
   -m, --machine MACHINE - Specify target machine (cpu)
+                          with 'list' as MACHINE - will list all machines
   -o, --output OUT_FILE - Set output file name (for -c)
   IN_FILE...            - Input (source) files
 ```
