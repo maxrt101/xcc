@@ -151,11 +151,11 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
     throw ParserException(current().line, "Expected ')' after function arguments");
   }
 
-  if (!checkAdvance(TOKEN_COLON)) {
-    throw ParserException(current().line, "Expected ':' after function arguments");
+  if (checkAdvance(TOKEN_COLON)) {
+    return_type = parseType();
+  } else {
+    return_type = ast::Type::create(ast::Identifier::create("void"), false);;
   }
-
-  return_type = parseType();
 
   auto fndecl = ast::FnDecl::create(name, return_type, args, is_extern, is_variadic);
 
