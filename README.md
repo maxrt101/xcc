@@ -9,19 +9,32 @@ CC - is taken from GCC (GNU Compiler Collection), while XCC is not a compiler co
 it most certainly is a compiler. X - is just a cool letter that I like :)  
 
 ### How to run  
-Prerequisites:  
+#### Prerequisites:  
  - GCC/clang  
  - CMake  
  - LLVM installed (and findable through CMake)
 
-Build:  
+#### Build:  
  - `cmake -B build -S .`  
  - `cd build`  
  - `make` (if makefile generator is used, you can use ninja, or anything else that CMake supports)  
 
-Run:  
+#### Run:  
  - `./build/xcc` - for a REPL (JIT powered interpreter)  
- - `./build/xcc FILE` - to run a file  
+ - `./build/xcc -r FILE` - to run a file  
+
+#### Arguments:
+```
+Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-t TARGET] [-m MACHINE] [-o OUT_FILE] IN_FILE...
+  -h, --help            - Print this message
+  -v, --version         - Print version
+  -c, --compile         - Compile into object file
+  -r, --run             - Run file using JIT
+  -t, --target TARGET   - Specify target triple
+  -m, --machine MACHINE - Specify target machine (cpu)
+  -o, --output OUT_FILE - Set output file name (for -c)
+  IN_FILE...            - Input (source) files
+```
 
 ### Features  
  - Functions (user-defined, extern, forward-declarations)  
@@ -43,6 +56,7 @@ Run:
  - User-defined types (`struct` & member access operator `.` + pointer member access `->`)  
  - JIT (which allows for REPL to exist)  
  - Runtime function resolution in the scope of running process using extern  
+ - Compiling into object files
 
 ### Syntax  
 Here's a hello world program:  
