@@ -349,9 +349,7 @@ std::shared_ptr<ast::Node> Parser::parseUse() {
     throw ParserException(current().line, "Expected ';' after 'use' statement");
   }
 
-  module.toInclude.push_back(name->value);
-
-  return ast::Use::create(name);
+  return ast::Use::create(name, includeModule(name->value));
 }
 
 std::shared_ptr<ast::Node> Parser::parseStmt() {
@@ -601,43 +599,47 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   return ast::Call::create(callee, args);
 }
 
-void Parser::includeModules(std::shared_ptr<ast::Block> root) {
-  for (size_t i = 0; i < module.toInclude.size(); ++i) {
-    auto name = module.toInclude[i];
+std::shared_ptr<ast::Block> Parser::includeModule(const std::string& name) {
+  auto block = ast::Block::create({});
 
-    if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
-      continue;
-    }
-
-    module.included.push_back(name);
-
-    auto path = resolveModulePath(name);
-    auto src = fs::readFile(path);
-
-    logger.info("Found module '{}' at {}", name, path);
-
-    auto tokens = Lexer(src).tokenize();
-    auto block = Parser(tokens).parse(false);
-
-    for (auto & node : block->body) {
-      if (node->is(ast::AST_USE)) {
-        module.toInclude.push_back(node->as<ast::Use>()->name->as<ast::Identifier>()->value);
-      } else if (node->is(ast::AST_FUNCTION_DECL)) {
-        root->body.insert(root->body.begin(), node);
-      } else if (node->is(ast::AST_FUNCTION_DEF)) {
-        root->body.insert(root->body.begin(), node->as<ast::FnDef>()->decl);
-      } else if (node->is(ast::AST_STRUCT)) {
-        auto s = node->as<ast::Struct>();
-
-        for (size_t j = 0; j < s->methods.size(); ++j) {
-          s->methods[i] = s->methods[i]->as<ast::FnDef>()->decl;
-        }
-
-        root->body.insert(root->body.begin(), node);
-      }
-    }
-
+  if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
+    return {};
   }
+
+  module.included.push_back(name);
+
+  auto path = resolveModulePath(name);
+  auto src = fs::readFile(path);
+
+  logger.info("Found module '{}' at {}", name, path);
+
+  auto lexer  = Lexer(src);
+  auto tokens = lexer.tokenize();
+  auto parser = Parser(tokens);
+
+  parser.module.searchPaths = module.searchPaths;
+
+  auto mod = parser.parse(false);
+
+  for (auto & node : mod->body) {
+    if (node->is(ast::AST_USE)) {
+      block->body.push_back(node);
+    } else if (node->is(ast::AST_FUNCTION_DECL)) {
+      block->body.push_back(node);
+    } else if (node->is(ast::AST_FUNCTION_DEF)) {
+      block->body.push_back(node->as<ast::FnDef>()->decl);
+    } else if (node->is(ast::AST_STRUCT)) {
+      auto s = node->as<ast::Struct>();
+
+      for (size_t j = 0; j < s->methods.size(); ++j) {
+        s->methods[j] = s->methods[j]->as<ast::FnDef>()->decl;
+      }
+
+      block->body.push_back(node);
+    }
+  }
+
+  return block;
 }
 
 std::string Parser::resolveModulePath(const std::string& name) {
@@ -685,8 +687,6 @@ std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
       }
     }
   }
-
-  includeModules(block);
 
   return block;
 }

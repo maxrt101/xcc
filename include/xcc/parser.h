@@ -30,7 +30,6 @@ private:
 
   struct {
     std::vector<std::string> searchPaths; /** List of module search paths */
-    std::vector<std::string> toInclude;   /** List of modules to be included */
     std::vector<std::string> included;    /** List of already included modules (avoid circular includes) */
   } module;
 
@@ -134,7 +133,7 @@ private:
   std::shared_ptr<ast::Node> parseLvalueAndCall();
 
   // Meta
-  void includeModules(std::shared_ptr<ast::Block> root);
+  std::shared_ptr<ast::Block> includeModule(const std::string& name);
   std::string resolveModulePath(const std::string& name);
 
 public:

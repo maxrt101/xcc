@@ -6,6 +6,42 @@
 
 static auto logger = xcc::util::log::Logger("XCC");
 
+/**
+ * Recursively lowers AST
+ *
+ * @param globalContext Global Context
+ * @param result        Generates functions and/or top-level expressions will be put here
+ * @param block         Block to lower
+ * @param isRepl        In in REPL mode
+ */
+static void process_ast_block(
+  std::unique_ptr<xcc::codegen::GlobalContext>& globalContext,
+  xcc::CompilationResult&                       result,
+  const std::shared_ptr<xcc::ast::Block>&       block,
+  bool                                          isRepl
+) {
+  for (auto& node : block->body) {
+    if (node->isAnyOf(xcc::ast::AST_FUNCTION_DEF, xcc::ast::AST_FUNCTION_DECL)) {
+      result.nodes.fn.push_back(node);
+    } else if (node->is(xcc::ast::AST_VAR_DECL)) {
+      node->generateValue(*globalContext->globalModule, {});
+    } else if (node->is(xcc::ast::AST_STRUCT)) {
+      node->generateType(*globalContext->globalModule, {});
+      for (auto& method : node->as<xcc::ast::Struct>()->methods) {
+        result.nodes.fn.push_back(method);
+      }
+    } else if (node->is(xcc::ast::AST_USE)) {
+      process_ast_block(globalContext, result, node->as<xcc::ast::Use>()->items, isRepl);
+    } else {
+      if (isRepl) {
+        result.nodes.expr.push_back(node);
+      } else {
+        throw std::runtime_error("Unexpected node at top-level scope: " + xcc::ast::Node::typeToString(node->type));
+      }
+    }
+  }
+}
+
 xcc::util::Target xcc::init(const std::string& target, const std::string& machine, bool autoCleanup) {
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargets();
@@ -64,26 +100,7 @@ xcc::CompilationResult xcc::compile(
 
   CompilationResult result;
 
-  for (auto& node : ast->body) {
-    if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
-      result.nodes.fn.push_back(node);
-    } else if (node->is(ast::AST_VAR_DECL)) {
-      node->generateValue(*globalContext->globalModule, {});
-    } else if (node->is(ast::AST_STRUCT)) {
-      node->generateType(*globalContext->globalModule, {});
-      for (auto& method : node->as<ast::Struct>()->methods) {
-        result.nodes.fn.push_back(method);
-      }
-    } else if (node->is(ast::AST_USE)) {
-      // ignore
-    } else {
-      if (isRepl) {
-        result.nodes.expr.push_back(node);
-      } else {
-        throw std::runtime_error("Unexpected node at top-level scope: " + ast::Node::typeToString(node->type));
-      }
-    }
-  }
+  process_ast_block(globalContext, result, ast, isRepl);
 
   for (auto& node : result.nodes.fn) {
     if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
@@ -92,7 +109,7 @@ xcc::CompilationResult xcc::compile(
 
       auto ctx = globalContext->createModule(name);
 
-#if USE_PRINT_LLVM_IR
+#if 1//USE_PRINT_LLVM_IR
       auto fn = node->generateFunction(*ctx, {});
       logger.info("LLVM IR for function {}:", fn->getName().str());
       util::RawStreamCollector collector;

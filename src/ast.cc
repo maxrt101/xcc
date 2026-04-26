@@ -147,7 +147,7 @@ static void printNode(Node* node, Node* parent, int indent) {
       }
       printIndent(indent);
       logger.print("}}");
-      if (!parent->isAnyOf(AST_IF, AST_FOR, AST_WHILE)) {
+      if (!parent->isAnyOf(AST_IF, AST_FOR, AST_WHILE, AST_USE)) {
         logger.print("\n");
       }
       break;
@@ -256,6 +256,7 @@ static void printNode(Node* node, Node* parent, int indent) {
     case AST_USE: {
       auto use_stmt = node->as<Use>();
       logger.print("use {}", use_stmt->name->as<Identifier>()->value);
+      printNode(use_stmt->items.get(), use_stmt, indent);
       break;
     }
 
