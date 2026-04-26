@@ -1,4 +1,5 @@
 #include "xcc/parser.h"
+#include "xcc/util/fs.h"
 #include "xcc/util/log.h"
 #include "xcc/exceptions.h"
 
@@ -217,7 +218,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct() {
   }
 
   std::vector<std::shared_ptr<ast::TypedIdentifier>> fields;
-  std::vector<std::shared_ptr<ast::FnDef>> methods;
+  std::vector<std::shared_ptr<ast::Node>> methods;
 
   structStack.push_back(name->value);
 
@@ -229,7 +230,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct() {
     }
 
     if (check(TOKEN_FN)) {
-      methods.push_back(std::dynamic_pointer_cast<ast::FnDef>(parseFunction(true)));
+      methods.push_back(parseFunction(true));
     } else {
       fields.push_back(parseValueDecl());
     }
@@ -315,7 +316,7 @@ std::shared_ptr<ast::Node> Parser::parseWhile() {
   std::shared_ptr<ast::Node> cond = parseExpr();
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    throw ParserException(current().line, "Expected ')' after 'if' condition");
+    throw ParserException(current().line, "Expected ')' after 'while' condition");
   }
 
   std::shared_ptr<ast::Node> body = parseStmt();
@@ -335,6 +336,22 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
   }
 
   return ast::Return::create(expr);
+}
+
+std::shared_ptr<ast::Node> Parser::parseUse() {
+  if (!checkAdvance(TOKEN_USE)) {
+    throw ParserException(current().line, "Expected 'use'");
+  }
+
+  auto name = parseIdentifier("for module name");
+
+  if (!checkAdvance(TOKEN_SEMICOLON)) {
+    throw ParserException(current().line, "Expected ';' after 'use' statement");
+  }
+
+  module.toInclude.push_back(name->value);
+
+  return ast::Use::create(name);
 }
 
 std::shared_ptr<ast::Node> Parser::parseStmt() {
@@ -584,6 +601,65 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   return ast::Call::create(callee, args);
 }
 
+void Parser::includeModules(std::shared_ptr<ast::Block> root) {
+  for (size_t i = 0; i < module.toInclude.size(); ++i) {
+    auto name = module.toInclude[i];
+
+    if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
+      continue;
+    }
+
+    module.included.push_back(name);
+
+    auto path = resolveModulePath(name);
+    auto src = fs::readFile(path);
+
+    logger.info("Found module '{}' at {}", name, path);
+
+    auto tokens = Lexer(src).tokenize();
+    auto block = Parser(tokens).parse(false);
+
+    for (auto & node : block->body) {
+      if (node->is(ast::AST_USE)) {
+        module.toInclude.push_back(node->as<ast::Use>()->name->as<ast::Identifier>()->value);
+      } else if (node->is(ast::AST_FUNCTION_DECL)) {
+        root->body.insert(root->body.begin(), node);
+      } else if (node->is(ast::AST_FUNCTION_DEF)) {
+        root->body.insert(root->body.begin(), node->as<ast::FnDef>()->decl);
+      } else if (node->is(ast::AST_STRUCT)) {
+        auto s = node->as<ast::Struct>();
+
+        for (size_t j = 0; j < s->methods.size(); ++j) {
+          s->methods[i] = s->methods[i]->as<ast::FnDef>()->decl;
+        }
+
+        root->body.insert(root->body.begin(), node);
+      }
+    }
+
+  }
+}
+
+std::string Parser::resolveModulePath(const std::string& name) {
+  auto filename = name + ".xc";
+
+  if (fs::exists(filename)) {
+    return filename;
+  }
+
+  for (auto& searchPath : module.searchPaths) {
+    auto path = searchPath + "/" + filename;
+
+    if (fs::exists(path)) {
+      return path;
+    }
+  }
+
+  logger.error("Could not resolve module '{}'", name);
+
+  throw std::runtime_error("Could not resolve module");
+}
+
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens), current_idx(0) {}
 
 std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
@@ -599,6 +675,8 @@ std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
       }
     } else if (check(TOKEN_STRUCT)) {
       block->body.push_back(parseStruct());
+    } else if (check(TOKEN_USE)) {
+      block->body.push_back(parseUse());
     } else {
       if (isRepl) {
         block->body.push_back(parseStmt());
@@ -608,6 +686,12 @@ std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
     }
   }
 
+  includeModules(block);
+
   return block;
+}
+
+void Parser::addModuleSearchPath(const std::string& path) {
+  module.searchPaths.push_back(path);
 }
 

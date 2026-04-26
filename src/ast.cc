@@ -253,6 +253,12 @@ static void printNode(Node* node, Node* parent, int indent) {
       break;
     }
 
+    case AST_USE: {
+      auto use_stmt = node->as<Use>();
+      logger.print("use {}", use_stmt->name->as<Identifier>()->value);
+      break;
+    }
+
     default:
       logger.print("Node<{}>", (int) node->type);
       break;

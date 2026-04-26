@@ -29,8 +29,14 @@ void xcc::cleanup() {
   util::log::cleanup();
 }
 
-xcc::CompilationResult xcc::compile(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl) {
-  auto tokens = Lexer(src).tokenize();
+xcc::CompilationResult xcc::compile(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::string&                       src,
+  bool                                     isRepl,
+  const std::vector<std::string>&          includePaths
+) {
+  auto lexer  = Lexer(src);
+  auto tokens = lexer.tokenize();
 
 #if USE_PRINT_TOKENS
   logger.info("TOKENS:");
@@ -43,12 +49,18 @@ xcc::CompilationResult xcc::compile(std::unique_ptr<codegen::GlobalContext>& glo
   }
 #endif
 
-  auto ast = Parser(tokens).parse(isRepl);
+  auto parser = Parser(tokens);
 
-#if USE_PRINT_AST
+  for (auto& path : includePaths) {
+    parser.addModuleSearchPath(path);
+  }
+
+  auto ast = parser.parse(isRepl);
+
+// #if USE_PRINT_AST
   logger.info("AST:");
   ast::printAst(ast);
-#endif
+// #endif
 
   CompilationResult result;
 
@@ -62,6 +74,8 @@ xcc::CompilationResult xcc::compile(std::unique_ptr<codegen::GlobalContext>& glo
       for (auto& method : node->as<ast::Struct>()->methods) {
         result.nodes.fn.push_back(method);
       }
+    } else if (node->is(ast::AST_USE)) {
+      // ignore
     } else {
       if (isRepl) {
         result.nodes.expr.push_back(node);
@@ -72,7 +86,6 @@ xcc::CompilationResult xcc::compile(std::unique_ptr<codegen::GlobalContext>& glo
   }
 
   for (auto& node : result.nodes.fn) {
-
     if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
       auto decl = node->is(ast::AST_FUNCTION_DEF) ? node->as<ast::FnDef>()->decl.get() : node->as<ast::FnDecl>();
       auto name = decl->name->as<ast::Identifier>()->value;
@@ -97,7 +110,12 @@ xcc::CompilationResult xcc::compile(std::unique_ptr<codegen::GlobalContext>& glo
   return result;
 }
 
-void xcc::compile_to_object(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, const std::string& filename) {
+void xcc::compile_to_object(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::string&                       src,
+  const std::string&                       filename,
+  const std::vector<std::string>&          includePaths
+) {
   std::error_code error;
   llvm::raw_fd_ostream dest(filename, error, llvm::sys::fs::OF_None);
 
@@ -114,7 +132,7 @@ void xcc::compile_to_object(std::unique_ptr<codegen::GlobalContext>& globalConte
     throw std::runtime_error("TargetMachine can't emit an object file");
   }
 
-  compile(globalContext, src, false);
+  compile(globalContext, src, false, includePaths);
 
   globalContext->mergeModules();
 
@@ -122,8 +140,13 @@ void xcc::compile_to_object(std::unique_ptr<codegen::GlobalContext>& globalConte
   dest.flush();
 }
 
-void xcc::run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl) {
-  auto result = compile(globalContext, src, isRepl);
+void xcc::run(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::string&                       src,
+  bool                                     isRepl,
+  const std::vector<std::string>&          includePaths
+) {
+  auto result = compile(globalContext, src, isRepl, includePaths);
 
   globalContext->flushModulesToJIT();
 

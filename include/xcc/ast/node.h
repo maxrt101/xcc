@@ -45,6 +45,8 @@ enum NodeType {
   AST_FOR,                    // for (init; cond; inc) body | for (typed_id in expr) body
   AST_WHILE,                  // while (cond) body
   AST_RETURN,                 // return expr
+
+  AST_USE,                    // use statement
 };
 
 /**

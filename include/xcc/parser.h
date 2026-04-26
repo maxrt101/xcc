@@ -24,9 +24,15 @@ class Parser {
   };
 
 private:
-  const std::vector<Token>& tokens;     /** Token stream */
-  size_t current_idx;                   /** Index into `tokens` */
-  std::vector<std::string> structStack; /** Stack of currently parsing struct definitions */
+  const std::vector<Token>& tokens;       /** Token stream */
+  size_t                    current_idx;  /** Index into `tokens` */
+  std::vector<std::string>  structStack;  /** Stack of currently parsing struct definitions */
+
+  struct {
+    std::vector<std::string> searchPaths; /** List of module search paths */
+    std::vector<std::string> toInclude;   /** List of modules to be included */
+    std::vector<std::string> included;    /** List of already included modules (avoid circular includes) */
+  } module;
 
 private:
   /**
@@ -106,6 +112,7 @@ private:
   std::shared_ptr<ast::Node> parseFor();
   std::shared_ptr<ast::Node> parseWhile();
   std::shared_ptr<ast::Node> parseReturn();
+  std::shared_ptr<ast::Node> parseUse();
 
   // Generic
   std::shared_ptr<ast::Node> parseStmt();
@@ -126,6 +133,10 @@ private:
   std::shared_ptr<ast::Node> parseRvalue();
   std::shared_ptr<ast::Node> parseLvalueAndCall();
 
+  // Meta
+  void includeModules(std::shared_ptr<ast::Block> root);
+  std::string resolveModulePath(const std::string& name);
+
 public:
   explicit Parser(const std::vector<Token>& tokens);
 
@@ -135,6 +146,13 @@ public:
    * @param isRepl true if run in REPL mode
    */
   std::shared_ptr<ast::Block> parse(bool isRepl);
+
+  /**
+   * Used to append a path to a list of module search paths
+   *
+   * @param path Path to add
+   */
+  void addModuleSearchPath(const std::string& path);
 };
 
 

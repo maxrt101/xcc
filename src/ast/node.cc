@@ -29,6 +29,7 @@ static const std::unordered_map<NodeType, std::string> s_type_map {
     {AST_EXPR_TYPE,             "AST_EXPR_TYPE"},
     {AST_EXPR_TYPED_IDENTIFIER, "AST_EXPR_TYPED_IDENTIFIER"},
     {AST_EXPR_UNARY,            "AST_EXPR_UNARY"},
+    {AST_USE,                   "AST_USE"},
     {AST_VAR_DECL,              "AST_VAR_DECL"},
     {AST_WHILE,                 "AST_WHILE"},
 };

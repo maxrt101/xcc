@@ -11,7 +11,6 @@ xcc::args::Arguments::Arguments()
     version(false),
     verbose(false),
     compile(false),
-    // link(false),
     run(false),
     target(llvm::sys::getDefaultTargetTriple()),
     machine("generic") {}
@@ -30,6 +29,15 @@ xcc::args::Arguments xcc::args::parse(int argc, char ** argv) {
       args.compile = true;
     } else if (!strcmp(argv[i], "-r") || !strcmp(argv[i], "--run")) {
       args.run = true;
+    } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--lib")) {
+      CHECK_ARG(i, argc, "lib");
+      args.libs.push_back(argv[++i]);
+    } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--lib-path")) {
+      CHECK_ARG(i, argc, "lib_path");
+      args.lib_paths.push_back(argv[++i]);
+    } else if (!strcmp(argv[i], "-I") || !strcmp(argv[i], "--mod-path")) {
+      CHECK_ARG(i, argc, "mod_path");
+      args.mod_paths.push_back(argv[++i]);
     } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
       CHECK_ARG(i, argc, "target");
       args.target = argv[++i];

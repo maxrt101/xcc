@@ -18,6 +18,9 @@ struct Arguments {
   std::string              machine;
   std::string              output;
   std::vector<std::string> files;
+  std::vector<std::string> libs;
+  std::vector<std::string> lib_paths;
+  std::vector<std::string> mod_paths;
 
   Arguments();
 };

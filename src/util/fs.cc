@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
+#include <filesystem>
 
 static auto logger = xcc::util::log::Logger("FS");
 
@@ -21,6 +22,10 @@ std::string xcc::fs::readFile(const std::string& filename) {
   ss << fs.rdbuf();
 
   return ss.str();
+}
+
+bool xcc::fs::exists(const std::string& path) {
+  return std::filesystem::exists(path);
 }
 
 std::vector<std::string> xcc::fs::path::split(const std::string& path) {

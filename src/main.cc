@@ -8,7 +8,6 @@
 #include "xcc/util/env.h"
 #include "xcc/util/fs.h"
 
-#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/TargetParser/Host.h>
 #include <llvm/MC/MCSubtargetInfo.h>
 
@@ -41,19 +40,35 @@ extern "C" [[maybe_unused]] int32_t xcc_puts(int8_t * s) {
 }
 #endif
 
+static std::vector<std::string> getModPaths(const std::string& filepath, xcc::args::Arguments& args) {
+  auto mod_paths = args.mod_paths;
+  auto parent = xcc::fs::path::getParent(filepath);
+
+  if (!parent.empty()) {
+    mod_paths.insert(mod_paths.begin(), parent);
+  }
+
+  return mod_paths;
+}
+
 static int help() {
-  logger.println("XCC Compiler");
-  logger.println("Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-t TARGET] [-m MACHINE] [-o OUT_FILE] IN_FILE...");
-  logger.println("  -h, --help            - Print this message");
-  logger.println("  -v, --version         - Print version");
-  logger.println("  -c, --compile         - Compile into object file");
-  logger.println("  -r, --run             - Run file using JIT");
-  logger.println("  -t, --target TARGET   - Specify target triple");
-  logger.println("                          with 'list' as TARGET - will list all targets");
-  logger.println("  -m, --machine MACHINE - Specify target machine (cpu)");
-  logger.println("                          with 'list' as MACHINE - will list all machines");
-  logger.println("  -o, --output OUT_FILE - Set output file name (for -c)");
-  logger.println("  IN_FILE...            - Input (source) files");
+  logger.println("XCC Compiler v{}", xcc::getVersion());
+  logger.println("Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-l LIB] [-L PATH] [-I PATH] [-t TARGET] [-m MACHINE] [-o OUT_FILE] IN_FILE...");
+  logger.println("Arguments:");
+  logger.println("  -h, --help              - Print this message");
+  logger.println("  -v, --version           - Print version");
+  logger.println("  -c, --compile           - Compile into object file");
+  logger.println("  -r, --run               - Run file using JIT");
+  logger.println("  -l, --lib LIB           - Link LIB");
+  logger.println("  -L, --lib-path LIB_PATH - Add library search path");
+  logger.println("  -I, --mod-path MOD_PATH - Add module search path");
+  logger.println("  -t, --target TARGET     - Specify target triple (use 'list' to see all)");
+  logger.println("  -m, --machine MACHINE   - Specify target machine (cpu) (use 'list' to see all)");
+  logger.println("  -o, --output OUT_FILE   - Set output file name");
+  logger.println("  IN_FILE...              - Input (source/object) files");
+  logger.println("Environment:");
+  logger.println("  XCC_LD                  - Path to linker executable");
+  logger.println("  XCC_LDFLAGS             - Flags to pass directly to linker");
   return 0;
 }
 
@@ -111,7 +126,7 @@ static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, x
 
   logger.info("Compiling '{}' into '{}'", filename, out);
 
-  xcc::compile_to_object(globalContext, src, out);
+  xcc::compile_to_object(globalContext, src, out, getModPaths(filename, args));
 
   return 0;
 }
@@ -132,7 +147,7 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
 
       logger.info("Compiling '{}' into '{}'", xcc::fs::path::getFileName(filename), xcc::fs::path::getFileName(out));
 
-      xcc::compile_to_object(globalContext, file, out);
+      xcc::compile_to_object(globalContext, file, out, getModPaths(filename, args));
 
       auto target = globalContext->target;
       globalContext = xcc::codegen::GlobalContext::create();
@@ -149,7 +164,16 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
     cmd += filename + " ";
   }
 
-  logger.info("Linker is '{}'", ld);
+  for (auto& path : args.lib_paths) {
+    cmd += "-L" + path + " ";
+  }
+
+  for (auto& lib : args.libs) {
+    cmd += "-l" + lib + " ";
+  }
+
+  cmd += xcc::env::get("XCC_LDFLAGS", "");
+
   logger.info("Linking {} objects into '{}'", files_to_link.size(), xcc::fs::path::getFileName(out));
   logger.debug("Linker command: {}", cmd);
 
@@ -162,12 +186,14 @@ static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::
     logger.info("xcc in 'run' (jit) mode accept only one file");
   }
 
-  logger.info("Running file '{}'", xcc::fs::path::getFileName(args.files[0]));
+  auto filename = args.files[0];
+
+  logger.info("Running file '{}'", xcc::fs::path::getFileName(filename));
 
 #if USE_CATCH_EXCEPTIONS
   try {
 #endif
-    xcc::run(globalContext, xcc::fs::readFile(args.files[0]), false);
+    xcc::run(globalContext, xcc::fs::readFile(filename), false, getModPaths(filename, args));
 #if USE_CATCH_EXCEPTIONS
   } catch (std::exception& e) {
     logger.fatal("{}", e.what());

@@ -29,6 +29,7 @@ enum TokenType {
   TOKEN_RETURN,
   TOKEN_AS,
   TOKEN_SELF,
+  TOKEN_USE,
 
   // Braces/Parenthesis
   TOKEN_LEFT_BRACE,

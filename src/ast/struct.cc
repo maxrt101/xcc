@@ -7,7 +7,7 @@ using namespace xcc::ast;
 Struct::Struct(
     std::shared_ptr<Identifier> name,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
-    std::vector<std::shared_ptr<FnDef>> methods
+    std::vector<std::shared_ptr<Node>> methods
 ) : Node(AST_STRUCT),
     name(std::move(name)),
     fields(std::move(fields)),
@@ -16,7 +16,7 @@ Struct::Struct(
 std::shared_ptr<Struct> Struct::create(
     std::shared_ptr<Identifier> name,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
-    std::vector<std::shared_ptr<FnDef>> methods
+    std::vector<std::shared_ptr<Node>> methods
 ) {
   return std::make_shared<Struct>(std::move(name), std::move(fields), std::move(methods));
 }

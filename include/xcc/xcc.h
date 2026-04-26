@@ -56,14 +56,31 @@ void cleanup();
  * @param globalContext Global context
  * @param src           String containing source code
  * @param isRepl        True if run in REPL mode
+ * @param includePaths  List of search paths for modules
  * @return List of compiled function and/or top-level expressions (if in REPL mode)
  */
-CompilationResult compile(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl = false);
+CompilationResult compile(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::string&                       src,
+  bool                                     isRepl = false,
+  const std::vector<std::string>&          includePaths = {}
+);
 
 /**
+ * 'Driver' function - will tokenize, parse, lower AST & compile the source code
+ * into an object file
  *
- */
-void compile_to_object(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, const std::string& filename);
+ * @param globalContext Global context
+ * @param src           String containing source code
+ * @param filename      Name of output object file
+ * @param includePaths  List of search paths for modules
+*/
+void compile_to_object(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::string&                       src,
+  const std::string&                       filename,
+  const std::vector<std::string>&          includePaths = {}
+);
 
 /**
  * 'Driver' function - will tokenize, parse, lower AST, compile the source code and run main() function, or if in REPL
@@ -72,7 +89,13 @@ void compile_to_object(std::unique_ptr<codegen::GlobalContext>& globalContext, c
  * @param globalContext Global context
  * @param src           String containing source code
  * @param isRepl        True if run in REPL mode
+ * @param includePaths  List of search paths for modules
  */
-void run(std::unique_ptr<codegen::GlobalContext>& globalContext, const std::string& src, bool isRepl = false);
+void run(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::string&                       src,
+  bool                                     isRepl = false,
+  const std::vector<std::string>&          includePaths = {}
+);
 
 }
