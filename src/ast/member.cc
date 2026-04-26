@@ -51,11 +51,10 @@ std::shared_ptr<xcc::meta::Type> MemberAccess::generateTypeForValueWithoutLoad(c
 }
 
 llvm::Value * MemberAccess::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (kind == MEMBER_ACCESS_VALUE) {
-    return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx, payload)->getLLVMType(ctx), generateValueWithoutLoad(ctx, {}), "member");
-  } else {
-    return generateValueWithoutLoad(ctx, payload);
-  }
+  llvm::Value * member_addr = generateValueWithoutLoad(ctx, payload);
+  llvm::Type *  member_type = generateTypeForValueWithoutLoad(ctx, payload)->getLLVMType(ctx);
+
+  return ctx.ir_builder->CreateLoad(member_type, member_addr, "member_value");
 }
 
 std::shared_ptr<xcc::meta::Type> MemberAccess::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
