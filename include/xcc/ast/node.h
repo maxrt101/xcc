@@ -95,8 +95,25 @@ public:
    */
   using PayloadList = std::vector<std::shared_ptr<Payload>>;
 
+  /**
+   * An attribute. Can be applied to any node (technically), for now
+   * applies only to top-level nodes (fn, var, use, mod)
+   *
+   * Has a syntax of "[attr(arg1, ...), attr2, ...]"
+   */
+  struct Attribute {
+    std::string                        name;
+    std::vector<std::shared_ptr<Node>> args;
+  };
+
+  /**
+   * Shortcut for a vector of Attributes
+   */
+  using AttributeList = std::vector<Attribute>;
+
 public:
-  NodeType type;
+  NodeType      type;
+  AttributeList attributes;
 
 public:
   explicit Node(NodeType type);
@@ -197,6 +214,13 @@ public:
    * @return first of filtered payload in regard to this->type
    */
   std::shared_ptr<Node::Payload> selectPayloadFirst(const PayloadList& payload);
+
+  /**
+   * Add attribute to the attribute list
+   *
+   * @param attr Attribute
+   */
+  void addAttribute(const Attribute& attr);
 
   /**
    * Generates llvm::Function from node

@@ -134,6 +134,7 @@ private:
   std::shared_ptr<ast::Node> parseLvalueAndCall();
 
   // Meta
+  ast::Node::AttributeList parseAttributeList();
   std::shared_ptr<ast::Block> includeModule(const std::string& name);
   std::string resolveModulePath(const std::string& name);
 

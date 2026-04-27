@@ -19,6 +19,33 @@ static void printNode(Node* node, Node* parent, int indent) {
     return;
   }
 
+  if (!node->attributes.empty()) {
+    logger.print("[");
+
+    for (int i = 0; i < node->attributes.size(); ++i) {
+      auto& attr = node->attributes[i];
+
+      logger.print("{}", attr.name);
+      if (!attr.args.empty()) {
+        logger.print("(");
+        for (int j = 0; j < attr.args.size(); ++j) {
+          printNode(attr.args[j].get(), node, indent);
+          if (j + 1 < attr.args.size()) {
+            logger.print(", ");
+          }
+        }
+        logger.print(")");
+      }
+
+      if (i + 1 < node->attributes.size()) {
+        logger.print(", ");
+      }
+    }
+
+    logger.print("]\n");
+    printIndent(indent);
+  }
+
   switch (node->type) {
     case AST_EXPR_NUMBER: {
       auto number = node->as<Number>();

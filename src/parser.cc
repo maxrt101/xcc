@@ -638,6 +638,46 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   return ast::Call::create(callee, args);
 }
 
+ast::Node::AttributeList Parser::parseAttributeList() {
+  if (!checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+    throw ParserException(current().line, "Expected '[' at the beginning of attribute list");
+  }
+
+  ast::Node::AttributeList attrs;
+
+  do {
+    if (isAtEnd() || check(TOKEN_RIGHT_SQUARE_BRACE)) {
+      break;
+    }
+
+    auto name = parseIdentifier("for attribute name");
+
+    std::vector<std::shared_ptr<ast::Node>> args;
+
+    if (checkAdvance(TOKEN_LEFT_PAREN)) {
+      do {
+        if (isAtEnd() || check(TOKEN_RIGHT_PAREN)) {
+          break;
+        }
+
+        args.push_back(parseExpr());
+      } while (checkAdvance(TOKEN_COMMA));
+
+      if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
+        throw ParserException(current().line, "Expected ')' after attribute");
+      }
+    }
+
+    attrs.push_back({name->value, args});
+  } while (checkAdvance(TOKEN_COMMA));
+
+  if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
+    throw ParserException(current().line, "Expected ']' after attribute list");
+  }
+
+  return attrs;
+}
+
 std::shared_ptr<ast::Block> Parser::includeModule(const std::string& name) {
   auto block = ast::Block::create({});
 
@@ -700,6 +740,13 @@ std::string Parser::resolveModulePath(const std::string& name) {
 }
 
 std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl) {
+  if (check(TOKEN_LEFT_SQUARE_BRACE)) {
+    auto attrs = parseAttributeList();
+    auto node  = parseOneTopLevelNode(isRepl);
+    node->attributes = attrs;
+    return node;
+  }
+
   if (checkAnyOf(TOKEN_FN, TOKEN_EXTERN)) {
     return parseFunction(false);
   }
