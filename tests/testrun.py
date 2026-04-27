@@ -5,10 +5,13 @@ import json
 import re
 import os
 
-COLOR_RED    = '\033[31m'
-COLOR_GREEN  = '\033[32m'
-COLOR_YELLOW = '\033[33m'
-COLOR_RESET  = '\033[0m'
+COLOR_RESET   = '\033[0m'
+COLOR_RED     = '\033[31m'
+COLOR_GREEN   = '\033[32m'
+COLOR_YELLOW  = '\033[33m'
+COLOR_BLUE    = '\033[34m'
+COLOR_MAGENTA = '\033[35m'
+COLOR_CYAN    = '\033[36m'
 
 @dataclass
 class Test:
@@ -29,7 +32,7 @@ class Test:
 
     id: int
     name: str
-    file: str
+    file: str | list[str]
     expect: Expected
 
     @classmethod
@@ -53,11 +56,12 @@ class TestRun:
 class Runner:
     RESULT_REGEX = re.compile(r'Result: (\d+)', re.MULTILINE)
 
-    def __init__(self, config: str, executable: str, test_dir: str | None, verbose: bool, print_output: bool):
+    def __init__(self, config: str, executable: str, test_dir: str | None, verbose: bool, print_output: bool, announce: bool):
         self.tests = Runner.__parse(config)
         self.test_dir = test_dir if test_dir else os.path.dirname(config)
         self.executable = executable
         self.verbose = verbose
+        self.announce = announce
         self.print_output = print_output
         self.runs = dict()
 
@@ -69,22 +73,26 @@ class Runner:
         failed = []
 
         for id, run in self.runs.items():
-            print(f'TEST {COLOR_YELLOW}{id:03}{COLOR_RESET} - ', end='')
+            if run.passed:
+                print(f'{COLOR_GREEN}PASSED{COLOR_RESET}', end='')
+            else:
+                print(f'{COLOR_RED}FAILED{COLOR_RESET}', end='')
+
+            print(f' - {COLOR_YELLOW}{id:03}{COLOR_RESET} - {self.tests[id].name}')
+
             if run.passed:
                 passed.append(id)
-                print(f'{COLOR_GREEN}PASSED{COLOR_RESET}')
             else:
                 failed.append(id)
-                print(f'{COLOR_RED}FAILED{COLOR_RESET}')
                 print(f'  Failure reasons:')
                 for fail_reason in run.fail_reasons:
                     print(f'    {fail_reason}')
                 if self.verbose:
                     print(f'  Additional info:')
-                    print(f'    name: {self.tests[id].name}')
-                    print(f'    file: {self.tests[id].file}')
+                    print(f'    name:    {self.tests[id].name}')
+                    print(f'    file:    {self.tests[id].file}')
                     print(f'    retcode: {run.retcode}')
-                    print(f'    result: {run.result}')
+                    print(f'    result:  {run.result}')
                     if self.print_output:
                         print(f'    stdout:\n{run.stdout}')
                         print(f'    stderr:\n{run.stderr}')
@@ -94,6 +102,9 @@ class Runner:
     def run(self, id: int):
         if id not in self.tests:
             raise ValueError(f'Invalid test ID: {id}')
+
+        if self.announce:
+            print(f'--- TEST {COLOR_YELLOW}{id}{COLOR_RESET} ---')
 
         self.runs[id] = self.__run(self.tests[id])
 
@@ -106,7 +117,12 @@ class Runner:
 
     def __run(self, test: Test) -> TestRun:
         # TODO: Add option into json, such as "exec_mode", with possible values "run", "compile", ...
-        result = subprocess.run([self.executable, '-r', os.path.join(self.test_dir, test.file)], capture_output=True, text=True)
+        files = (
+            [os.path.join(self.test_dir, test.file)]
+            if isinstance(test.file, str) else
+            [os.path.join(self.test_dir, file) for file in test.file]
+        )
+        result = subprocess.run([self.executable, '-r', *files], capture_output=True, text=True)
         run = TestRun(True, result.returncode, 0, result.stdout, result.stderr, [])
 
         if match := self.RESULT_REGEX.search(run.stdout):
@@ -159,6 +175,9 @@ def main():
     parser.add_argument('-t', '--tests', action='store', dest='tests', default=None,
                         help='Comma separated list of test ids to run (default: all)')
 
+    parser.add_argument('-a', '--announce', action='store_true', dest='announce', default=False,
+                        help='Announce what test runs now')
+
     parser.add_argument('-v', '--verbose', action='store_true', dest='verbose', default=False,
                         help='Verbose output')
 
@@ -167,11 +186,17 @@ def main():
 
     args = parser.parse_args()
 
-    runner = Runner(args.config, args.executable, args.testdir, args.verbose, args.print_output)
+    print(f'{COLOR_MAGENTA}--- XCC Test Runner ---{COLOR_RESET}')
+
+    runner = Runner(args.config, args.executable, args.testdir, args.verbose, args.print_output, args.announce)
+
+    print(f'--- Parsed {COLOR_YELLOW}{len(runner.tests)}{COLOR_RESET} tests from {COLOR_BLUE}{args.config}{COLOR_RESET}')
 
     if args.tests:
+        print(f'-- Running tests: {COLOR_YELLOW}' + ', '.join(args.tests.split(',')) + COLOR_RESET)
         runner.run_range([int(id) for id in args.tests.split(',')])
     else:
+        print(f'--- Running {COLOR_RED}all{COLOR_RESET} tests')
         runner.run_all()
 
     passed, failed = runner.report()
