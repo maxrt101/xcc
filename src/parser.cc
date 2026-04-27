@@ -769,10 +769,11 @@ Parser::IncludedModule Parser::includeModule(const std::string& name) {
 
   if (module_cache.contains(name)) {
     logger.info("Using cached module '{}'", name);
+    module.included.emplace(name);
     return module_cache[name];
   }
 
-  module.included.push_back(name);
+  module.included.emplace(name);
 
   result.path = resolveModulePath(name);
   auto src = fs::readFile(result.path);
@@ -785,6 +786,7 @@ Parser::IncludedModule Parser::includeModule(const std::string& name) {
 
   parser.module.stack.push_back(name);
   parser.module.searchPaths = module.searchPaths;
+  parser.module.included    = module.included;
 
   auto mod = parser.parse(false);
 
@@ -793,6 +795,9 @@ Parser::IncludedModule Parser::includeModule(const std::string& name) {
   module_cache[name] = result;
 
   parser.module.stack.pop_back();
+
+  // Copy list of already included modules over to current parser
+  module.included.merge(parser.module.included);
 
   return result;
 }

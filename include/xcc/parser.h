@@ -2,6 +2,8 @@
 
 #include "xcc/ast.h"
 
+#include <set>
+
 namespace xcc {
 
 /**
@@ -42,7 +44,7 @@ private:
 
   struct {
     std::vector<std::string> searchPaths; /** List of module search paths */
-    std::vector<std::string> included;    /** List of already included modules (avoid circular includes) */
+    std::set<std::string>    included;    /** List of already included modules (avoid circular includes) */
     std::vector<std::string> stack;       /** Stack of currently parsing recursive mod definitions */
   } module;
 
