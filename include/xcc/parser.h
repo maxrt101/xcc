@@ -23,6 +23,16 @@ class Parser {
     static std::shared_ptr<ast::MemberAccess> from(const MemberAccessContext& a, const MemberAccessContext& b);
   };
 
+  /**
+   * Result of includeModule
+   */
+  struct IncludedModule {
+    std::string                 path;
+    std::shared_ptr<ast::Block> body;
+
+    IncludedModule();
+  };
+
 private:
   const std::vector<Token>& tokens;       /** Token stream */
   size_t                    current_idx;  /** Index into `tokens` */
@@ -135,7 +145,7 @@ private:
 
   // Meta
   ast::Node::AttributeList parseAttributeList();
-  std::shared_ptr<ast::Block> includeModule(const std::string& name);
+  IncludedModule includeModule(const std::string& name);
   std::string resolveModulePath(const std::string& name);
 
   std::shared_ptr<ast::Node> parseOneTopLevelNode(bool isRepl);

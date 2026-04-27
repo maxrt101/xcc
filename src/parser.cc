@@ -13,6 +13,8 @@ std::shared_ptr<ast::MemberAccess> Parser::MemberAccessContext::from(const Membe
       : ast::MemberAccess::createByValue(a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node));
 }
 
+Parser::IncludedModule::IncludedModule() : body(ast::Block::create({})) {}
+
 bool Parser::isAtEnd() const {
   return current_idx >= tokens.size();
 }
@@ -349,7 +351,12 @@ std::shared_ptr<ast::Node> Parser::parseUse() {
     throw ParserException(current().line, "Expected ';' after 'use' statement");
   }
 
-  return ast::Module::create(name, includeModule(name->value));
+  auto res = includeModule(name->value);
+  auto mod = ast::Module::create(name, res.body);
+
+  mod->addAttribute({"__xcc_tag_use", { ast::String::create(res.path) }});
+
+  return mod;
 }
 
 std::shared_ptr<ast::Node> Parser::parseMod() {
@@ -678,8 +685,8 @@ ast::Node::AttributeList Parser::parseAttributeList() {
   return attrs;
 }
 
-std::shared_ptr<ast::Block> Parser::includeModule(const std::string& name) {
-  auto block = ast::Block::create({});
+Parser::IncludedModule Parser::includeModule(const std::string& name) {
+  auto result = IncludedModule();
 
   if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
     return {};
@@ -687,10 +694,10 @@ std::shared_ptr<ast::Block> Parser::includeModule(const std::string& name) {
 
   module.included.push_back(name);
 
-  auto path = resolveModulePath(name);
-  auto src = fs::readFile(path);
+  result.path = resolveModulePath(name);
+  auto src = fs::readFile(result.path);
 
-  logger.info("Found module '{}' at {}", name, path);
+  logger.info("Found module '{}' at {}", name, result.path);
 
   auto lexer  = Lexer(src);
   auto tokens = lexer.tokenize();
@@ -702,9 +709,9 @@ std::shared_ptr<ast::Block> Parser::includeModule(const std::string& name) {
 
   for (auto & node : mod->body) {
     if (node->isAnyOf(ast::AST_MOD, ast::AST_FUNCTION_DECL)) {
-      block->body.push_back(node);
+      result.body->body.push_back(node);
     } else if (node->is(ast::AST_FUNCTION_DEF)) {
-      block->body.push_back(node->as<ast::FnDef>()->decl);
+      result.body->body.push_back(node->as<ast::FnDef>()->decl);
     } else if (node->is(ast::AST_STRUCT)) {
       auto s = node->as<ast::Struct>();
 
@@ -712,11 +719,11 @@ std::shared_ptr<ast::Block> Parser::includeModule(const std::string& name) {
         s->methods[j] = s->methods[j]->as<ast::FnDef>()->decl;
       }
 
-      block->body.push_back(node);
+      result.body->body.push_back(node);
     }
   }
 
-  return block;
+  return result;
 }
 
 std::string Parser::resolveModulePath(const std::string& name) {

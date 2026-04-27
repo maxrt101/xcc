@@ -14,35 +14,39 @@ static void printIndent(int indent) {
   }
 }
 
+static void printAttributes(Node* node, int indent) {
+  logger.print("[");
+
+  for (int i = 0; i < node->attributes.size(); ++i) {
+    auto& attr = node->attributes[i];
+
+    logger.print("{}", attr.name);
+    if (!attr.args.empty()) {
+      logger.print("(");
+      for (int j = 0; j < attr.args.size(); ++j) {
+        printNode(attr.args[j].get(), node, indent);
+        if (j + 1 < attr.args.size()) {
+          logger.print(", ");
+        }
+      }
+      logger.print(")");
+    }
+
+    if (i + 1 < node->attributes.size()) {
+      logger.print(", ");
+    }
+  }
+
+  logger.print("]\n");
+  printIndent(indent);
+}
+
 void ast::printNode(Node* node, Node* parent, int indent) {
   if (!node) return;
   if (node->is(AST_EMPTY)) return;
 
   if (!node->attributes.empty()) {
-    logger.print("[");
-
-    for (int i = 0; i < node->attributes.size(); ++i) {
-      auto& attr = node->attributes[i];
-
-      logger.print("{}", attr.name);
-      if (!attr.args.empty()) {
-        logger.print("(");
-        for (int j = 0; j < attr.args.size(); ++j) {
-          printNode(attr.args[j].get(), node, indent);
-          if (j + 1 < attr.args.size()) {
-            logger.print(", ");
-          }
-        }
-        logger.print(")");
-      }
-
-      if (i + 1 < node->attributes.size()) {
-        logger.print(", ");
-      }
-    }
-
-    logger.print("]\n");
-    printIndent(indent);
+    printAttributes(node, indent);
   }
 
   switch (node->type) {
