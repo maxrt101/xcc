@@ -169,6 +169,7 @@ void ast::printNode(Node* node, Node* parent, int indent) {
       // printIndent(indent);
       logger.print(" {{\n");
       for (auto& stmt : block->body) {
+        if (stmt->is(AST_EMPTY)) continue;
         printIndent(indent + 2);
         printNode(stmt.get(), block, indent + 2);
         if (!stmt->isAnyOf(AST_BLOCK, AST_FUNCTION_DECL, AST_FUNCTION_DEF, AST_IF, AST_FOR, AST_WHILE, AST_STRUCT)) {
