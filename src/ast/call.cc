@@ -20,18 +20,23 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
 
   llvm::Function * fn = throwIfNull(ctx.getFunction(fnName), CodegenException("Unknown function to call ('" + fnName + "')"));
 
-  /* If member - add implicit 'self' value, which is an LHS of callee MemberAccess tree */
-  if (isMember) {
-    args.insert(args.begin(), callee->as<MemberAccess>()->lhs);
-  }
-
   auto meta_fn = ctx.globalContext.getMetaFunction(fnName);
 
-  if (!meta_fn->decl->isVariadic && fn->arg_size() != args.size()) {
-    throw CodegenException("Argument mismatch (function: '" + fnName + "', expected: " + std::to_string(fn->arg_size()) + ", got: " + std::to_string(args.size()) + ")");
+  std::vector<llvm::Value *> arg_vals;
+
+  if (isMember) {
+    auto selfNode = callee->as<MemberAccess>()->lhs;
+    arg_vals.push_back(selfNode->generateValueWithoutLoad(ctx, {}));
   }
 
-  std::vector<llvm::Value *> arg_vals;
+  size_t expectedArgs = fn->arg_size();
+  size_t providedArgs = args.size() + (isMember ? 1 : 0);
+
+  if (!meta_fn->decl->isVariadic && expectedArgs != providedArgs) {
+    throw CodegenException(std::format(
+        "Argument mismatch (function: '{}', expected: {}, got: {})",
+        fnName, expectedArgs, providedArgs));
+  }
 
   for (size_t i = 0; i < args.size(); ++i) {
     /* If member and first arg - it's 'self', which is allways a pointer, so should
@@ -73,7 +78,7 @@ void Call::getInfoFromCallee(codegen::ModuleContext& ctx, std::string * name, bo
   switch (callee->type) {
     /* Plain function call - callee is an identifier */
     case AST_EXPR_IDENTIFIER: {
-      if (name)     *name = callee->as<Identifier>()->value;
+      if (name)     *name = callee->as<Identifier>()->name();
       if (isMember) *isMember = false;
       break;
     }
