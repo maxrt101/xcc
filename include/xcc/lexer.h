@@ -47,6 +47,7 @@ enum TokenType {
   TOKEN_COLON,
   TOKEN_SEMICOLON,
   TOKEN_RIGHT_ARROW,
+  TOKEN_DOLLAR_SIGN,
 
   // Assignment Operators
   TOKEN_EQUALS,
@@ -88,6 +89,7 @@ struct Token {
   TokenType type;     /** Token type */
   std::string value;  /** Token value (for identifier/string/number/char) */
   size_t line;        /** Line is source code */
+  // TODO: add `size_t offset; // Offset into line`
 
   /**
    * Returns true if token is of type `expected`

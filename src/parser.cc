@@ -543,6 +543,20 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
     return ast::Number::createInteger(previous().value[0]);
   }
 
+  if (checkAdvance(TOKEN_DOLLAR_SIGN)) {
+    if (!checkAdvance(TOKEN_IDENTIFIER)) {
+      throw ParserException(current().line, "Expected identifier after '$'");
+    }
+
+    char * value = getenv(previous().value.c_str());
+
+    if (!value) {
+      throw ParserException(current().line, "No such env variable '" + previous().value + "'");
+    }
+
+    return ast::String::create(value);
+  }
+
   if (checkAdvance(TOKEN_LEFT_PAREN)) {
     auto expr = parseExpr();
     if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
