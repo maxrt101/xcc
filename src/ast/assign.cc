@@ -52,11 +52,11 @@ std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ct
   if (lhs->is(AST_EXPR_IDENTIFIER)) {
     auto name = Node::cast<Identifier>(lhs);
 
-    if (ctx.hasLocal(name->value)) {
-      return ctx.getLocalType(name->value);
+    if (ctx.hasLocal(name->name())) {
+      return ctx.getLocalType(name->name());
     }
 
-    throw CodegenException("Unknown variable '" + name->value + "'");
+    throw CodegenException("Unknown variable '" + name->name() + "'");
   }
 
   return lhs->generateTypeForValueWithoutLoad(ctx, {});

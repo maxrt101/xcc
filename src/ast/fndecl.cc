@@ -29,13 +29,13 @@ std::shared_ptr<FnDecl> FnDecl::create(
 }
 
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
-  std::string fn_name = name->value;
+  std::string fn_name = name->name();
 
   OrderedMap<std::string, std::shared_ptr<xcc::meta::Type>> arg_meta_types;
 
   for (auto& arg : args) {
     if (arg->is(AST_EXPR_TYPED_IDENTIFIER)) {
-      arg_meta_types[arg->name->value] = arg->generateType(ctx, {});
+      arg_meta_types[arg->name->name()] = arg->generateType(ctx, {});
     } else {
       throw CodegenException("Unexpected node discovered in '" + fn_name + "' functions argument ('" + Node::typeToString(arg->type) + "')");
     }
@@ -50,7 +50,7 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
 
   size_t arg_idx = 0;
   for (auto& arg : llvm_fn->args()) {
-    arg.setName(args[arg_idx++]->name->value);
+    arg.setName(args[arg_idx++]->name->name());
   }
 
   auto fn = meta::Function::create(

@@ -125,19 +125,19 @@ xcc::CompilationResult xcc::compile(
   for (auto& node : result.nodes.fn) {
     if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
       auto decl = node->is(ast::AST_FUNCTION_DEF) ? node->as<ast::FnDef>()->decl.get() : node->as<ast::FnDecl>();
-      auto name = decl->name->as<ast::Identifier>()->value;
+      auto name = decl->name->as<ast::Identifier>()->name();
 
       auto ctx = globalContext->createModule(name);
 
-#if USE_PRINT_LLVM_IR
+// #if USE_PRINT_LLVM_IR
       auto fn = node->generateFunction(*ctx, {});
       logger.info("LLVM IR for function {}:", fn->getName().str());
       util::RawStreamCollector collector;
       fn->print(*collector.stream());
       logger.print("{}", collector.string());
-#else
+// #else
       node->generateFunction(*ctx, {});
-#endif
+// #endif
       globalContext->addModule(ctx);
     } else {
       throw std::runtime_error("Unexpected node at top-level scope: " + ast::Node::typeToString(node->type));

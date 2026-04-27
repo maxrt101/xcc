@@ -29,18 +29,18 @@ class Parser {
   struct IncludedModule {
     std::string                 path;
     std::shared_ptr<ast::Block> body;
-
-    IncludedModule();
   };
 
 private:
   const std::vector<Token>& tokens;       /** Token stream */
   size_t                    current_idx;  /** Index into `tokens` */
   std::vector<std::string>  structStack;  /** Stack of currently parsing struct definitions */
+  bool                      isModule;
 
   struct {
     std::vector<std::string> searchPaths; /** List of module search paths */
     std::vector<std::string> included;    /** List of already included modules (avoid circular includes) */
+    std::vector<std::string> stack;       /** Stack of currently parsing recursive mod definitions */
   } module;
 
 private:
@@ -107,8 +107,15 @@ private:
    */
   bool checkNext(TokenType expected);
 
+  /**
+   * Generate module prefix for function/struct definitions
+   */
+  std::string modulePrefix();
+
   // Helper
   std::shared_ptr<ast::Identifier> parseIdentifier(const std::string& ex_msg);
+  std::shared_ptr<ast::Identifier> parseIdentifierWithCurrentScope(const std::string& ex_msg);
+  std::shared_ptr<ast::Identifier> parseScopedIdentifier(const std::string& ex_msg);
   std::shared_ptr<ast::Type> parseType();
   std::shared_ptr<ast::TypedIdentifier> parseValueDecl();
 
@@ -147,11 +154,12 @@ private:
   ast::Node::AttributeList parseAttributeList();
   IncludedModule includeModule(const std::string& name);
   std::string resolveModulePath(const std::string& name);
+  std::shared_ptr<ast::Block> moduleReplaceDeclarations(const std::shared_ptr<ast::Block>& body);
 
   std::shared_ptr<ast::Node> parseOneTopLevelNode(bool isRepl);
 
 public:
-  explicit Parser(const std::vector<Token>& tokens);
+  explicit Parser(const std::vector<Token>& tokens, bool isModule = false);
 
   /**
    * Performs parsing

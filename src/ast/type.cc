@@ -15,7 +15,7 @@ std::shared_ptr<Type> Type::create(std::shared_ptr<Node> name, bool pointer) {
 std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   /* Basic type - identifier + optional pointer */
   if (name->is(AST_EXPR_IDENTIFIER)) {
-    auto baseType = meta::Type::fromTypeName(name->as<Identifier>()->value);
+    auto baseType = meta::Type::fromTypeName(name->as<Identifier>()->name());
     return pointer ? meta::Type::createPointer(baseType) : baseType;
   }
 

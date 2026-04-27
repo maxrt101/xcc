@@ -24,7 +24,7 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
     type = type->getPointedType();
   }
 
-  assertThrow(type->hasMember(rhs->value), CodegenException("Type '" + type->toString() + "' doesn't have member '" + rhs->value + "'"));
+  assertThrow(type->hasMember(rhs->name()), CodegenException("Type '" + type->toString() + "' doesn't have member '" + rhs->name() + "'"));
 
   llvm::Value * value_to_load;
 
@@ -34,7 +34,7 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
     value_to_load = ctx.ir_builder->CreateLoad(meta::Type::createPointer(type)->getLLVMType(ctx), lhs->generateValueWithoutLoad(ctx, payload));
   }
 
-  return ctx.ir_builder->CreateStructGEP(type->getLLVMType(ctx), value_to_load, type->getMemberIndex(rhs->value));
+  return ctx.ir_builder->CreateStructGEP(type->getLLVMType(ctx), value_to_load, type->getMemberIndex(rhs->name()));
 }
 
 std::shared_ptr<xcc::meta::Type> MemberAccess::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -45,9 +45,9 @@ std::shared_ptr<xcc::meta::Type> MemberAccess::generateTypeForValueWithoutLoad(c
     type = type->getPointedType();
   }
 
-  assertThrow(type->hasMember(rhs->value), CodegenException("Type '" + type->toString() + "' doesn't have member '" + rhs->value + "'"));
+  assertThrow(type->hasMember(rhs->name()), CodegenException("Type '" + type->toString() + "' doesn't have member '" + rhs->name() + "'"));
 
-  return type->getMemberType(rhs->value);
+  return type->getMemberType(rhs->name());
 }
 
 llvm::Value * MemberAccess::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {

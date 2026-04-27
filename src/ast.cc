@@ -66,9 +66,15 @@ void ast::printNode(Node* node, Node* parent, int indent) {
       break;
     }
 
-    case AST_EXPR_IDENTIFIER:
-      logger.print("{}", node->as<Identifier>()->value);
+    case AST_EXPR_IDENTIFIER: {
+      auto id = node->as<Identifier>();
+      std::string name;
+      for (auto& part : id->scope) {
+        name += part + "::";
+      }
+      logger.print("{}", name + id->value);
       break;
+    }
 
     case AST_EXPR_CALL: {
       auto call = node->as<Call>();
@@ -287,7 +293,9 @@ void ast::printNode(Node* node, Node* parent, int indent) {
     case AST_MOD: {
       auto module = node->as<Module>();
       logger.print("mod {}", module->name->as<Identifier>()->value);
-      printNode(module->body.get(), module, indent);
+      if (!module->body->body.empty()) {
+        printNode(module->body.get(), module, indent);
+      }
       break;
     }
 

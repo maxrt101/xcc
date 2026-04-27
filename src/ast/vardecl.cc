@@ -38,7 +38,7 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
         ? value->generateValueWithoutLoad(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
         : meta_type->getDefault(ctx));
 
-    ctx.globalContext.globals[name->value] = meta_type;
+    ctx.globalContext.globals[name->name()] = meta_type;
 
     [[maybe_unused]] auto global = new llvm::GlobalVariable(
         *ctx.globalContext.globalModule->llvm.module,
@@ -46,11 +46,11 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
         false,
         llvm::GlobalValue::ExternalLinkage,
         constant,
-        name->value
+        name->name()
     );
 
     auto extern_global = llvm::cast<llvm::GlobalVariable>(
-      ctx.llvm.module->getOrInsertGlobal(name->value, llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
+      ctx.llvm.module->getOrInsertGlobal(name->name(), llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
 
     return extern_global;
   } else {
@@ -62,11 +62,11 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
 
     init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx));
 
-    auto tv = meta::TypedValue::create(ctx, fn, meta_type, name->value);
+    auto tv = meta::TypedValue::create(ctx, fn, meta_type, name->name());
 
     ctx.ir_builder->CreateStore(init, tv->value);
 
-    ctx.locals[name->value] = tv;
+    ctx.locals[name->name()] = tv;
 
     return init;
   }

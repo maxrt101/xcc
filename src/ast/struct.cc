@@ -29,12 +29,12 @@ std::shared_ptr<meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::Mod
   meta::StructMembers members;
 
   for (auto & field : fields) {
-    members.emplace_back(field->name->value, field->generateType(ctx, {}));
+    members.emplace_back(field->name->name(), field->generateType(ctx, {}));
   }
 
-  auto type =  meta::Type::createStruct(name->value, members);
+  auto type =  meta::Type::createStruct(name->name(), members);
 
-  meta::Type::registerCustomType(name->value, type);
+  meta::Type::registerCustomType(name->name(), type);
 
   return type;
 }

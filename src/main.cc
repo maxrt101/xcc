@@ -181,19 +181,23 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
 }
 
 static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
-  if (args.files.size() > 1) {
-    logger.warn("Ignoring input files after '{}'", args.files[0]);
-    logger.info("xcc in 'run' (jit) mode accept only one file");
-  }
-
-  auto filename = args.files[0];
-
-  logger.info("Running file '{}'", xcc::fs::path::getFileName(filename));
 
 #if USE_CATCH_EXCEPTIONS
   try {
 #endif
-    xcc::run(globalContext, xcc::fs::readFile(filename), false, getModPaths(filename, args));
+    for (auto& filename : args.files) {
+      logger.info("Running file '{}'", xcc::fs::path::getFileName(filename));
+
+      xcc::compile(globalContext, xcc::fs::readFile(filename), false, args.mod_paths);
+
+
+      // xcc::run(globalContext, xcc::fs::readFile(filename), false, getModPaths(filename, args));
+    }
+
+    globalContext->flushModulesToJIT();
+
+    globalContext->runFunction("main");
+
 #if USE_CATCH_EXCEPTIONS
   } catch (std::exception& e) {
     logger.fatal("{}", e.what());

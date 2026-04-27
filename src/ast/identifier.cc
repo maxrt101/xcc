@@ -5,36 +5,50 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-Identifier::Identifier(std::string value) : Node(AST_EXPR_IDENTIFIER), value(std::move(value)) {}
+Identifier::Identifier(std::string value, std::vector<std::string> scope)
+  : Node(AST_EXPR_IDENTIFIER), value(std::move(value)), scope(std::move(scope)) {}
 
-std::shared_ptr<Identifier> Identifier::create(const std::string& value) {
-  return std::make_shared<Identifier>(value);
+std::shared_ptr<Identifier> Identifier::create(const std::string& value, std::vector<std::string> scope) {
+  return std::make_shared<Identifier>(value, scope);
+}
+
+std::string Identifier::name() const {
+  std::string prefix;
+
+  for (auto& part : scope) {
+    prefix += part + "_";
+  }
+
+  return prefix + value;
 }
 
 llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (ctx.hasLocal(value)) {
-    return ctx.ir_builder->CreateLoad(ctx.getLocalValue(value)->getAllocatedType(), ctx.getLocalValue(value), value.c_str());
-  } else if (ctx.globalContext.hasGlobal(value)) {
-    auto global = ctx.globalContext.getGlobal(ctx, value);
+  if (ctx.hasLocal(name())) {
+    return ctx.ir_builder->CreateLoad(ctx.getLocalValue(name())->getAllocatedType(), ctx.getLocalValue(name()), name().c_str());
+  } else if (ctx.globalContext.hasGlobal(name())) {
+    auto global = ctx.globalContext.getGlobal(ctx, name());
 
-    if (ctx.globalContext.getGlobalType(value)->isPointer()) {
-      auto alloca = ctx.ir_builder->CreateAlloca(ctx.globalContext.getGlobalType(value)->getLLVMType(ctx), nullptr);
+    if (ctx.globalContext.getGlobalType(name())->isPointer()) {
+      auto alloca = ctx.ir_builder->CreateAlloca(ctx.globalContext.getGlobalType(name())->getLLVMType(ctx), nullptr);
       ctx.ir_builder->CreateStore(global, alloca);
-      return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(value)->getLLVMType(ctx), alloca);
+      return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(name())->getLLVMType(ctx), alloca);
     }
 
-    return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(value)->getLLVMType(ctx), global);
+    return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(name())->getLLVMType(ctx), global);
   }
-  throw CodegenException("Undeclared value referenced: '" + value + "'");
+  throw CodegenException("Undeclared value referenced: '" + name() + "'");
 }
 
 llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (ctx.hasLocal(value)) {
-    return ctx.getLocalValue(value);
-  } else if (ctx.globalContext.hasGlobal(value)) {
-    return ctx.globalContext.getGlobal(ctx, value);
+  if (ctx.hasLocal(name())) {
+    return ctx.getLocalValue(name());
   }
-  throw CodegenException("Undeclared value referenced: '" + value + "'");
+
+  if (ctx.globalContext.hasGlobal(name())) {
+    return ctx.globalContext.getGlobal(ctx, name());
+  }
+
+  throw CodegenException("Undeclared value referenced: '" + name() + "'");
 }
 
 std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -42,10 +56,13 @@ std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx
 }
 
 std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
- if (ctx.hasLocal(value)) {
-    return ctx.getLocalType(value);
-  } else if (ctx.globalContext.hasGlobal(value)) {
-    return ctx.globalContext.getGlobalType(value);
+ if (ctx.hasLocal(name())) {
+    return ctx.getLocalType(name());
   }
-  throw CodegenException("Undeclared value referenced: '" + value + "'");
+
+  if (ctx.globalContext.hasGlobal(name())) {
+    return ctx.globalContext.getGlobalType(name());
+  }
+
+  throw CodegenException("Undeclared value referenced: '" + name() + "'");
 }

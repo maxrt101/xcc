@@ -18,12 +18,12 @@ std::shared_ptr<FnDef> FnDef::create(std::shared_ptr<FnDecl> decl, std::shared_p
 llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   decl->generateFunction(ctx, {});
 
-  auto meta_fn = ctx.globalContext.getMetaFunction(decl->name->value);
+  auto meta_fn = ctx.globalContext.getMetaFunction(decl->name->name());
 
-  auto fn = ctx.getFunction(decl->name->value);
+  auto fn = ctx.getFunction(decl->name->name());
 
   if (!fn) {
-    throw CodegenException("Error generating Function object for '" + decl->name->value + "'");
+    throw CodegenException("Error generating Function object for '" + decl->name->name() + "'");
   }
 
   auto basic_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", fn);
@@ -38,7 +38,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     ctx.ir_builder->CreateStore(&arg, ctx.locals[arg_name]->value);
   }
 
-  ctx.globalContext.setCurrentFunction(decl->name->value);
+  ctx.globalContext.setCurrentFunction(decl->name->name());
 
   auto last_val = body->generateValue(ctx, {});
 
@@ -61,7 +61,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     logger.debug("Function {} IR:", meta_fn->name);
     logger.print("{}", fn_collector.string());
 #endif
-    throw CodegenException("Function '" + decl->name->value + "' didn't pass validation\n" + collector.string());
+    throw CodegenException("Function '" + decl->name->name() + "' didn't pass validation\n" + collector.string());
   }
 
   return fn;

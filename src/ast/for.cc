@@ -14,7 +14,7 @@ std::shared_ptr<For> For::create(std::shared_ptr<VarDecl> init, std::shared_ptr<
 llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
-  auto var = meta::TypedValue::create(ctx, fn, init->generateType(ctx, {}), init->name->value);
+  auto var = meta::TypedValue::create(ctx, fn, init->generateType(ctx, {}), init->name->name());
 
   auto init_val = init->generateValue(ctx, {});
 
@@ -26,8 +26,8 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
 
   ctx.ir_builder->SetInsertPoint(loop_block);
 
-  auto old_val = ctx.locals[init->name->value];
-  ctx.locals[init->name->value] = var;
+  auto old_val = ctx.locals[init->name->name()];
+  ctx.locals[init->name->name()] = var;
 
   //
   auto body_val = body->generateValue(ctx, {});
@@ -53,9 +53,9 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
   ctx.ir_builder->SetInsertPoint(loop_after_block);
 
   if (old_val) {
-    ctx.locals[init->name->value] = old_val;
+    ctx.locals[init->name->name()] = old_val;
   } else {
-    ctx.locals.erase(init->name->value);
+    ctx.locals.erase(init->name->name());
   }
 
   return meta::Type::createI64()->getDefault(ctx);

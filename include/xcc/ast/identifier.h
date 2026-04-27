@@ -8,13 +8,16 @@ namespace xcc::ast {
 
 class Identifier : public Node {
 public:
-  std::string value;
+  std::string              value;
+  std::vector<std::string> scope;
 
 public:
-  explicit Identifier(std::string value);
+  explicit Identifier(std::string value, std::vector<std::string> scope = {});
   virtual ~Identifier() override = default;
 
-  static std::shared_ptr<Identifier> create(const std::string& value);
+  static std::shared_ptr<Identifier> create(const std::string& value, std::vector<std::string> scope = {});
+
+  std::string name() const;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;

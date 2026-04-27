@@ -60,6 +60,7 @@ public:
   CodegenException(llvm::Error&& err) {
     std::string str;
     llvm::raw_string_ostream output(str);
+    output << err;
     this->msg = "LLVM Error:" + str;
   }
 

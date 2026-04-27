@@ -13,8 +13,6 @@ std::shared_ptr<ast::MemberAccess> Parser::MemberAccessContext::from(const Membe
       : ast::MemberAccess::createByValue(a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node));
 }
 
-Parser::IncludedModule::IncludedModule() : body(ast::Block::create({})) {}
-
 bool Parser::isAtEnd() const {
   return current_idx >= tokens.size();
 }
@@ -60,6 +58,16 @@ bool Parser::checkNext(TokenType expected) {
   return next().type == expected;
 }
 
+std::string Parser::modulePrefix() {
+  std::string prefix;
+
+  for (size_t i = 0; i < module.stack.size(); ++i) {
+    prefix += module.stack[i] + "_";
+  }
+
+  return prefix;
+}
+
 std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_msg) {
   if (checkAdvance(TOKEN_SELF)) {
     return ast::Identifier::create("self");
@@ -72,8 +80,43 @@ std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_m
   return ast::Identifier::create(previous().value);
 }
 
+std::shared_ptr<ast::Identifier> Parser::parseIdentifierWithCurrentScope(const std::string& ex_msg) {
+  auto id = parseIdentifier(ex_msg);
+  id->scope = module.stack;
+  return id;
+}
+
+std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string& ex_msg) {
+  auto first = parseIdentifier(ex_msg);
+
+  if (!checkAdvance(TOKEN_SCOPE)) {
+    return first;
+  }
+
+  std::vector<std::string> nodes = {first->value};
+
+  do {
+    if (!check(TOKEN_IDENTIFIER)) {
+      break;
+    }
+
+    nodes.push_back(parseIdentifier("for member access")->value);
+  } while (checkAdvance(TOKEN_SCOPE));
+
+  /* Very specific error, shouldn't happen */
+  assertThrow(!nodes.empty(), ParserException("Invalid member scope access state (nodes.size=0)"));
+
+  auto name = nodes.back();
+
+  nodes.pop_back();
+
+  auto id = ast::Identifier::create(name, nodes);
+
+  return id;
+}
+
 std::shared_ptr<ast::Type> Parser::parseType() {
-  auto id = parseIdentifier("for type name");
+  auto id = parseScopedIdentifier("for type name");
 
   std::shared_ptr<ast::Type> type;
 
@@ -117,7 +160,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
     throw ParserException(current().line, "Expected 'fn'");
   }
 
-  auto name = parseIdentifier("for function name");
+  auto name = parseIdentifierWithCurrentScope("for function name");
 
   if (isMethod) {
     name->value = structStack.back() + "_" + name->value;
@@ -133,7 +176,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   if (isMethod && checkAdvance(TOKEN_SELF)) {
     args.push_back(ast::TypedIdentifier::create(
     ast::Identifier::create("self"),
-      ast::Type::create(ast::Identifier::create(structStack.back()), true)
+      ast::Type::create(ast::Identifier::create(structStack.back(), module.stack), true)
     ));
 
     checkAdvance(TOKEN_COMMA);
@@ -166,6 +209,11 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
       throw ParserException(current().line, "Expected ';' after function declaration");
     }
+
+    // Workaround: erase scope, if it's a forward declaration
+    // TODO: Won't work for something like `fn a::b::c();`, but then again, is it needed?
+    fndecl->name->scope = {};
+
     return ast::Node::cast(fndecl);
   }
 
@@ -213,7 +261,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct() {
     throw ParserException(current().line, "Expected 'struct'");
   }
 
-  auto name = parseIdentifier("for struct name");
+  auto name = parseIdentifierWithCurrentScope("for struct name");
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
     throw ParserException(current().line, "Expected '{' after 'struct'");
@@ -222,6 +270,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct() {
   std::vector<std::shared_ptr<ast::TypedIdentifier>> fields;
   std::vector<std::shared_ptr<ast::Node>> methods;
 
+  // important: don't use name(), as it will prepend the same prefix as parseScopedIdentified in parseFunction
   structStack.push_back(name->value);
 
   bool shouldContinue = true;
@@ -351,7 +400,7 @@ std::shared_ptr<ast::Node> Parser::parseUse() {
     throw ParserException(current().line, "Expected ';' after 'use' statement");
   }
 
-  auto res = includeModule(name->value);
+  auto res = includeModule(name->name());
   auto mod = ast::Module::create(name, res.body);
 
   mod->addAttribute({"__xcc_tag_use", { ast::String::create(res.path) }});
@@ -367,14 +416,32 @@ std::shared_ptr<ast::Node> Parser::parseMod() {
   auto name = parseIdentifier("for module name");
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
-    throw ParserException(current().line, "Expected '{' after 'mod'");
+    if (!checkAdvance(TOKEN_SEMICOLON)) {
+      throw ParserException(current().line, "Expected ';' after file-scoped module declaration");
+    }
+
+    if (isModule) {
+      // Workaround for generated `mod` from `use` having another `mod` with the same name inside
+      return ast::Empty::create();
+    }
+
+    // if (!module.stack.empty()) {
+    //   throw ParserException(current().line, "There can be only one file-scoped module in the file");
+    // }
+
+    module.stack.push_back(name->name());
+    return ast::Module::create(name, ast::Block::create({}));
   }
 
   auto body = ast::Block::create({});
 
+  module.stack.push_back(name->name());
+
   while (!check(TOKEN_RIGHT_BRACE) && !isAtEnd()) {
     body->body.push_back(parseOneTopLevelNode(false));
   }
+
+  module.stack.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
     throw ParserException(current().line, "Expected '}' after mod body");
@@ -613,12 +680,14 @@ std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
     return memberAccess;
   }
 
-  if (checkNext(TOKEN_LEFT_PAREN)) {
+  auto id = parseScopedIdentifier("for function name (or not?)");
+
+  if (check(TOKEN_LEFT_PAREN)) {
     /* Function Call */
-    return parseCall(parseIdentifier("for function name"));
+    return parseCall(id);
   }
 
-  return std::dynamic_pointer_cast<ast::Node>(parseIdentifier(""));
+  return std::dynamic_pointer_cast<ast::Node>(id);
 }
 
 std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) {
@@ -675,7 +744,7 @@ ast::Node::AttributeList Parser::parseAttributeList() {
       }
     }
 
-    attrs.push_back({name->value, args});
+    attrs.push_back({name->name(), args});
   } while (checkAdvance(TOKEN_COMMA));
 
   if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
@@ -686,9 +755,10 @@ ast::Node::AttributeList Parser::parseAttributeList() {
 }
 
 Parser::IncludedModule Parser::includeModule(const std::string& name) {
-  auto result = IncludedModule();
+  IncludedModule result;
 
   if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
+    // TODO: Test double inclusion
     return {};
   }
 
@@ -701,27 +771,16 @@ Parser::IncludedModule Parser::includeModule(const std::string& name) {
 
   auto lexer  = Lexer(src);
   auto tokens = lexer.tokenize();
-  auto parser = Parser(tokens);
+  auto parser = Parser(tokens, true);
 
+  parser.module.stack.push_back(name);
   parser.module.searchPaths = module.searchPaths;
 
   auto mod = parser.parse(false);
 
-  for (auto & node : mod->body) {
-    if (node->isAnyOf(ast::AST_MOD, ast::AST_FUNCTION_DECL)) {
-      result.body->body.push_back(node);
-    } else if (node->is(ast::AST_FUNCTION_DEF)) {
-      result.body->body.push_back(node->as<ast::FnDef>()->decl);
-    } else if (node->is(ast::AST_STRUCT)) {
-      auto s = node->as<ast::Struct>();
+  result.body = moduleReplaceDeclarations(mod);
 
-      for (size_t j = 0; j < s->methods.size(); ++j) {
-        s->methods[j] = s->methods[j]->as<ast::FnDef>()->decl;
-      }
-
-      result.body->body.push_back(node);
-    }
-  }
+  parser.module.stack.pop_back();
 
   return result;
 }
@@ -744,6 +803,32 @@ std::string Parser::resolveModulePath(const std::string& name) {
   logger.error("Could not resolve module '{}'", name);
 
   throw std::runtime_error("Could not resolve module");
+}
+
+std::shared_ptr<ast::Block> Parser::moduleReplaceDeclarations(const std::shared_ptr<ast::Block>& body) {
+  auto result = ast::Block::create({});
+
+  for (auto & node : body->body) {
+    if (node->is(ast::AST_MOD)) {
+      auto mod = node->as<ast::Module>();
+      mod->body = moduleReplaceDeclarations(mod->body);
+      result->body.push_back(node);
+    } else if (node->is(ast::AST_FUNCTION_DECL)) {
+      result->body.push_back(node);
+    } else if (node->is(ast::AST_FUNCTION_DEF)) {
+      result->body.push_back(node->as<ast::FnDef>()->decl);
+    } else if (node->is(ast::AST_STRUCT)) {
+      auto s = node->as<ast::Struct>();
+
+      for (size_t j = 0; j < s->methods.size(); ++j) {
+        s->methods[j] = s->methods[j]->as<ast::FnDef>()->decl;
+      }
+
+      result->body.push_back(node);
+    }
+  }
+
+  return result;
 }
 
 std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl) {
@@ -785,7 +870,7 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl) {
   throw ParserException(current().line, "Unexpected token at top-level scope: '" + current().value + "' (" + Token::typeToString(current().type) + ")");
 }
 
-Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens), current_idx(0) {}
+Parser::Parser(const std::vector<Token>& tokens, bool isModule) : tokens(tokens), current_idx(0), isModule(isModule) {}
 
 std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
   auto block = ast::Block::create({});
