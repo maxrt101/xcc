@@ -48,6 +48,7 @@ enum TokenType {
   TOKEN_SEMICOLON,
   TOKEN_RIGHT_ARROW,
   TOKEN_DOLLAR_SIGN,
+  TOKEN_SCOPE,
 
   // Assignment Operators
   TOKEN_EQUALS,
@@ -169,6 +170,14 @@ private:
    * Checks if current char (at current_index) is same as `expected`
    */
   bool check(char expected);
+
+  /**
+   * Checks if char is a-z A-Z 0-9 or '_'
+   *
+   * @param c Character to check
+   * @return @c true if char is eligible to be a part of an identifier
+   */
+  bool isIdentifierChar(char c);
 
   /**
    * Skip whitespace from current until next non-whitespace char

@@ -1,9 +1,12 @@
 #include "xcc/lexer.h"
+#include "xcc/util/log.h"
 #include "xcc/exceptions.h"
 #include "xcc/util/prefix_tree.h"
 #include "xcc/util/string.h"
 
 using namespace xcc;
+
+static auto logger = util::log::Logger("LEXER");
 
 static const PrefixTree<TokenType> s_token_patterns(TOKEN_EOF, {
     {"extern",  TOKEN_EXTERN},
@@ -32,6 +35,7 @@ static const PrefixTree<TokenType> s_token_patterns(TOKEN_EOF, {
     {";",       TOKEN_SEMICOLON},
     {"->",      TOKEN_RIGHT_ARROW},
     {"$",       TOKEN_DOLLAR_SIGN},
+    {"::",      TOKEN_SCOPE},
     {"=",       TOKEN_EQUALS},
     {"+=",      TOKEN_ADD_EQUALS},
     {"-=",      TOKEN_MIN_EQUALS},
@@ -90,6 +94,7 @@ static const std::unordered_map<TokenType, std::string> s_token_type_name_map {
     {TOKEN_SEMICOLON,           "TOKEN_SEMICOLON"},
     {TOKEN_RIGHT_ARROW,         "TOKEN_RIGHT_ARROW"},
     {TOKEN_DOLLAR_SIGN,         "TOKEN_DOLLAR_SIGN"},
+    {TOKEN_SCOPE,               "TOKEN_SCOPE"},
     {TOKEN_EQUALS,              "TOKEN_EQUALS"},
     {TOKEN_ADD_EQUALS,          "TOKEN_ADD_EQUALS"},
     {TOKEN_MIN_EQUALS,          "TOKEN_MIN_EQUALS"},
@@ -148,6 +153,7 @@ static const std::unordered_map<TokenType, std::string> s_token_type_value_map {
     {TOKEN_SEMICOLON,           ";"},
     {TOKEN_RIGHT_ARROW,         "->"},
     {TOKEN_DOLLAR_SIGN,         "$"},
+    {TOKEN_SCOPE,               "::"},
     {TOKEN_EQUALS,              "="},
     {TOKEN_ADD_EQUALS,          "+="},
     {TOKEN_MIN_EQUALS,          "-="},
@@ -201,6 +207,16 @@ std::string Token::typeToString(TokenType type) {
   return "UNKNOWN";
 }
 
+static bool isalnumstr(std::string s) {
+  for (auto& c : s) {
+    if (!isalnum(c)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool Lexer::isAtEnd() {
   return current_index >= text.size();
 }
@@ -215,6 +231,10 @@ char Lexer::current() {
 
 bool Lexer::check(char expected) {
   return current() == expected;
+}
+
+bool Lexer::isIdentifierChar(char c) {
+  return isalnum(c) || c == '_';
 }
 
 void Lexer::skipWhitespace() {
@@ -279,7 +299,7 @@ void Lexer::tokenizeChar() {
 void Lexer::tokenizeIdentifier() {
   size_t begin = current_index;
 
-  while (isalnum(current()) || check('_')) {
+  while (isIdentifierChar(current())) {
     if (isAtEnd()) {
       throw LexerException(line, "Unexpected EOF");
     }
@@ -332,7 +352,9 @@ std::vector<Token> Lexer::tokenize() {
 
     auto [token_type, token_size] = s_token_patterns.find(text, current_index);
 
-    if (token_type != TOKEN_EOF) {
+    bool identifier = isalnumstr(s_token_type_value_map.at(token_type)) && isIdentifierChar(text[current_index + token_size]);
+
+    if (token_type != TOKEN_EOF && !identifier) {
       current_index += token_size;
       result.push_back({token_type, "", line});
       continue;

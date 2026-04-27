@@ -8,19 +8,23 @@ namespace xcc {
 
 template <typename T>
 class PrefixTree {
+  struct Node;
+
+  using NodeMap = std::unordered_map<char, Node>;
+
   struct Node {
-    char prefix = '\0';
-    T value;
-    size_t depth = 0;
-    std::unordered_map<char, Node> children;
+    char    prefix = '\0';
+    T       value;
+    size_t  depth = 0;
+    NodeMap children;
   };
 
-  std::unordered_map<char, Node> roots;
+  NodeMap roots;
   const T null_value;
 
 public:
   struct FindResult {
-    T value;
+    T      value;
     size_t depth;
   };
 
@@ -35,7 +39,7 @@ public:
   }
 
   void append(const std::string& prefix, T value) {
-    if (roots.find(prefix[0]) == roots.end()) {
+    if (!roots.contains(prefix[0])) {
       roots[prefix[0]] = Node {
         prefix[0],
         prefix.size() == 1 ? value : null_value,
@@ -51,17 +55,17 @@ public:
   }
 
   FindResult find(const std::string& prefix, size_t start_index = 0) const {
-    if (roots.find(prefix[start_index]) != roots.end()) {
+    if (roots.contains(prefix[start_index])) {
       if (roots.at(prefix[start_index]).children.empty()) {
         return {roots.at(prefix[start_index]).value, 1};
-      } else {
-        FindResult result = find(roots.at(prefix[start_index]), prefix, start_index + 1);
-        if (result.value == null_value) {
-          return {roots.at(prefix[start_index]).value, 1};
-        } else {
-          return result;
-        }
       }
+
+      FindResult result = find(roots.at(prefix[start_index]), prefix, start_index + 1);
+      if (result.value == null_value) {
+        return {roots.at(prefix[start_index]).value, 1};
+      }
+
+      return result;
     }
 
     return {null_value, 0};
@@ -75,7 +79,7 @@ public:
 
 private:
   void append(Node& node, const std::string& prefix, size_t index, T value) {
-    if (node.children.find(prefix[index]) == node.children.end()) {
+    if (!node.children.contains(prefix[index])) {
       node.children[prefix[index]] = Node {prefix[index], null_value, node.depth + 1};
 
       if (index >= prefix.size() - 1) {
@@ -93,10 +97,10 @@ private:
   FindResult find(const Node& node, const std::string& prefix, size_t index) const {
     if (node.children.empty()) {
       return {node.value, node.depth};
-    } else {
-      if (node.children.find(prefix[index]) != node.children.end()) {
-        return find(node.children.at(prefix[index]), prefix, index + 1);
-      }
+    }
+
+    if (node.children.find(prefix[index]) != node.children.end()) {
+      return find(node.children.at(prefix[index]), prefix, index + 1);
     }
 
     return {null_value, node.depth};
