@@ -225,6 +225,24 @@ public:
   void addAttribute(const Attribute& attr);
 
   /**
+   * Check if node has a specific attribute
+   *
+   * @param name Attribute name
+   * @return @c true if attribute with specified name is present
+   */
+  bool hasAttribute(const std::string& name);
+
+  /**
+   * Get attribute by name
+   *
+   * @note Will throw if attribute is missing
+   *
+   * @param name Attribute name
+   * @return Attribute reference
+   */
+  Attribute& getAttribute(const std::string& name);
+
+  /**
    * Generates llvm::Function from node
    *
    * Part of codegen API. Implemented when node has a relation to functions (fndecl/fndef/etc.)

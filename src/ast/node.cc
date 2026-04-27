@@ -64,6 +64,27 @@ void Node::addAttribute(const Attribute& attr) {
   attributes.push_back(attr);
 }
 
+bool Node::hasAttribute(const std::string& name) {
+  for (auto& attr : attributes) {
+    if (attr.name == name) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+Node::Attribute& Node::getAttribute(const std::string& name) {
+  for (auto& attr : attributes) {
+    if (attr.name == name) {
+      return attr;
+    }
+  }
+
+  logger.error("Attribute '{}' is missing from node {}", name, typeToString(type));
+  throw std::runtime_error("Missing attribute");
+}
+
 llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   logger.warn("Warning: Default Node::generateFunction is called on node with type '{}' ({})", Node::typeToString(type).c_str(), int(type));
   return nullptr;
