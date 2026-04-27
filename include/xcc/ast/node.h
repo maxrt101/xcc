@@ -46,7 +46,7 @@ enum NodeType {
   AST_WHILE,                  // while (cond) body
   AST_RETURN,                 // return expr
 
-  AST_USE,                    // use statement
+  AST_MOD,                    // module
 };
 
 /**

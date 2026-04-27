@@ -112,6 +112,7 @@ private:
   std::shared_ptr<ast::Node> parseWhile();
   std::shared_ptr<ast::Node> parseReturn();
   std::shared_ptr<ast::Node> parseUse();
+  std::shared_ptr<ast::Node> parseMod();
 
   // Generic
   std::shared_ptr<ast::Node> parseStmt();
@@ -135,6 +136,8 @@ private:
   // Meta
   std::shared_ptr<ast::Block> includeModule(const std::string& name);
   std::string resolveModulePath(const std::string& name);
+
+  std::shared_ptr<ast::Node> parseOneTopLevelNode(bool isRepl);
 
 public:
   explicit Parser(const std::vector<Token>& tokens);

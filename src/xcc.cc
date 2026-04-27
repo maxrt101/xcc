@@ -30,8 +30,8 @@ static void process_ast_block(
       for (auto& method : node->as<xcc::ast::Struct>()->methods) {
         result.nodes.fn.push_back(method);
       }
-    } else if (node->is(xcc::ast::AST_USE)) {
-      process_ast_block(globalContext, result, node->as<xcc::ast::Use>()->items, isRepl);
+    } else if (node->is(xcc::ast::AST_MOD)) {
+      process_ast_block(globalContext, result, node->as<xcc::ast::Module>()->body, isRepl);
     } else {
       if (isRepl) {
         result.nodes.expr.push_back(node);
@@ -93,10 +93,10 @@ xcc::CompilationResult xcc::compile(
 
   auto ast = parser.parse(isRepl);
 
-#if USE_PRINT_AST
+// #if USE_PRINT_AST
   logger.info("AST:");
   ast::printAst(ast);
-#endif
+// #endif
 
   CompilationResult result;
 

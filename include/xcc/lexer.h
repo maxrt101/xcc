@@ -30,6 +30,7 @@ enum TokenType {
   TOKEN_AS,
   TOKEN_SELF,
   TOKEN_USE,
+  TOKEN_MOD,
 
   // Braces/Parenthesis
   TOKEN_LEFT_BRACE,

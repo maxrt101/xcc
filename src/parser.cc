@@ -349,7 +349,31 @@ std::shared_ptr<ast::Node> Parser::parseUse() {
     throw ParserException(current().line, "Expected ';' after 'use' statement");
   }
 
-  return ast::Use::create(name, includeModule(name->value));
+  return ast::Module::create(name, includeModule(name->value));
+}
+
+std::shared_ptr<ast::Node> Parser::parseMod() {
+  if (!checkAdvance(TOKEN_MOD)) {
+    throw ParserException(current().line, "Expected 'mod'");
+  }
+
+  auto name = parseIdentifier("for module name");
+
+  if (!checkAdvance(TOKEN_LEFT_BRACE)) {
+    throw ParserException(current().line, "Expected '{' after 'mod'");
+  }
+
+  auto body = ast::Block::create({});
+
+  while (!check(TOKEN_RIGHT_BRACE) && !isAtEnd()) {
+    body->body.push_back(parseOneTopLevelNode(false));
+  }
+
+  if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
+    throw ParserException(current().line, "Expected '}' after mod body");
+  }
+
+  return ast::Module::create(name, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseStmt() {
@@ -485,7 +509,8 @@ std::shared_ptr<ast::Node> Parser::parseNumber() {
   }
 
   std::string value = previous().value;
-  int base = 10;
+
+  int base       = 10;
   int prefix_len = 2;
 
   if (value.size() > 2 && value[0] == '0') {
@@ -622,9 +647,7 @@ std::shared_ptr<ast::Block> Parser::includeModule(const std::string& name) {
   auto mod = parser.parse(false);
 
   for (auto & node : mod->body) {
-    if (node->is(ast::AST_USE)) {
-      block->body.push_back(node);
-    } else if (node->is(ast::AST_FUNCTION_DECL)) {
+    if (node->isAnyOf(ast::AST_MOD, ast::AST_FUNCTION_DECL)) {
       block->body.push_back(node);
     } else if (node->is(ast::AST_FUNCTION_DEF)) {
       block->body.push_back(node->as<ast::FnDef>()->decl);
@@ -662,30 +685,45 @@ std::string Parser::resolveModulePath(const std::string& name) {
   throw std::runtime_error("Could not resolve module");
 }
 
+std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl) {
+  if (checkAnyOf(TOKEN_FN, TOKEN_EXTERN)) {
+    return parseFunction(false);
+  }
+
+  if (check(TOKEN_VAR)) {
+    auto var = parseVar(true);
+    if (!checkAdvance(TOKEN_SEMICOLON)) {
+      throw ParserException(current().line, "Expected ';' variable declaration (global scope)");
+    }
+    return var;
+  }
+
+  if (check(TOKEN_STRUCT)) {
+    return parseStruct();
+  }
+
+  if (check(TOKEN_USE)) {
+    return parseUse();
+  }
+
+  if (check(TOKEN_MOD)) {
+    return parseMod();
+  }
+
+  if (isRepl) {
+    return parseStmt();
+  }
+
+  throw ParserException(current().line, "Unexpected token at top-level scope: '" + current().value + "' (" + Token::typeToString(current().type) + ")");
+}
+
 Parser::Parser(const std::vector<Token>& tokens) : tokens(tokens), current_idx(0) {}
 
 std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
   auto block = ast::Block::create({});
 
   while (!isAtEnd()) {
-    if (checkAnyOf(TOKEN_FN, TOKEN_EXTERN)) {
-      block->body.push_back(parseFunction(false));
-    } else if (check(TOKEN_VAR)) {
-      block->body.push_back(parseVar(true));
-      if (!checkAdvance(TOKEN_SEMICOLON)) {
-        throw ParserException(current().line, "Expected ';' variable declaration (global scope)");
-      }
-    } else if (check(TOKEN_STRUCT)) {
-      block->body.push_back(parseStruct());
-    } else if (check(TOKEN_USE)) {
-      block->body.push_back(parseUse());
-    } else {
-      if (isRepl) {
-        block->body.push_back(parseStmt());
-      } else {
-        throw ParserException(current().line, "Unexpected token at top-level scope: '" + current().value + "' (" + Token::typeToString(current().type) + ")");
-      }
-    }
+    block->body.push_back(parseOneTopLevelNode(isRepl));
   }
 
   return block;

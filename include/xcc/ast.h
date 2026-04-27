@@ -20,7 +20,7 @@
 #include "xcc/ast/type.h"
 #include "xcc/ast/typed_identifier.h"
 #include "xcc/ast/unary.h"
-#include "xcc/ast/use.h"
+#include "xcc/ast/mod.h"
 #include "xcc/ast/vardecl.h"
 #include "xcc/ast/while.h"
 
