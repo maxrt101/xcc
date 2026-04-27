@@ -23,8 +23,11 @@ class Parser {
     static std::shared_ptr<ast::MemberAccess> from(const MemberAccessContext& a, const MemberAccessContext& b);
   };
 
+public:
   /**
    * Result of includeModule
+   *
+   * @note For internal use only
    */
   struct IncludedModule {
     std::string                 path;

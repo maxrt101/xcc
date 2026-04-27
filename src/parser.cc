@@ -6,6 +6,7 @@
 using namespace xcc;
 
 static auto logger = xcc::util::log::Logger("PARSER");
+static std::unordered_map<std::string, Parser::IncludedModule> module_cache;
 
 std::shared_ptr<ast::MemberAccess> Parser::MemberAccessContext::from(const MemberAccessContext& a, const MemberAccessContext& b) {
   return a.pointer || b.pointer
@@ -401,6 +402,10 @@ std::shared_ptr<ast::Node> Parser::parseUse() {
   }
 
   auto res = includeModule(name->name());
+
+  // Happens, if module was already included
+  if (!res.body) return ast::Empty::create();
+
   auto mod = ast::Module::create(name, res.body);
 
   mod->addAttribute({"__xcc_tag_use", { ast::String::create(res.path) }});
@@ -758,8 +763,13 @@ Parser::IncludedModule Parser::includeModule(const std::string& name) {
   IncludedModule result;
 
   if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
-    // TODO: Test double inclusion
+    logger.warn("Skipping inclusion of '{}', as it was already included", name);
     return {};
+  }
+
+  if (module_cache.contains(name)) {
+    logger.info("Using cached module '{}'", name);
+    return module_cache[name];
   }
 
   module.included.push_back(name);
@@ -779,6 +789,8 @@ Parser::IncludedModule Parser::includeModule(const std::string& name) {
   auto mod = parser.parse(false);
 
   result.body = moduleReplaceDeclarations(mod);
+
+  module_cache[name] = result;
 
   parser.module.stack.pop_back();
 
