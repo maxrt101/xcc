@@ -240,5 +240,32 @@
       "stdout": ["Dereferences: 15 15 15\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 28,
+    "name": "Same-file modules",
+    "file": "28.xc",
+    "expect": {
+      "stdout": ["do_stuff: 42\n", "Doer::do 69\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 29,
+    "name": "External file modules + use",
+    "file": ["mod29.xc", "29.xc"],
+    "expect": {
+      "stdout": ["do_stuff: 42\n", "Doer::do 69\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 30,
+    "name": "External file modules with nested module",
+    "file": ["mod30.xc", "30.xc"],
+    "expect": {
+      "stdout": ["do_stuff: 42\n", "test::do_stuff: 420\n", "test::Doer::do 69\n"],
+      "retcode": 0
+    }
   }
 ]
