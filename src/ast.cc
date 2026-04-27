@@ -14,10 +14,9 @@ static void printIndent(int indent) {
   }
 }
 
-static void printNode(Node* node, Node* parent, int indent) {
-  if (!node) {
-    return;
-  }
+void ast::printNode(Node* node, Node* parent, int indent) {
+  if (!node) return;
+  if (node->is(AST_EMPTY)) return;
 
   if (!node->attributes.empty()) {
     logger.print("[");

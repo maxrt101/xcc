@@ -21,6 +21,8 @@ namespace xcc::ast {
  * Abstract Syntax Tree Node Type
  */
 enum NodeType {
+  AST_EMPTY = 0,
+
   AST_EXPR_NUMBER,            // [0-9]+
   AST_EXPR_STRING,            // ".+"
   AST_EXPR_IDENTIFIER,        // [a-zA-Z_][a-zA-Z0-9_]+ - id
@@ -280,12 +282,25 @@ public:
    */
   virtual std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload);
 
+  // TODO: Add a visitor. `virtual void visit(std::function<void(Node*)> visitor);
+
   /**
    * Converts node type to its string representation
    *
    * @param type Node type
    */
   static std::string typeToString(NodeType type);
+};
+
+/**
+ * Empty AST node. May be used as a placeholder in the tree
+ */
+class Empty : public Node {
+public:
+  Empty();
+  ~Empty() override = default;
+
+  static std::shared_ptr<Empty> create();
 };
 
 } /* namespace xcc::ast */

@@ -94,3 +94,9 @@ std::string Node::typeToString(NodeType type) {
 
   return "UNKNOWN";
 }
+
+Empty::Empty() : Node(AST_EMPTY) {}
+
+std::shared_ptr<Empty> Empty::create() {
+  return std::make_shared<Empty>();
+}

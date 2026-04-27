@@ -1,10 +1,26 @@
 #include "xcc/xcc.h"
+#include "xcc/attrs.h"
 #include "xcc/util/fs.h"
 #include "xcc/util/string.h"
 
 #include <llvm/IR/LegacyPassManager.h>
 
 static auto logger = xcc::util::log::Logger("XCC");
+
+/**
+ * Process attributes for top-level block
+ *
+ * @param block AST Block
+ */
+static void process_attributes(const std::shared_ptr<xcc::ast::Block>& block) {
+  for (auto& node : block->body) {
+    if (!node->attributes.empty()) {
+      for (auto& attr : node->attributes) {
+        xcc::attr::callHandler(attr, node.get());
+      }
+    }
+  }
+}
 
 /**
  * Recursively lowers AST
@@ -32,6 +48,8 @@ static void process_ast_block(
       }
     } else if (node->is(xcc::ast::AST_MOD)) {
       process_ast_block(globalContext, result, node->as<xcc::ast::Module>()->body, isRepl);
+    } else if (node->is(xcc::ast::AST_EMPTY)) {
+      // Ignore
     } else {
       if (isRepl) {
         result.nodes.expr.push_back(node);
@@ -92,6 +110,8 @@ xcc::CompilationResult xcc::compile(
   }
 
   auto ast = parser.parse(isRepl);
+
+  process_attributes(ast);
 
 // #if USE_PRINT_AST
   logger.info("AST:");

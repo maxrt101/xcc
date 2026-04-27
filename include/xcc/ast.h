@@ -27,7 +27,20 @@
 namespace xcc::ast {
 
 /**
+ * Recursive node printer. Used by printAst
+ *
+ * @warning For internal use only
+ *
+ * @param node   Node to print
+ * @param parent Parent of `node`
+ * @param indent Indentation level
+ */
+void printNode(Node* node, Node* parent, int indent);
+
+/**
  * Pretty print an AST
+ *
+ * @param root Node to print
  */
 void printAst(std::shared_ptr<Node> root);
 
