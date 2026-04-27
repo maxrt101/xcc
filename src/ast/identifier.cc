@@ -25,7 +25,9 @@ std::string Identifier::name() const {
 llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   if (ctx.hasLocal(name())) {
     return ctx.ir_builder->CreateLoad(ctx.getLocalValue(name())->getAllocatedType(), ctx.getLocalValue(name()), name().c_str());
-  } else if (ctx.globalContext.hasGlobal(name())) {
+  }
+
+  if (ctx.globalContext.hasGlobal(name())) {
     auto global = ctx.globalContext.getGlobal(ctx, name());
 
     if (ctx.globalContext.getGlobalType(name())->isPointer()) {
@@ -36,6 +38,11 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
 
     return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(name())->getLLVMType(ctx), global);
   }
+
+  if (auto * fn = ctx.getFunction(name())) {
+    return fn;
+  }
+
   throw CodegenException("Undeclared value referenced: '" + name() + "'");
 }
 
@@ -46,6 +53,10 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, 
 
   if (ctx.globalContext.hasGlobal(name())) {
     return ctx.globalContext.getGlobal(ctx, name());
+  }
+
+  if (auto * fn = ctx.getFunction(name())) {
+    return fn;
   }
 
   throw CodegenException("Undeclared value referenced: '" + name() + "'");
@@ -62,6 +73,11 @@ std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(cod
 
   if (ctx.globalContext.hasGlobal(name())) {
     return ctx.globalContext.getGlobalType(name());
+  }
+
+  if (auto meta_fn = ctx.globalContext.getMetaFunction(name())) {
+    // TODO: Create a Function type (so to make function pointers a thing)
+    return meta::Type::createPointer(meta::Type::createI8());
   }
 
   throw CodegenException("Undeclared value referenced: '" + name() + "'");
