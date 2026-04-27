@@ -122,7 +122,7 @@ class Runner:
             if isinstance(test.file, str) else
             [os.path.join(self.test_dir, file) for file in test.file]
         )
-        result = subprocess.run([self.executable, '-r', *files], capture_output=True, text=True)
+        result = subprocess.run([self.executable, '-r', '-I', self.test_dir, *files], capture_output=True, text=True)
         run = TestRun(True, result.returncode, 0, result.stdout, result.stderr, [])
 
         if match := self.RESULT_REGEX.search(run.stdout):

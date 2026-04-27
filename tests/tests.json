@@ -243,7 +243,7 @@
   },
   {
     "id": 28,
-    "name": "Same-file modules",
+    "name": "Same-file module",
     "file": "28.xc",
     "expect": {
       "stdout": ["do_stuff: 42\n", "Doer::do 69\n"],
@@ -252,7 +252,7 @@
   },
   {
     "id": 29,
-    "name": "External file modules + use",
+    "name": "External file module + use",
     "file": ["mod29.xc", "29.xc"],
     "expect": {
       "stdout": ["do_stuff: 42\n", "Doer::do 69\n"],
@@ -261,10 +261,19 @@
   },
   {
     "id": 30,
-    "name": "External file modules with nested module",
+    "name": "External file module with nested module",
     "file": ["mod30.xc", "30.xc"],
     "expect": {
       "stdout": ["do_stuff: 42\n", "test::do_stuff: 420\n", "test::Doer::do 69\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 31,
+    "name": "Multiple cross-dependant external file modules",
+    "file": ["mod31_1.xc", "mod31_2.xc", "31.xc"],
+    "expect": {
+      "stdout": ["mod31_2::do_stuff2 42\n", "Skipping inclusion of 'mod31_2', as it was already included\n"],
       "retcode": 0
     }
   }
