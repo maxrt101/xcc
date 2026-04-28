@@ -306,5 +306,23 @@
       "stdout": ["long_function_name: 42\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 35,
+    "name": "Alias to scoped function",
+    "file": "35.xc",
+    "expect": {
+      "stdout": ["test::long_function_name: 42\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 36,
+    "name": "Type declarations (aliases)",
+    "file": "36.xc",
+    "expect": {
+      "stdout": ["s=abc\n", "\\*p=42\n"],
+      "retcode": 0
+    }
   }
 ]
