@@ -49,7 +49,7 @@ Here's a hello world program:
 ```
 use stdc;
 
-fn main(): i32 {
+fn main() -> i32 {
   stdc::io::printf("Hello, World!\n");
   return 0;
 }
