@@ -836,7 +836,10 @@ Parser::IncludedModule Parser::includeModuleFromPath(const std::string& name, co
   auto tokens = lexer.tokenize();
   auto parser = Parser(tokens, true);
 
-  parser.module.stack = module.stack;
+  if (scoped) {
+    parser.module.stack = module.stack;
+  }
+
   parser.module.stack.push_back(name);
   parser.module.searchPaths = module.searchPaths;
   parser.module.included    = module.included;
