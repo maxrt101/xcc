@@ -139,6 +139,15 @@ std::shared_ptr<ast::Type> Parser::parseType() {
 
   auto id = parseScopedIdentifier("for type name");
 
+  // Check if referenced type was declared inside of this module
+  auto isDeclaredInModule = std::find(module.typeAliases.begin(), module.typeAliases.end(), id->value) != module.typeAliases.end();
+
+  // If currently parsing a module, referenced type was declared in this module, and no scope is present
+  if (isModule && isDeclaredInModule && id->scope.empty()) {
+    // Set type's scope to current module stack
+    id->scope = module.stack;
+  }
+
   std::shared_ptr<ast::Type> type;
 
   while (checkAdvance(TOKEN_STAR)) {
@@ -508,6 +517,10 @@ std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::Attribu
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
     throw ParserException(current().line, "Expected ';' after type declaration (alias)");
+  }
+
+  if (isModule) {
+    module.typeAliases.push_back(name->value);
   }
 
   return ast::TypeDecl::create(name, type);

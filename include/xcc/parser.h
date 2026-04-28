@@ -46,6 +46,7 @@ private:
     std::vector<std::string> searchPaths; /** List of module search paths */
     std::set<std::string>    included;    /** List of already included modules (avoid circular includes) */
     std::vector<std::string> stack;       /** Stack of currently parsing recursive mod definitions */
+    std::vector<std::string> typeAliases; /** List of declared type aliases in current module */
   } module;
 
 private:
