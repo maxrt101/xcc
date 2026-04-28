@@ -134,7 +134,7 @@ void ast::printNode(Node* node, Node* parent, int indent) {
           if (type->isVariadic) {
             logger.print("...");
           }
-          logger.print("): ");
+          logger.print(") -> ");
           printNode(type->returnType.get(), type, indent);
         }
       } else {
@@ -235,7 +235,7 @@ void ast::printNode(Node* node, Node* parent, int indent) {
       if (fndecl->isVariadic) {
         logger.print(", ...");
       }
-      logger.print("): ");
+      logger.print(") -> ");
       printNode(fndecl->return_type.get(), fndecl, indent);
       if (!parent->is(AST_FUNCTION_DEF)) {
         logger.print(";\n");

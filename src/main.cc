@@ -181,29 +181,14 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
 }
 
 static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
+  for (auto& filename : args.files) {
+    logger.info("Running file '{}'", xcc::fs::path::getFileName(filename));
 
-#if USE_CATCH_EXCEPTIONS
-  try {
-#endif
-    for (auto& filename : args.files) {
-      logger.info("Running file '{}'", xcc::fs::path::getFileName(filename));
-
-      xcc::compile(globalContext, xcc::fs::readFile(filename), false, args.mod_paths);
-
-
-      // xcc::run(globalContext, xcc::fs::readFile(filename), false, getModPaths(filename, args));
-    }
-
-    globalContext->flushModulesToJIT();
-
-    globalContext->runFunction("main");
-
-#if USE_CATCH_EXCEPTIONS
-  } catch (std::exception& e) {
-    logger.fatal("{}", e.what());
-    return 1;
+    xcc::compile(globalContext, xcc::fs::readFile(filename), false, args.mod_paths);
   }
-#endif
+
+  globalContext->flushModulesToJIT();
+  globalContext->runFunction("main");
 
   return 0;
 }
@@ -253,21 +238,13 @@ static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
       continue;
     }
 
-#if USE_CATCH_EXCEPTIONS
-    try {
-#endif
-      xcc::run(globalContext, line, true);
-#if USE_CATCH_EXCEPTIONS
-    } catch (std::exception& e) {
-      logger.error("{}\n", e.what());
-    }
-#endif
+    xcc::run(globalContext, line, true);
   }
 
   return 0;
 }
 
-int main(int argc, char ** argv) {
+static int xcc_main(int argc, char ** argv) {
   auto args = xcc::args::parse(argc, argv);
 
   if (args.help) {
@@ -310,4 +287,16 @@ int main(int argc, char ** argv) {
   }
 
   return repl(std::move(globalContext), args);
+}
+
+int main(int argc, char ** argv) {
+#if USE_CATCH_EXCEPTIONS
+  try {
+#endif
+    return xcc_main(argc, argv);
+#if USE_CATCH_EXCEPTIONS
+  } catch (std::exception& e) {
+    logger.error("{}\n", e.what());
+  }
+#endif
 }

@@ -20,7 +20,7 @@ private:
 
 public:
   std::shared_ptr<Node> callee;
-  // Generics?
+  // TODO: Generics?
   std::vector<std::shared_ptr<Node>> args;
 
 public:

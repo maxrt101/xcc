@@ -113,10 +113,10 @@ xcc::CompilationResult xcc::compile(
 
   process_attributes(ast);
 
-// #if USE_PRINT_AST
+#if USE_PRINT_AST
   logger.info("AST:");
   ast::printAst(ast);
-// #endif
+#endif
 
   CompilationResult result;
 
@@ -129,15 +129,15 @@ xcc::CompilationResult xcc::compile(
 
       auto ctx = globalContext->createModule(name);
 
-// #if USE_PRINT_LLVM_IR
+#if USE_PRINT_LLVM_IR
       auto fn = node->generateFunction(*ctx, {});
       logger.info("LLVM IR for function {}:", fn->getName().str());
       util::RawStreamCollector collector;
       fn->print(*collector.stream());
       logger.print("{}", collector.string());
-// #else
+#else
       node->generateFunction(*ctx, {});
-// #endif
+#endif
       globalContext->addModule(ctx);
     } else {
       throw std::runtime_error("Unexpected node at top-level scope: " + ast::Node::typeToString(node->type));
