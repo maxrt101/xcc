@@ -297,5 +297,14 @@
       "stdout": ["f\\(4\\)=16\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 34,
+    "name": "Function aliases",
+    "file": "34.xc",
+    "expect": {
+      "stdout": ["long_function_name: 42\n"],
+      "retcode": 0
+    }
   }
 ]
