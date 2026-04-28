@@ -163,16 +163,17 @@ bool Type::isVoid() const {
 }
 
 bool Type::isSigned() const {
-  return isAnyOf(TypeTag::I8, TypeTag::I16, TypeTag::I32, TypeTag::I64);
+  return isAnyOf(TypeTag::I8, TypeTag::I16, TypeTag::I32, TypeTag::I64, TypeTag::ISIZE);
 }
 
 bool Type::isUnsigned() const {
-  return isAnyOf(TypeTag::U8, TypeTag::U16, TypeTag::U32, TypeTag::U64);
+  return isAnyOf(TypeTag::U8, TypeTag::U16, TypeTag::U32, TypeTag::U64, TypeTag::USIZE);
 }
 
 bool Type::isInteger() const {
   return isAnyOf(TypeTag::I8, TypeTag::I16, TypeTag::I32, TypeTag::I64,
-                 TypeTag::U8, TypeTag::U16, TypeTag::U32, TypeTag::U64);
+                 TypeTag::U8, TypeTag::U16, TypeTag::U32, TypeTag::U64,
+                 TypeTag::ISIZE, TypeTag::USIZE);
 }
 
 bool Type::isFloat() const {
@@ -207,6 +208,7 @@ int Type::getNumberBitWidth() const {
     case TypeTag::U64:
     case TypeTag::F64:
       return 64;
+    // TODO: ISIZE/USIZE
     case TypeTag::PTR:
     case TypeTag::FUNCTION:
     case TypeTag::STRUCT:
