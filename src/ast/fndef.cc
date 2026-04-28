@@ -1,4 +1,5 @@
 #include "xcc/ast/fndef.h"
+#include "xcc/ast/string.h"
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
 #include "xcc/util/log.h"
@@ -49,6 +50,19 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
       last_val = codegen::castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx));
       ctx.ir_builder->CreateRet(last_val);
     }
+  }
+
+  if (hasAttribute("section")) {
+    auto section_attr = getAttribute("section");
+
+    assertThrow(section_attr.args.size() == 1, CodegenException("Expected 1 argument in 'section' attribute"));
+    assertThrow(section_attr.args[0]->is(AST_EXPR_STRING), CodegenException("Argument to 'section' attribute must be a string"));
+
+    auto section_name = section_attr.args[0]->as<ast::String>()->value;
+
+    logger.debug("Placing '{}' in section '{}'", decl->name->name(), section_name);
+
+    fn->setSection(section_name);
   }
 
   ctx.globalContext.clearCurrentFunction();
