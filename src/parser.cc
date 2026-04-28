@@ -241,9 +241,11 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
       throw ParserException(current().line, "Expected ';' after function declaration");
     }
 
-    // Workaround: erase scope, if it's a forward declaration
+    // Workaround: erase scope, if it's an extern forward declaration
     // TODO: Won't work for something like `fn a::b::c();`, but then again, is it needed?
-    fndecl->name->scope = {};
+    if (fndecl->isExtern) {
+      fndecl->name->scope = {};
+    }
 
     return ast::Node::cast(fndecl);
   }
@@ -420,9 +422,15 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
   return ast::Return::create(expr);
 }
 
-std::shared_ptr<ast::Node> Parser::parseUse() {
+std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attrs) {
+  bool scoped = false;
+
   if (!checkAdvance(TOKEN_USE)) {
     throw ParserException(current().line, "Expected 'use'");
+  }
+
+  if (checkAdvance(TOKEN_MOD)) {
+    scoped = true;
   }
 
   auto name = parseIdentifier("for module name");
@@ -431,7 +439,17 @@ std::shared_ptr<ast::Node> Parser::parseUse() {
     throw ParserException(current().line, "Expected ';' after 'use' statement");
   }
 
-  auto res = includeModule(name->name());
+  auto path_attr = std::find_if(attrs.begin(), attrs.end(), [](auto& a) { return a.name == "path"; });
+  std::string path;
+
+  if (path_attr != attrs.end()) {
+    assertThrow(path_attr->args.size() == 1, ParserException("'path' attribute expects 1 argument"));
+    assertThrow(path_attr->args[0]->is(ast::AST_EXPR_STRING), ParserException("'path' attribute expect a string argument"));
+
+    path = path_attr->args[0]->as<ast::String>()->value;
+  }
+
+  auto res = path.empty() ? includeModule(name->name(), scoped) : includeModuleFromPath(name->name(), path, scoped);
 
   // Happens, if module was already included
   if (!res.body) return ast::Empty::create();
@@ -443,7 +461,7 @@ std::shared_ptr<ast::Node> Parser::parseUse() {
   return mod;
 }
 
-std::shared_ptr<ast::Node> Parser::parseMod() {
+std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attrs) {
   if (!checkAdvance(TOKEN_MOD)) {
     throw ParserException(current().line, "Expected 'mod'");
   }
@@ -473,7 +491,7 @@ std::shared_ptr<ast::Node> Parser::parseMod() {
   module.stack.push_back(name->name());
 
   while (!check(TOKEN_RIGHT_BRACE) && !isAtEnd()) {
-    body->body.push_back(parseOneTopLevelNode(false));
+    body->body.push_back(parseOneTopLevelNode(false, {}));
   }
 
   module.stack.pop_back();
@@ -789,7 +807,11 @@ ast::Node::AttributeList Parser::parseAttributeList() {
   return attrs;
 }
 
-Parser::IncludedModule Parser::includeModule(const std::string& name) {
+Parser::IncludedModule Parser::includeModule(const std::string& name, bool scoped) {
+  return includeModuleFromPath(name, resolveModulePath(name), scoped);
+}
+
+Parser::IncludedModule Parser::includeModuleFromPath(const std::string& name, const std::string& path, bool scoped) {
   IncludedModule result;
 
   if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
@@ -805,7 +827,7 @@ Parser::IncludedModule Parser::includeModule(const std::string& name) {
 
   module.included.emplace(name);
 
-  result.path = resolveModulePath(name);
+  result.path = path;
   auto src = fs::readFile(result.path);
 
   logger.info("Found module '{}' at {}", name, result.path);
@@ -814,6 +836,7 @@ Parser::IncludedModule Parser::includeModule(const std::string& name) {
   auto tokens = lexer.tokenize();
   auto parser = Parser(tokens, true);
 
+  parser.module.stack = module.stack;
   parser.module.stack.push_back(name);
   parser.module.searchPaths = module.searchPaths;
   parser.module.included    = module.included;
@@ -878,11 +901,11 @@ std::shared_ptr<ast::Block> Parser::moduleReplaceDeclarations(const std::shared_
   return result;
 }
 
-std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl) {
+std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::Node::AttributeList& attrs) {
   if (check(TOKEN_LEFT_SQUARE_BRACE)) {
-    auto attrs = parseAttributeList();
-    auto node  = parseOneTopLevelNode(isRepl);
-    node->attributes = attrs;
+    auto new_attrs = parseAttributeList();
+    auto node  = parseOneTopLevelNode(isRepl, new_attrs);
+    node->attributes = new_attrs;
     return node;
   }
 
@@ -903,11 +926,11 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl) {
   }
 
   if (check(TOKEN_USE)) {
-    return parseUse();
+    return parseUse(attrs);
   }
 
   if (check(TOKEN_MOD)) {
-    return parseMod();
+    return parseMod(attrs);
   }
 
   if (isRepl) {
@@ -923,7 +946,7 @@ std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
   auto block = ast::Block::create({});
 
   while (!isAtEnd()) {
-    block->body.push_back(parseOneTopLevelNode(isRepl));
+    block->body.push_back(parseOneTopLevelNode(isRepl, {}));
   }
 
   return block;

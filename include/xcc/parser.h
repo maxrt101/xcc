@@ -133,8 +133,8 @@ private:
   std::shared_ptr<ast::Node> parseFor();
   std::shared_ptr<ast::Node> parseWhile();
   std::shared_ptr<ast::Node> parseReturn();
-  std::shared_ptr<ast::Node> parseUse();
-  std::shared_ptr<ast::Node> parseMod();
+  std::shared_ptr<ast::Node> parseUse(const ast::Node::AttributeList& attrs);
+  std::shared_ptr<ast::Node> parseMod(const ast::Node::AttributeList& attrs);
 
   // Generic
   std::shared_ptr<ast::Node> parseStmt();
@@ -157,11 +157,12 @@ private:
 
   // Meta
   ast::Node::AttributeList parseAttributeList();
-  IncludedModule includeModule(const std::string& name);
+  IncludedModule includeModule(const std::string& name, bool scoped);
+  IncludedModule includeModuleFromPath(const std::string& name, const std::string& path, bool scoped);
   std::string resolveModulePath(const std::string& name);
   std::shared_ptr<ast::Block> moduleReplaceDeclarations(const std::shared_ptr<ast::Block>& body);
 
-  std::shared_ptr<ast::Node> parseOneTopLevelNode(bool isRepl);
+  std::shared_ptr<ast::Node> parseOneTopLevelNode(bool isRepl, const ast::Node::AttributeList& attrs);
 
 public:
   explicit Parser(const std::vector<Token>& tokens, bool isModule = false);
