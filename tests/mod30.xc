@@ -1,6 +1,6 @@
 mod mod30;
 
-extern fn printf(fmt: i8*, ...): i32;
+extern fn printf(fmt: i8*, ...) -> i32;
 
 mod test {
   struct Doer {

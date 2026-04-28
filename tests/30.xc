@@ -1,6 +1,6 @@
 use mod30;
 
-fn main(): i32 {
+fn main() -> i32 {
   mod30::do_stuff("42");
   mod30::test::do_stuff("420");
 

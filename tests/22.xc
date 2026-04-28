@@ -1,7 +1,7 @@
-extern fn printf(fmt: i8*, ...): i32;
-extern fn malloc(size: u32): u8*;
-extern fn free(ptr: u8*): void;
-extern fn strlen(ptr: u8*): u32;
+extern fn printf(fmt: i8*, ...) -> i32;
+extern fn malloc(size: u32) -> u8*;
+extern fn free(ptr: u8*) -> void;
+extern fn strlen(ptr: u8*) -> u32;
 
 struct buffer_t {
   data: i8*;
@@ -13,14 +13,14 @@ struct context_t {
   buf: buffer_t;
 }
 
-fn memcopy(dest: i8*, src: i8*, size: u32): u32 {
+fn memcopy(dest: i8*, src: i8*, size: u32) -> u32 {
   for (var i: u32 = 0; i < size; i = i + 1) {
     dest[i] = src[i];
   }
   return 0;
 }
 
-fn context_init(ctx: context_t*, str: i8*): void {
+fn context_init(ctx: context_t*, str: i8*) -> void {
   ctx->buf.size = strlen(str) + 1;
   ctx->buf.data = malloc(ctx->buf.size);
 
@@ -29,13 +29,13 @@ fn context_init(ctx: context_t*, str: i8*): void {
   ctx->status = 1;
 }
 
-fn context_deinit(ctx: context_t *): void {
+fn context_deinit(ctx: context_t *) -> void {
   if (ctx->buf.data != 0) {
     free(ctx->buf.data);
   }
 }
 
-fn main(): i32 {
+fn main() -> i32 {
   var s: context_t;
 
   s.status = 0;

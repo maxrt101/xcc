@@ -1,12 +1,12 @@
-extern fn xcc_putc(c: i32): i32;
-extern fn xcc_putd(c: i32): i32;
-extern fn xcc_putud(c: i32): i32;
-extern fn xcc_putux(c: i32): i32;
+extern fn xcc_putc(c: i32) -> i32;
+extern fn xcc_putd(c: i32) -> i32;
+extern fn xcc_putud(c: i32) -> i32;
+extern fn xcc_putux(c: i32) -> i32;
 
-extern fn malloc(size: u32): u8*;
-extern fn free(ptr: u8*): void;
+extern fn malloc(size: u32) -> u8*;
+extern fn free(ptr: u8*) -> void;
 
-fn main(): i32 {
+fn main() -> i32 {
   var mem: u8* = malloc(4);
   var p32: u32* = mem as u32*;
 

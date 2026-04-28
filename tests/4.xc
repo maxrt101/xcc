@@ -1,10 +1,10 @@
 
-extern fn xcc_putc(c: i32): i32;
+extern fn xcc_putc(c: i32) -> i32;
 
-extern fn div(a: i32, b: i32): i32;
-extern fn sin(a: f64): f64;
+extern fn div(a: i32, b: i32) -> i32;
+extern fn sin(a: f64) -> f64;
 
-fn test(x: i32): f64 {
+fn test(x: i32) -> f64 {
   var a: f64 = sin(x as f64);
 
   if (a > 0) {
@@ -16,6 +16,6 @@ fn test(x: i32): f64 {
   }
 }
 
-fn main(): i32 {
+fn main() -> i32 {
   return test(100);
 }

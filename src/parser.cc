@@ -138,8 +138,8 @@ std::shared_ptr<ast::Type> Parser::parseType() {
       throw ParserException(current().line, "Expected ')' after function type args");
     }
 
-    if (!checkAdvance(TOKEN_COLON)) {
-      throw ParserException(current().line, "Expected ':' after function type args");
+    if (!checkAdvance(TOKEN_RIGHT_ARROW)) {
+      throw ParserException(current().line, "Expected '->' after function type args");
     }
 
     std::shared_ptr<ast::Type> returnType = parseType();
@@ -228,7 +228,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
     throw ParserException(current().line, "Expected ')' after function arguments");
   }
 
-  if (checkAdvance(TOKEN_COLON)) {
+  if (checkAdvance(TOKEN_RIGHT_ARROW)) {
     return_type = parseType();
   } else {
     return_type = ast::Type::create(ast::Identifier::create("void"), false);;

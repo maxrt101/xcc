@@ -1,6 +1,6 @@
-extern fn printf(fmt: i8*, ...): i32;
+extern fn printf(fmt: i8*, ...) -> i32;
 
-fn test(): void {
+fn test() -> void {
   var x: i8 = 15;
   var y: i8* = &x;
   var z: i8** = &y;
@@ -11,7 +11,7 @@ fn test(): void {
 
 }
 
-fn main(): i32 {
+fn main() -> i32 {
   test();
 
   return 0;

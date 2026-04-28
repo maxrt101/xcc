@@ -1,4 +1,4 @@
-extern fn printf(fmt: i8*, ...): i32;
+extern fn printf(fmt: i8*, ...) -> i32;
 
 mod test {
   struct Doer {
@@ -14,7 +14,7 @@ mod test {
   }
 }
 
-fn main(): i32 {
+fn main() -> i32 {
   test::do_stuff("42");
 
   var doer: test::Doer;

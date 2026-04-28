@@ -1,9 +1,9 @@
-extern fn printf(fmt: i8*, ...): i32;
-extern fn strlen(str: i8*): u32;
+extern fn printf(fmt: i8*, ...) -> i32;
+extern fn strlen(str: i8*) -> u32;
 
 var str: i8* = "Test String";
 
-fn main(): i32 {
+fn main() -> i32 {
   var len: u32 = strlen(str);
 
   str[0] = 'X'; # "X"[0]
