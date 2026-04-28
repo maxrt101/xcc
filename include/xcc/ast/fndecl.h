@@ -15,6 +15,7 @@ public:
   std::vector<std::shared_ptr<TypedIdentifier>> args;
   bool isExtern;
   bool isVariadic;
+  std::string alias_to;
 
 public:
   FnDecl(

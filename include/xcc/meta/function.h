@@ -20,6 +20,9 @@ public:
   /** Function name */
   std::string name;
 
+  /** What this function aliases */
+  std::string alias_to;
+
   /** Function return type */
   std::shared_ptr<Type> returnType;
 
