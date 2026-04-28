@@ -276,5 +276,17 @@
       "stdout": ["mod31_2::do_stuff2 42\n", "Skipping inclusion of 'mod31_2', as it was already included\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 32,
+    "name": "Compile-time environment variable resolution",
+    "file": "32.xc",
+    "env": {
+      "TEST_VAR": "42"
+    },
+    "expect": {
+      "stdout": ["TEST_VAR=42\n"],
+      "retcode": 0
+    }
   }
 ]
