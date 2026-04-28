@@ -52,6 +52,7 @@ public:
   /* Global Module */
   std::shared_ptr<ModuleContext> globalModule;
 
+  /* Already processed modules, which are waiting to be flushed to JIT, or merged to an object file */
   std::vector<std::unique_ptr<ModuleContext>> pendingModules;
 
   /* Global Variable Types */
@@ -62,6 +63,8 @@ public:
 
   /* Current Function Name */
   std::string current_function;
+
+  std::vector<std::string> moduleStack;
 
 public:
   GlobalContext();
@@ -109,6 +112,10 @@ public:
   bool hasGlobal(const std::string& name);
   llvm::GlobalVariable * getGlobal(ModuleContext& ctx, const std::string& name);
   std::shared_ptr<meta::Type> getGlobalType(const std::string& name);
+
+  void pushModule(const std::string& name);
+  void popModule();
+  std::string getModulePrefix() const;
 
   void runExpr(std::shared_ptr<ast::Node> expr);
 

@@ -29,7 +29,6 @@ inline std::string getVersion() {
  */
 struct CompilationResult {
   struct {
-    std::vector<std::shared_ptr<ast::Node>> fn;
     std::vector<std::shared_ptr<ast::Node>> expr;
   } nodes;
 };

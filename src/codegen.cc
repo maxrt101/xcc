@@ -6,6 +6,8 @@
 
 #include <llvm/Linker/Linker.h>
 
+#include <utility>
+
 using namespace xcc;
 using namespace xcc::codegen;
 
@@ -99,6 +101,24 @@ std::shared_ptr<meta::Type> GlobalContext::getGlobalType(const std::string& name
     throw CodegenException("Unknown global variable '" + name + "'");
   }
   return globals[name];
+}
+
+void GlobalContext::pushModule(const std::string& name) {
+  moduleStack.push_back(name);
+}
+
+void GlobalContext::popModule() {
+  moduleStack.pop_back();
+}
+
+std::string GlobalContext::getModulePrefix() const {
+  std::string res;
+
+  for (auto& mod : moduleStack) {
+    res += mod + "_";
+  }
+
+  return res;
 }
 
 void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {

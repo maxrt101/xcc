@@ -8,6 +8,7 @@
 #include "xcc/ast/node.h"
 
 namespace xcc::codegen {
+class GlobalContext;
 class ModuleContext;
 }
 
@@ -30,6 +31,8 @@ enum class TypeTag {
   I64,      /** signed 64-bit integer */
   F32,      /** 32-bit float point (equivalent to `float` type in C) */
   F64,      /** 64-bit float point (equivalent to `double` type in C) */
+  ISIZE,    /** Signed platform-dependent size type, (equivalent to ssize_t in C) */
+  USIZE,    /** Unsigned platform-dependent size type, (equivalent to size_t in C) */
   PTR,      /** Generic/Opaque pointer type */
   FUNCTION, /** Function type */
   STRUCT,   /** Type tag for user-defined types */
@@ -177,7 +180,7 @@ public:
   }
 
   static std::shared_ptr<Type> create(TypeTag tag);
-  static std::shared_ptr<Type> fromTypeName(const std::string& name);
+  static std::shared_ptr<Type> fromTypeName(codegen::GlobalContext& ctx, const std::string& name);
 
   static std::shared_ptr<Type> createVoid();
   static std::shared_ptr<Type> createI8();
@@ -190,6 +193,8 @@ public:
   static std::shared_ptr<Type> createU64();
   static std::shared_ptr<Type> createF32();
   static std::shared_ptr<Type> createF64();
+  static std::shared_ptr<Type> createIsize();
+  static std::shared_ptr<Type> createUsize();
   static std::shared_ptr<Type> createSigned(int bits);
   static std::shared_ptr<Type> createUnsigned(int bits);
   static std::shared_ptr<Type> createFloating(int bits);
@@ -204,6 +209,11 @@ public:
    * Saves user-defined type to customTypes
    */
   static void registerCustomType(const std::string& name, std::shared_ptr<Type> type);
+
+  /**
+   * Check if custom type with specified type is present
+   */
+  static bool hasCustomType(const std::string& name);
 
   /**
    * Compares tag of lhs & rhs and returns 'bigger' type to avoid implicit downcasts

@@ -33,14 +33,23 @@ std::shared_ptr<FnDecl> FnDecl::create(
 
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   std::string fn_name = name->name();
+  std::string symbol_name = fn_name;
 
   if (hasAttribute("alias")) {
     auto attr = getAttribute("alias");
 
     attr.validateArgsStrict({AST_EXPR_IDENTIFIER});
 
-    alias_to = attr.args[0]->as<Identifier>()->value;
+    alias_to = attr.args[0]->as<Identifier>()->name();
+    symbol_name = alias_to;
+  }
 
+  // Prevent regeneration on subsequent passes
+  if (auto * existing = ctx.llvm.module->getFunction(symbol_name)) {
+    return existing;
+  }
+
+  if (!alias_to.empty()) {
     logger.debug("Aliasing '{}' as '{}'", fn_name, alias_to);
   }
 
@@ -59,7 +68,7 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
   auto llvm_fn_type = llvm::FunctionType::get(return_meta_type->getLLVMType(ctx), meta::Function::typesFromMetaArgs(ctx, arg_meta_types), isVariadic);
   // auto llvm_fn = llvm::Function::Create(llvm_fn_type, isExtern ? llvm::Function::ExternalLinkage : llvm::Function::CommonLinkage, fn_name, ctx.llvm.module.get());
   // TODO: LLVM Disallows CommonLinkage, maybe replace with Private?
-  auto llvm_fn = llvm::Function::Create(llvm_fn_type, llvm::Function::ExternalLinkage, alias_to.empty() ? fn_name : alias_to, ctx.llvm.module.get());
+  auto llvm_fn = llvm::Function::Create(llvm_fn_type, llvm::Function::ExternalLinkage, symbol_name, ctx.llvm.module.get());
 
   size_t arg_idx = 0;
   for (auto& arg : llvm_fn->args()) {

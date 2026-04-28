@@ -161,6 +161,17 @@ void ast::printNode(Node* node, Node* parent, int indent) {
       break;
     }
 
+    case AST_TYPE_DECL: {
+      auto type = node->as<TypeDecl>();
+
+      logger.print("type ");
+      printNode(type->name.get(), type, indent);
+      logger.print(" = ");
+      printNode(type->value.get(), type, indent);
+
+      break;
+    }
+
     case AST_EXPR_MEMBER_ACCESS: {
       auto access = node->as<MemberAccess>();
       printNode(access->lhs.get(), access, indent);

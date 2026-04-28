@@ -19,6 +19,7 @@
 #include "xcc/ast/subscript.h"
 #include "xcc/ast/type.h"
 #include "xcc/ast/typed_identifier.h"
+#include "xcc/ast/typedecl.h"
 #include "xcc/ast/unary.h"
 #include "xcc/ast/mod.h"
 #include "xcc/ast/vardecl.h"

@@ -25,7 +25,7 @@ enum NodeType {
 
   AST_EXPR_NUMBER,            // [0-9]+
   AST_EXPR_STRING,            // ".+"
-  AST_EXPR_IDENTIFIER,        // [a-zA-Z_][a-zA-Z0-9_]+ - id
+  AST_EXPR_IDENTIFIER,        // [a-zA-Z_][a-zA-Z0-9_]+ [:: id] - id
 
   AST_EXPR_CALL,              // id (expr, ...)
   AST_EXPR_CAST,              // expr as type
@@ -42,6 +42,7 @@ enum NodeType {
   AST_VAR_DECL,               // var name: type [= value]
   AST_FUNCTION_DECL,          // fn name([args])[: type];
   AST_FUNCTION_DEF,           // function-decl { body }
+  AST_TYPE_DECL,              // type id = type_expr
   AST_STRUCT,                 // struct name { field: type [= init], ... }
   AST_IF,                     // if (cond) then else
   AST_FOR,                    // for (init; cond; inc) body | for (typed_id in expr) body

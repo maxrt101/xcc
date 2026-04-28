@@ -1,9 +1,10 @@
 #include "xcc/xcc.h"
 #include "xcc/attrs.h"
 #include "xcc/util/fs.h"
-#include "xcc/util/string.h"
 
 #include <llvm/IR/LegacyPassManager.h>
+
+using namespace xcc;
 
 static auto logger = xcc::util::log::Logger("XCC");
 
@@ -12,14 +13,43 @@ static auto logger = xcc::util::log::Logger("XCC");
  *
  * @param block AST Block
  */
-static void process_attributes(const std::shared_ptr<xcc::ast::Block>& block) {
+static void processAttributes(const std::shared_ptr<ast::Block>& block) {
   for (auto& node : block->body) {
     if (!node->attributes.empty()) {
       for (auto& attr : node->attributes) {
-        xcc::attr::callHandler(attr, node.get());
+        attr::callHandler(attr, node.get());
       }
     }
   }
+}
+
+/**
+ * Compile function (both declarations & definitions)
+ *
+ * @param globalContext Global Context
+ * @param node          FnDecl/FnDef node
+ */
+static llvm::Function * compileFunction(std::unique_ptr<codegen::GlobalContext>& globalContext, std::shared_ptr<ast::Node> node) {
+  if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
+    auto decl = node->is(ast::AST_FUNCTION_DEF) ? node->as<ast::FnDef>()->decl.get() : node->as<ast::FnDecl>();
+    auto name = decl->name->as<ast::Identifier>()->name();
+
+    auto ctx = globalContext->createModule(name);
+
+    auto fn = node->generateFunction(*ctx, {});
+
+#if USE_PRINT_LLVM_IR
+    logger.info("LLVM IR for function {}:", fn->getName().str());
+    util::RawStreamCollector collector;
+    fn->print(*collector.stream());
+    logger.print("{}", collector.string());
+#endif
+
+    globalContext->addModule(ctx);
+    return fn;
+  }
+
+  throw CodegenException(std::format("compileFunction expects AST_FUNCTION_DECL or AST_FUNCTION_DEF, got {}", ast::Node::typeToString(node->type)));
 }
 
 /**
@@ -30,37 +60,41 @@ static void process_attributes(const std::shared_ptr<xcc::ast::Block>& block) {
  * @param block         Block to lower
  * @param isRepl        In in REPL mode
  */
-static void process_ast_block(
-  std::unique_ptr<xcc::codegen::GlobalContext>& globalContext,
-  xcc::CompilationResult&                       result,
-  const std::shared_ptr<xcc::ast::Block>&       block,
-  bool                                          isRepl
+static void compileBlock(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  CompilationResult&                       result,
+  const std::shared_ptr<ast::Block>&       block,
+  bool                                     isRepl
 ) {
   for (auto& node : block->body) {
-    if (node->isAnyOf(xcc::ast::AST_FUNCTION_DEF, xcc::ast::AST_FUNCTION_DECL)) {
-      result.nodes.fn.push_back(node);
-    } else if (node->is(xcc::ast::AST_VAR_DECL)) {
+    if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
+      compileFunction(globalContext, node);
+    } else if (node->is(ast::AST_VAR_DECL)) {
       node->generateValue(*globalContext->globalModule, {});
-    } else if (node->is(xcc::ast::AST_STRUCT)) {
+    } else if (node->is(ast::AST_STRUCT)) {
       node->generateType(*globalContext->globalModule, {});
-      for (auto& method : node->as<xcc::ast::Struct>()->methods) {
-        result.nodes.fn.push_back(method);
+      for (auto& method : node->as<ast::Struct>()->methods) {
+        compileFunction(globalContext, method);
       }
-    } else if (node->is(xcc::ast::AST_MOD)) {
-      process_ast_block(globalContext, result, node->as<xcc::ast::Module>()->body, isRepl);
-    } else if (node->is(xcc::ast::AST_EMPTY)) {
+    } else if (node->is(ast::AST_MOD)) {
+      globalContext->pushModule(node->as<ast::Module>()->getName());
+      compileBlock(globalContext, result, node->as<ast::Module>()->body, isRepl);
+      globalContext->popModule();
+    } else if (node->is(ast::AST_TYPE_DECL)) {
+      node->generateType(*globalContext->globalModule, {});
+    } else if (node->is(ast::AST_EMPTY)) {
       // Ignore
     } else {
       if (isRepl) {
         result.nodes.expr.push_back(node);
       } else {
-        throw std::runtime_error("Unexpected node at top-level scope: " + xcc::ast::Node::typeToString(node->type));
+        throw std::runtime_error("Unexpected node at top-level scope: " + ast::Node::typeToString(node->type));
       }
     }
   }
 }
 
-xcc::util::Target xcc::init(const std::string& target, const std::string& machine, bool autoCleanup) {
+util::Target xcc::init(const std::string& target, const std::string& machine, bool autoCleanup) {
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargets();
   llvm::InitializeAllTargetMCs();
@@ -85,7 +119,7 @@ void xcc::cleanup() {
   util::log::cleanup();
 }
 
-xcc::CompilationResult xcc::compile(
+CompilationResult xcc::compile(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
   const std::string&                       src,
   bool                                     isRepl,
@@ -113,7 +147,7 @@ xcc::CompilationResult xcc::compile(
 
   auto ast = parser.parse(isRepl);
 
-  process_attributes(ast);
+  processAttributes(ast);
 
 #if USE_PRINT_AST
   logger.info("AST:");
@@ -122,29 +156,7 @@ xcc::CompilationResult xcc::compile(
 
   CompilationResult result;
 
-  process_ast_block(globalContext, result, ast, isRepl);
-
-  for (auto& node : result.nodes.fn) {
-    if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
-      auto decl = node->is(ast::AST_FUNCTION_DEF) ? node->as<ast::FnDef>()->decl.get() : node->as<ast::FnDecl>();
-      auto name = decl->name->as<ast::Identifier>()->name();
-
-      auto ctx = globalContext->createModule(name);
-
-#if USE_PRINT_LLVM_IR
-      auto fn = node->generateFunction(*ctx, {});
-      logger.info("LLVM IR for function {}:", fn->getName().str());
-      util::RawStreamCollector collector;
-      fn->print(*collector.stream());
-      logger.print("{}", collector.string());
-#else
-      node->generateFunction(*ctx, {});
-#endif
-      globalContext->addModule(ctx);
-    } else {
-      throw std::runtime_error("Unexpected node at top-level scope: " + ast::Node::typeToString(node->type));
-    }
-  }
+  compileBlock(globalContext, result, ast, isRepl);
 
   return result;
 }

@@ -33,7 +33,7 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
 
   /* Basic type - identifier + optional pointer */
   if (name->is(AST_EXPR_IDENTIFIER)) {
-    auto baseType = meta::Type::fromTypeName(name->as<Identifier>()->name());
+    auto baseType = meta::Type::fromTypeName(ctx.globalContext, name->as<Identifier>()->name());
     return pointer ? meta::Type::createPointer(baseType) : baseType;
   }
 

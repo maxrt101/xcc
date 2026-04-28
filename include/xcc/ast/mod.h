@@ -15,6 +15,8 @@ public:
   ~Module() override = default;
 
   static std::shared_ptr<Module> create(std::shared_ptr<Node> name, std::shared_ptr<Block> body = nullptr);
+
+  std::string getName() const;
 };
 
 } /* namespace xcc::ast */

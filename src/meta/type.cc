@@ -5,6 +5,7 @@
 
 using namespace xcc::meta;
 
+// TODO: Should be scoped per-module (or per-file)!
 std::unordered_map<std::string, std::shared_ptr<Type>> Type::customTypes;
 
 Type::Type(TypeTag tag) : tag(tag) {}
@@ -60,6 +61,12 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     case TypeTag::F64:
       return llvm::Type::getDoubleTy(*ctx.llvm.ctx);
 
+    case TypeTag::ISIZE:
+    case TypeTag::USIZE: {
+      auto bits = ctx.llvm.module->getDataLayout().getPointerSizeInBits();
+      return llvm::IntegerType::get(*ctx.llvm.ctx, bits);
+    }
+
     case TypeTag::PTR:
       return llvm::PointerType::get(ptr.pointedType->getLLVMType(ctx), 0);
 
@@ -75,7 +82,6 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
 
       return llvm::StructType::get(*ctx.llvm.ctx, elements, false);
     }
-
 
     default:
       throw CodegenException("Unknown type");
@@ -120,6 +126,8 @@ std::string Type::toString() const {
     case TypeTag::I64:    return "i64";
     case TypeTag::F32:    return "f32";
     case TypeTag::F64:    return "f64";
+    case TypeTag::ISIZE:  return "isize";
+    case TypeTag::USIZE:  return "usize";
     case TypeTag::PTR:    return ptr.pointedType->toString() + "*";
     case TypeTag::FUNCTION: {
       std::string result = "fn (";
@@ -282,6 +290,10 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
     case TypeTag::F64:
       return llvm::ConstantFP::get(getLLVMType(ctx), 0.0);
 
+    case TypeTag::ISIZE:
+    case TypeTag::USIZE:
+      return llvm::ConstantInt::get(getLLVMType(ctx), 0);
+
     case TypeTag::PTR:
       return llvm::Constant::getNullValue(getLLVMType(ctx));
 
@@ -309,22 +321,30 @@ std::shared_ptr<Type> Type::create(TypeTag tag) {
   return std::make_shared<Type>(tag);
 }
 
-std::shared_ptr<Type> Type::fromTypeName(const std::string& name) {
+std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std::string& name) {
   switch (util::strhash(name.c_str())) {
-    case util::strhash("void"): return createVoid();
-    case util::strhash("i8"):   return createI8();
-    case util::strhash("i16"):  return createI16();
-    case util::strhash("i32"):  return createI32();
-    case util::strhash("i64"):  return createI64();
-    case util::strhash("u8"):   return createU8();
-    case util::strhash("u16"):  return createU16();
-    case util::strhash("u32"):  return createU32();
-    case util::strhash("u64"):  return createU64();
-    case util::strhash("f32"):  return createF32();
-    case util::strhash("f64"):  return createF64();
+    case util::strhash("void"):  return createVoid();
+    case util::strhash("i8"):    return createI8();
+    case util::strhash("i16"):   return createI16();
+    case util::strhash("i32"):   return createI32();
+    case util::strhash("i64"):   return createI64();
+    case util::strhash("u8"):    return createU8();
+    case util::strhash("u16"):   return createU16();
+    case util::strhash("u32"):   return createU32();
+    case util::strhash("u64"):   return createU64();
+    case util::strhash("f32"):   return createF32();
+    case util::strhash("f64"):   return createF64();
+    case util::strhash("isize"): return createIsize();
+    case util::strhash("usize"): return createUsize();
     default: {
       if (customTypes.find(name) != customTypes.end()) {
         return customTypes[name];
+      }
+
+      auto prefixed_name = ctx.getModulePrefix() + name;
+
+      if (customTypes.find(prefixed_name) != customTypes.end()) {
+        return customTypes[prefixed_name];
       }
 
       throw CodegenException("Unknown type '" + name + "'");
@@ -374,6 +394,14 @@ std::shared_ptr<Type> Type::createF32() {
 
 std::shared_ptr<Type> Type::createF64() {
   return create(TypeTag::F64);
+}
+
+std::shared_ptr<Type> Type::createIsize() {
+  return create(TypeTag::ISIZE);
+}
+
+std::shared_ptr<Type> Type::createUsize() {
+  return create(TypeTag::USIZE);
 }
 
 std::shared_ptr<Type> Type::createSigned(int bits) {
@@ -435,6 +463,10 @@ std::shared_ptr<Type> Type::inferFromNode(codegen::ModuleContext& ctx, std::shar
 
 void Type::registerCustomType(const std::string& name, std::shared_ptr<Type> type) {
   customTypes[name] = std::move(type);
+}
+
+bool Type::hasCustomType(const std::string& name) {
+  return customTypes.contains(name);
 }
 
 std::shared_ptr<Type> Type::alignTypes(std::shared_ptr<Type> lhs, std::shared_ptr<Type> rhs) {

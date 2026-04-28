@@ -59,16 +59,6 @@ bool Parser::checkNext(TokenType expected) {
   return next().type == expected;
 }
 
-std::string Parser::modulePrefix() {
-  std::string prefix;
-
-  for (size_t i = 0; i < module.stack.size(); ++i) {
-    prefix += module.stack[i] + "_";
-  }
-
-  return prefix;
-}
-
 std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_msg) {
   if (checkAdvance(TOKEN_SELF)) {
     return ast::Identifier::create("self");
@@ -503,6 +493,26 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
   return ast::Module::create(name, body);
 }
 
+std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::AttributeList& attrs) {
+  if (!checkAdvance(TOKEN_TYPE)) {
+    throw ParserException(current().line, "Expected 'type'");
+  }
+
+  auto name = parseIdentifierWithCurrentScope("for type alias name");
+
+  if (!checkAdvance(TOKEN_EQUALS)) {
+    throw ParserException(current().line, "Expected '=' after type name");
+  }
+
+  auto type = parseType();
+
+  if (!checkAdvance(TOKEN_SEMICOLON)) {
+    throw ParserException(current().line, "Expected ';' after type declaration (alias)");
+  }
+
+  return ast::TypeDecl::create(name, type);
+}
+
 std::shared_ptr<ast::Node> Parser::parseStmt() {
   switch (current().type) {
     case TOKEN_VAR:         return parseVar(false);
@@ -846,7 +856,7 @@ Parser::IncludedModule Parser::includeModuleFromPath(const std::string& name, co
 
   auto mod = parser.parse(false);
 
-  result.body = moduleReplaceDeclarations(mod);
+  result.body = moduleReplaceDefinitions(mod);
 
   module_cache[name] = result;
 
@@ -878,15 +888,15 @@ std::string Parser::resolveModulePath(const std::string& name) {
   throw std::runtime_error("Could not resolve module");
 }
 
-std::shared_ptr<ast::Block> Parser::moduleReplaceDeclarations(const std::shared_ptr<ast::Block>& body) {
+std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_ptr<ast::Block>& body) {
   auto result = ast::Block::create({});
 
   for (auto & node : body->body) {
-    if (node->is(ast::AST_MOD)) {
-      auto mod = node->as<ast::Module>();
-      mod->body = moduleReplaceDeclarations(mod->body);
+    if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL)) {
       result->body.push_back(node);
-    } else if (node->is(ast::AST_FUNCTION_DECL)) {
+    } else if (node->is(ast::AST_MOD)) {
+      auto mod = node->as<ast::Module>();
+      mod->body = moduleReplaceDefinitions(mod->body);
       result->body.push_back(node);
     } else if (node->is(ast::AST_FUNCTION_DEF)) {
       result->body.push_back(node->as<ast::FnDef>()->decl);
@@ -934,6 +944,10 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
 
   if (check(TOKEN_MOD)) {
     return parseMod(attrs);
+  }
+
+  if (check(TOKEN_TYPE)) {
+    return parseTypeDeclaration(attrs);
   }
 
   if (isRepl) {

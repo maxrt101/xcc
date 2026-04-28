@@ -113,15 +113,43 @@ private:
   bool checkNext(TokenType expected);
 
   /**
-   * Generate module prefix for function/struct definitions
+   * Parse a single-token identifier (or "self")
+   *
+   * @param ex_msg Message to append to "Expected identifier " if there is no identifier token
    */
-  std::string modulePrefix();
-
-  // Helper
   std::shared_ptr<ast::Identifier> parseIdentifier(const std::string& ex_msg);
+
+  /**
+   * Parse a single-token identifier, appending current module stack as it's scope
+   *
+   * So, if parser encounters this:
+   * @code
+   * mod test {
+   *   fn do_stuff() {}
+   * }
+   * @endcode
+   *
+   * Name of function will be `test::do_stuff`
+   *
+   * @param ex_msg Message to append to "Expected identifier " if parsing fails
+   */
   std::shared_ptr<ast::Identifier> parseIdentifierWithCurrentScope(const std::string& ex_msg);
+
+  /**
+   * Parse a scoped identifier, e.g. `test::do_stuff`
+   *
+   * @param ex_msg Message to append to "Expected identifier " if parsing fails
+   */
   std::shared_ptr<ast::Identifier> parseScopedIdentifier(const std::string& ex_msg);
+
+  /**
+   * Parses type
+   */
   std::shared_ptr<ast::Type> parseType();
+
+  /**
+   * Parses a value declaration, e.g. `a: b = c`
+   */
   std::shared_ptr<ast::TypedIdentifier> parseValueDecl();
 
   // Statements
@@ -135,6 +163,7 @@ private:
   std::shared_ptr<ast::Node> parseReturn();
   std::shared_ptr<ast::Node> parseUse(const ast::Node::AttributeList& attrs);
   std::shared_ptr<ast::Node> parseMod(const ast::Node::AttributeList& attrs);
+  std::shared_ptr<ast::Node> parseTypeDeclaration(const ast::Node::AttributeList& attrs);
 
   // Generic
   std::shared_ptr<ast::Node> parseStmt();
@@ -155,13 +184,102 @@ private:
   std::shared_ptr<ast::Node> parseRvalue();
   std::shared_ptr<ast::Node> parseLvalueAndCall();
 
-  // Meta
+  /**
+   * Parse an attribute list, that can precede any top-level declaration, e.g. `[a, b(c)]`
+   */
   ast::Node::AttributeList parseAttributeList();
-  IncludedModule includeModule(const std::string& name, bool scoped);
-  IncludedModule includeModuleFromPath(const std::string& name, const std::string& path, bool scoped);
-  std::string resolveModulePath(const std::string& name);
-  std::shared_ptr<ast::Block> moduleReplaceDeclarations(const std::shared_ptr<ast::Block>& body);
 
+  /**
+   * Resolves module path and calls includeModuleFromPath
+   *
+   * For more info look up @ref Parser::includeModuleFromPath
+   *
+   * @param name Module name
+   * @param scoped Is scoped, i.e. should current module stack be passed to child (module) parser
+   */
+  IncludedModule includeModule(const std::string& name, bool scoped);
+
+  /**
+   * Include module from path. Reads file from path, tokenizes and parses it, stripping variable & function definitions
+   * in the process. Adds this module to included list, to avoid double include. Caches parsed and processed AST and
+   * uses it, if a module was already processed.
+   *
+   * So if there is a module `test`, that looks like this:
+   * @code
+   * mod test;
+   *
+   * struct Counter {
+   *   ticks: u32;
+   *
+   *   fn tick(self) {
+   *      self->ticks += 1;
+   *   }
+   * }
+   *
+   * fn pow(x: i32) -> i32 {
+   *    return x * x;
+   * }
+   * @endcode
+   *
+   * And another file, that includes it:
+   * @code
+   * use test;
+   *
+   * fn main() -> i32 {
+   *    var c: test::Counter;
+   *    test::pow(4);
+   * }
+   * @endcode
+   *
+   * AST for file that includes the module `test`, will look like this:
+   * @code
+   * [__xcc_tag_used_from("/resolved/path/to/test.xc")]
+   * mod test {
+   *   struct Counter {
+   *      ticks: u32;
+   *      fn tick(self);
+   *   }
+   *
+   *   fn pow(x: i32) -> i32;
+   * }
+   *
+   * fn main() -> i32 {
+   *    var c: test::Counter;
+   *    test::pow(4);
+   * }
+   * @endcode
+   *
+   * @param name Module name
+   * @param path Path to module file
+   * @param scoped Is scoped, i.e. should current module stack be passed to child (module) parser
+   * @return
+   */
+  IncludedModule includeModuleFromPath(const std::string& name, const std::string& path, bool scoped);
+
+  /**
+   * Resolves a path to module file by name, using `this->module.searchPaths`
+   *
+   * To add search paths, use @ref Parser::addModuleSearchPath
+   *
+   * @param name Module name
+   * @return Path to module file, i.e. `.../{name}.xc`
+   */
+  std::string resolveModulePath(const std::string& name);
+
+  /**
+   * Performs definition stripping
+   *
+   * For more info use @ref Parser::includeModuleFromPath
+   *
+   * @param body Module body
+   */
+  std::shared_ptr<ast::Block> moduleReplaceDefinitions(const std::shared_ptr<ast::Block>& body);
+
+  /**
+   * Parse single top-level statement/declaration
+   *
+   * @param attrs Attributes for node that is about to be parsed
+   */
   std::shared_ptr<ast::Node> parseOneTopLevelNode(bool isRepl, const ast::Node::AttributeList& attrs);
 
 public:
