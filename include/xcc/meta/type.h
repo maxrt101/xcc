@@ -31,6 +31,7 @@ enum class TypeTag {
   F32,      /** 32-bit float point (equivalent to `float` type in C) */
   F64,      /** 64-bit float point (equivalent to `double` type in C) */
   PTR,      /** Generic/Opaque pointer type */
+  FUNCTION, /** Function type */
   STRUCT,   /** Type tag for user-defined types */
 };
 
@@ -51,11 +52,22 @@ private:
   TypeTag tag;
 
   /** For TypeTag::PTR */
-  std::shared_ptr<Type> pointedType;
+  struct {
+    std::shared_ptr<Type> pointedType;
+  } ptr;
+
+  /** For TypeTag::FUNCTION */
+  struct {
+    std::shared_ptr<Type>              returnType;
+    std::vector<std::shared_ptr<Type>> args;
+    bool                               isVariadic;
+  } fn;
 
   /** For TypeTag::STRUCT */
-  std::string   name;
-  StructMembers members;
+  struct {
+    std::string   name;
+    StructMembers members;
+  } _struct;
 
   /** Global static storage for all user-defined types */
   static std::unordered_map<std::string, std::shared_ptr<Type>> customTypes;
@@ -98,9 +110,35 @@ public:
   [[nodiscard]] std::shared_ptr<Type> getMemberType(const std::string& name) const;
 
   /**
+   * If type in a function - get return type
+   */
+  [[nodiscard]] std::shared_ptr<Type> getReturnType() const;
+
+  /**
+   * If type in a function - get count of arguments
+   */
+  [[nodiscard]] size_t getArgumentCount() const;
+
+  /**
+   * If type in a function - get argument type by index
+   */
+  [[nodiscard]] std::shared_ptr<Type> getArgumentType(size_t i) const;
+
+  /**
+   * If type is a function - get isVariadic flag
+   */
+  [[nodiscard]] bool isVariadic() const;
+
+  /**
    * Generate LLVM type from a valid meta type, needs ModuleContext
    */
   [[nodiscard]] llvm::Type * getLLVMType(codegen::ModuleContext& ctx) const;
+
+  /**
+   * Generate LLVM type from a valid meta type, needs ModuleContext
+   */
+  [[nodiscard]] llvm::FunctionType * getLLVMFunctionType(codegen::ModuleContext& ctx) const;
+
 
   /**
    * Returns type name. If struct - struct name, otherwise - just type name
@@ -118,6 +156,7 @@ public:
   [[nodiscard]] bool isInteger() const;
   [[nodiscard]] bool isFloat() const;
   [[nodiscard]] bool isPointer() const;
+  [[nodiscard]] bool isFunction() const;
   [[nodiscard]] bool isStruct() const;
 
   int getNumberBitWidth() const;
@@ -155,6 +194,8 @@ public:
   static std::shared_ptr<Type> createUnsigned(int bits);
   static std::shared_ptr<Type> createFloating(int bits);
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
+  static std::shared_ptr<Type> createFunction(
+    std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);
   static std::shared_ptr<Type> createStruct(std::string name, StructMembers members);
 
   static std::shared_ptr<Type> inferFromNode(codegen::ModuleContext& ctx, std::shared_ptr<ast::Node> node);

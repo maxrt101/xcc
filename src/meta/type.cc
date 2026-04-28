@@ -22,12 +22,12 @@ TypeTag Type::getTag() const {
 }
 
 std::shared_ptr<Type> Type::getPointedType() const {
-  return pointedType;
+  return ptr.pointedType;
 }
 
 std::shared_ptr<Type> Type::getBaseType() {
   if (isPointer()) {
-    return pointedType->getBaseType();
+    return ptr.pointedType->getBaseType();
   }
 
   return shared_from_this();
@@ -61,12 +61,15 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
       return llvm::Type::getDoubleTy(*ctx.llvm.ctx);
 
     case TypeTag::PTR:
-      return llvm::PointerType::get(pointedType->getLLVMType(ctx), 0);
+      return llvm::PointerType::get(ptr.pointedType->getLLVMType(ctx), 0);
+
+    case TypeTag::FUNCTION:
+      return llvm::PointerType::getUnqual(getLLVMFunctionType(ctx));
 
     case TypeTag::STRUCT: {
       std::vector<llvm::Type*> elements;
 
-      for (auto & member : members) {
+      for (auto & member : _struct.members) {
         elements.push_back(member.second->getLLVMType(ctx));
       }
 
@@ -79,9 +82,26 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
   }
 }
 
+llvm::FunctionType * Type::getLLVMFunctionType(codegen::ModuleContext& ctx) const {
+  assertThrow(isFunction(), CodegenException("Type is not a function"));
+
+  std::vector<llvm::Type*> args;
+
+  for (auto& p : fn.args) {
+    args.push_back(p->getLLVMType(ctx));
+  }
+
+  return llvm::FunctionType::get(
+    fn.returnType->getLLVMType(ctx),
+    args,
+    fn.isVariadic
+  );
+
+}
+
 std::string Type::getName() const {
   if (tag == TypeTag::STRUCT) {
-    return name;
+    return _struct.name;
   }
 
   return toString();
@@ -100,14 +120,26 @@ std::string Type::toString() const {
     case TypeTag::I64:    return "i64";
     case TypeTag::F32:    return "f32";
     case TypeTag::F64:    return "f64";
-    case TypeTag::PTR:    return pointedType->toString() + "*";
+    case TypeTag::PTR:    return ptr.pointedType->toString() + "*";
+    case TypeTag::FUNCTION: {
+      std::string result = "fn (";
+
+      for (size_t i = 0; i < fn.args.size(); ++i) {
+        result += fn.args[i]->toString();
+        if (i + 1 < fn.args.size()) {
+          result += ", ";
+        }
+      }
+
+      return result + "): " + fn.returnType->toString();
+    }
     case TypeTag::STRUCT: {
       std::string result = "struct {";
-      for (size_t i = 0; i < members.size(); ++i) {
-        result += members[i].first;
+      for (size_t i = 0; i < _struct.members.size(); ++i) {
+        result += _struct.members[i].first;
         result += ": ";
-        result += members[i].second->toString();
-        if (i + 1 != members.size()) {
+        result += _struct.members[i].second->toString();
+        if (i + 1 != _struct.members.size()) {
           result += ", ";
         }
       }
@@ -143,6 +175,10 @@ bool Type::isPointer() const {
   return is(TypeTag::PTR);
 }
 
+bool Type::isFunction() const {
+  return is(TypeTag::FUNCTION);
+}
+
 bool Type::isStruct() const {
   return is(TypeTag::STRUCT);
 }
@@ -164,6 +200,7 @@ int Type::getNumberBitWidth() const {
     case TypeTag::F64:
       return 64;
     case TypeTag::PTR:
+    case TypeTag::FUNCTION:
     case TypeTag::STRUCT:
     case TypeTag::VOID:
     default:
@@ -172,17 +209,21 @@ int Type::getNumberBitWidth() const {
 }
 
 bool Type::hasMember(const std::string& name) const {
+  assertThrow(isStruct(), "Type is not a struct");
+
   return std::find_if(
-    members.begin(), members.end(),
+    _struct.members.begin(), _struct.members.end(),
     [&name](auto & element) {
       return element.first == name;
     }
-  ) != members.end();
+  ) != _struct.members.end();
 }
 
 size_t Type::getMemberIndex(const std::string& name) const {
-  for (size_t idx = 0; idx < members.size(); ++idx) {
-    if (members[idx].first == name) {
+  assertThrow(isStruct(), "Type is not a struct");
+
+  for (size_t idx = 0; idx < _struct.members.size(); ++idx) {
+    if (_struct.members[idx].first == name) {
       return idx;
     }
   }
@@ -191,13 +232,38 @@ size_t Type::getMemberIndex(const std::string& name) const {
 }
 
 std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
-  for (size_t idx = 0; idx < members.size(); ++idx) {
-    if (members[idx].first == name) {
-      return members[idx].second;
+  assertThrow(isStruct(), "Type is not a struct");
+
+  for (size_t idx = 0; idx < _struct.members.size(); ++idx) {
+    if (_struct.members[idx].first == name) {
+      return _struct.members[idx].second;
     }
   }
 
   throw CodegenException("Struct '" + toString() + "' has no member '" + name + "'");
+}
+
+std::shared_ptr<Type> Type::getReturnType() const {
+  assertThrow(isFunction(), "Type is not a function");
+
+  return fn.returnType;
+}
+
+size_t Type::getArgumentCount() const {
+  assertThrow(isFunction(), "Type is not a function");
+
+  return fn.args.size();
+}
+
+std::shared_ptr<Type> Type::getArgumentType(size_t i) const {
+  assertThrow(isFunction(), "Type is not a function");
+  assertThrow(i < fn.args.size(), "Out of bound argument type request");
+
+  return fn.args[i];
+}
+
+bool Type::isVariadic() const {
+  return fn.isVariadic;
 }
 
 llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
@@ -219,10 +285,14 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
     case TypeTag::PTR:
       return llvm::Constant::getNullValue(getLLVMType(ctx));
 
+    case TypeTag::FUNCTION: {
+      return llvm::Constant::getNullValue(getLLVMType(ctx));
+    }
+
     case TypeTag::STRUCT: {
       std::vector<llvm::Constant *> initializers;
 
-      for (auto & member : members) {
+      for (auto & member : _struct.members) {
         initializers.push_back((llvm::Constant *) member.second->getDefault(ctx));
       }
 
@@ -335,15 +405,27 @@ std::shared_ptr<Type> Type::createFloating(int bits) {
 }
 
 std::shared_ptr<Type> Type::createPointer(std::shared_ptr<Type> pointedType) {
-  auto t = Type::create(TypeTag::PTR);
-  t->pointedType = std::move(pointedType);
-  return t;
+  auto type = Type::create(TypeTag::PTR);
+  type->ptr.pointedType = std::move(pointedType);
+  return type;
+}
+
+std::shared_ptr<Type> Type::createFunction(
+  std::shared_ptr<Type>              returnType,
+  std::vector<std::shared_ptr<Type>> args,
+  bool                               isVariadic
+) {
+  auto type = create(TypeTag::FUNCTION);
+  type->fn.returnType = returnType;
+  type->fn.args       = args;
+  type->fn.isVariadic = isVariadic;
+  return type;
 }
 
 std::shared_ptr<Type> Type::createStruct(std::string name, StructMembers members) {
   auto type = create(TypeTag::STRUCT);
-  type->name    = std::move(name);
-  type->members = std::move(members);
+  type->_struct.name    = std::move(name);
+  type->_struct.members = std::move(members);
   return type;
 }
 

@@ -80,3 +80,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 
   return fn;
 }
+
+std::shared_ptr<meta::Type> FnDef::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+  return decl->generateType(ctx, payload);
+}

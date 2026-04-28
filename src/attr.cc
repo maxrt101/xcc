@@ -4,6 +4,8 @@
 using namespace xcc;
 
 static void xcc_attr_exclude(const ast::Node::Attribute& attr, ast::Node* node) {
+  // Soundness: it's okay to slice objects here, because Empty has no additional
+  //            fields in relation to Node, so it shouldn't get sliced
   *node = ast::Empty();
 }
 

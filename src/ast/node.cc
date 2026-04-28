@@ -64,7 +64,7 @@ void Node::addAttribute(const Attribute& attr) {
   attributes.push_back(attr);
 }
 
-bool Node::hasAttribute(const std::string& name) {
+bool Node::hasAttribute(const std::string& name) const {
   for (auto& attr : attributes) {
     if (attr.name == name) {
       return true;

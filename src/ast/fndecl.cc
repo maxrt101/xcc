@@ -64,3 +64,13 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
 
   return llvm_fn;
 }
+
+std::shared_ptr<meta::Type> FnDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+  std::vector<std::shared_ptr<meta::Type>> args;
+
+  for (auto& arg : this->args) {
+    args.push_back(arg->generateType(ctx, payload));
+  }
+
+  return meta::Type::createFunction(return_type->generateType(ctx, payload), args, isVariadic);
+}

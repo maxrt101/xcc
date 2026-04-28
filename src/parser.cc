@@ -117,6 +117,36 @@ std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string
 }
 
 std::shared_ptr<ast::Type> Parser::parseType() {
+  if (checkAdvance(TOKEN_FN)) {
+    if (!checkAdvance(TOKEN_LEFT_PAREN)) {
+      throw ParserException(current().line, "Expected '(' after 'fn' for type");
+    }
+
+    std::vector<std::shared_ptr<ast::Type>> args;
+    bool isVariadic = false;
+
+    do {
+      if (checkAdvance(TOKEN_3_DOTS)) {
+        isVariadic = true;
+        break;
+      }
+
+      args.push_back(parseType());
+    } while (checkAdvance(TOKEN_COMMA));
+
+    if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
+      throw ParserException(current().line, "Expected ')' after function type args");
+    }
+
+    if (!checkAdvance(TOKEN_COLON)) {
+      throw ParserException(current().line, "Expected ':' after function type args");
+    }
+
+    std::shared_ptr<ast::Type> returnType = parseType();
+
+    return ast::Type::createFunction(returnType, args, isVariadic);
+  }
+
   auto id = parseScopedIdentifier("for type name");
 
   std::shared_ptr<ast::Type> type;

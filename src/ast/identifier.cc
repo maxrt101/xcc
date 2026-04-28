@@ -76,8 +76,7 @@ std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(cod
   }
 
   if (auto meta_fn = ctx.globalContext.getMetaFunction(name())) {
-    // TODO: Create a Function type (so to make function pointers a thing)
-    return meta::Type::createPointer(meta::Type::createI8());
+    return meta_fn->decl->generateType(ctx, payload);
   }
 
   throw CodegenException("Undeclared value referenced: '" + name() + "'");

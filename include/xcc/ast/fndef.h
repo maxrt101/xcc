@@ -18,6 +18,8 @@ public:
   static std::shared_ptr<FnDef> create(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
 
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;
+
+  std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
 };
 
 } /* namespace xcc::ast */

@@ -124,10 +124,26 @@ void ast::printNode(Node* node, Node* parent, int indent) {
 
     case AST_EXPR_TYPE: {
       auto type = node->as<Type>();
-      printNode(type->name.get(), type, indent);
-      if (type->pointer) {
-        logger.print("*");
+      if (type->function) {
+        logger.print("fn (");
+        for (size_t i = 0; i < type->args.size(); ++i) {
+          printNode(type->args[i].get(), type, indent);
+          if (i + 1 < type->args.size()) {
+            logger.print(", ");
+          }
+          if (type->isVariadic) {
+            logger.print("...");
+          }
+          logger.print("): ");
+          printNode(type->returnType.get(), type, indent);
+        }
+      } else {
+        printNode(type->name.get(), type, indent);
+        if (type->pointer) {
+          logger.print("*");
+        }
       }
+
       break;
     }
 
@@ -194,7 +210,7 @@ void ast::printNode(Node* node, Node* parent, int indent) {
       auto vardecl = node->as<VarDecl>();
       logger.print("var ");
       printNode(vardecl->name.get(), vardecl, indent);
-      if (vardecl->type && vardecl->type->name) {
+      if (vardecl->type && (vardecl->type->name || vardecl->type->function)) {
         logger.print(": ");
         printNode(vardecl->type.get(), vardecl, indent);
       }

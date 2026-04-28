@@ -288,5 +288,14 @@
       "stdout": ["TEST_VAR=42\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 33,
+    "name": "Function type & pointer",
+    "file": "33.xc",
+    "expect": {
+      "stdout": ["f\\(4\\)=16\n"],
+      "retcode": 0
+    }
   }
 ]

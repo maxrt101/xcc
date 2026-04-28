@@ -230,7 +230,7 @@ public:
    * @param name Attribute name
    * @return @c true if attribute with specified name is present
    */
-  bool hasAttribute(const std::string& name);
+  bool hasAttribute(const std::string& name) const;
 
   /**
    * Get attribute by name
