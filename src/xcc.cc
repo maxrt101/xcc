@@ -75,6 +75,8 @@ xcc::util::Target xcc::init(const std::string& target, const std::string& machin
 
   logger.info("XCC v{} initialized for {}", getVersion().c_str(), target_info.target_triple);
 
+  setenv("XCC_VERSION", getVersion().c_str(), 1);
+
   return target_info;
 }
 
