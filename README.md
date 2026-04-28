@@ -56,32 +56,54 @@ fn main(): i32 {
 ```
 
 ### Features  
- - Functions (user-defined, extern, forward-declarations)  
- - Variables (local & global)  
- - Number literals (in 8, 10, 16 bases + float point)  
- - String literals (ascii only, null-terminator automatically appended + escape sequences)  
- - Character literals (ascii only)
- - Basic data types (`i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `void`)  
- - Arithmetic operations (`+`, `-`, `*`, `/`)  
- - Comparison operations (`==`, `!=`, `<`, `<=`, `>`, `>=`)  
- - Pointers (dereferencing `*`, taking address of a variable `&`)  
- - Subscripting (`[]`, no array type, so only usable on pointers)  
- - Variadic functions (only declarations, no API to actually use it by the user)  
- - Strings (null-terminated, as `i8*`)  
- - String interning  
- - Conditional execution (`if` statement, works just like in C)  
- - Loops (only `for` is supported (syntax like in C), `while` is in the works)  
- - Type casts (to some extent, represented by `as` expression)  
- - User-defined types (`struct` & member access operator `.` + pointer member access `->`)  
- - JIT (which allows for REPL to exist)  
- - Runtime function resolution in the scope of running process using extern  
- - Compiling into object files
- - Scoped file modules (`use`, `use mod`, `::`)
- - Nested modules (`mod name { ... }`)
- - Attributes (`[]`)
- - Function aliases (`[alias(...)]`)
- - Environment variable resolution at compile-time
- - Function pointers (`fn() -> void`)
+ - [X] Functions (user-defined, extern, forward-declarations)  
+ - [X] Variables (local & global)  
+ - [X] Number literals (in 8, 10, 16 bases + float point)  
+ - [X] String literals (ascii only, null-terminator automatically appended + escape sequences)  
+ - [X] Character literals (ascii only)
+ - [X] Basic data types (`i8`, `i16`, `i32`, `i64`, `u8`, `u16`, `u32`, `u64`, `void`)  
+ - [X] Arithmetic operations (`+`, `-`, `*`, `/`)  
+ - [X] Comparison operations (`==`, `!=`, `<`, `<=`, `>`, `>=`)  
+ - [X] Pointers (dereferencing `*`, taking address of a variable `&`)  
+ - [X] Subscripting (`[]`, no array type, so only usable on pointers)  
+ - [X] Variadic functions (only declarations, no API to actually use it by the user)  
+ - [X] Strings (null-terminated, as `i8*`)  
+ - [X] String interning  
+ - [X] Conditional execution (`if` statement, works just like in C)  
+ - [X] Loops (only `for` is supported (syntax like in C), `while` is in the works)  
+ - [X] Type casts (to some extent, represented by `as` expression)  
+ - [X] User-defined types (`struct` & member access operator `.` + pointer member access `->`)  
+ - [X] JIT (which allows for REPL to exist)  
+ - [X] Runtime function resolution in the scope of running process using extern  
+ - [X] Compiling into object files
+ - [X] Scoped file modules (`use`, `use mod`, `::`)
+ - [X] Nested modules (`mod name { ... }`)
+ - [X] Attributes (`[]`)
+ - [X] Function aliases (`[alias(...)]`)
+ - [X] Environment variable resolution at compile-time
+ - [X] Function pointers (`fn() -> void`)
+ - [X] Target/Machine selection via command line (which enables cross-compiling)  
+ - [ ] Macros  
+ - [ ] Procedural macros  
+ - [ ] Port of libc (stdc)  
+ - [ ] Standard library  
+ - [ ] Built-ins (sizeof, offsetof, typeof)  
+ - [ ] Procedural attributes  
+ - [ ] Conditional imports  
+ - [ ] Compound struct initialization  
+ - [ ] Destructors (or something like `defer`)  
+ - [ ] Lambdas (closures)
+ - [ ] The rest of gcc/clang attributes (alias & section are done)  
+ - [ ] Full variadic support  
+ - [ ] Stable ABI/FFI  
+ - [ ] String interpolation  
+ - [ ] Better type inference  
+ - [ ] Generics?  
+ - [ ] Multithreading  
+ - [ ] Inheritance?  
+ - [ ] Dynamic dispatch?  
+ - [ ] Build system?  
+ - [ ] Dependency management system?  
 
 ### REPL  
 When running XCC executable without argument - you will be dropped into the REPL.  
