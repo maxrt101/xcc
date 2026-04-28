@@ -58,4 +58,18 @@ constexpr uint64_t strhash(const char * s) {
   return hash;
 }
 
+/**
+ * Convert a number to string and add an ordinal suffix
+ *
+ * 1 -> "1st"
+ * 2 -> "2nd"
+ * 3 -> "3rd"
+ * 4 -> "4th"
+ * ...
+ *
+ * @param num Number to convert
+ * @return stringified number with ordinal suffix
+ */
+std::string toStringWithOrdinalSuffix(int num);
+
 }

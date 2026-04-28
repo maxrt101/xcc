@@ -53,12 +53,11 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
   }
 
   if (hasAttribute("section")) {
-    auto section_attr = getAttribute("section");
+    auto attr = getAttribute("section");
 
-    assertThrow(section_attr.args.size() == 1, CodegenException("Expected 1 argument in 'section' attribute"));
-    assertThrow(section_attr.args[0]->is(AST_EXPR_STRING), CodegenException("Argument to 'section' attribute must be a string"));
+    attr.validateArgsStrict({AST_EXPR_STRING});
 
-    auto section_name = section_attr.args[0]->as<ast::String>()->value;
+    auto section_name = attr.args[0]->as<ast::String>()->value;
 
     logger.debug("Placing '{}' in section '{}'", decl->name->name(), section_name);
 

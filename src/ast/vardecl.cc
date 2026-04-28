@@ -53,23 +53,23 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
       ctx.llvm.module->getOrInsertGlobal(name->name(), llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
 
     return extern_global;
-  } else {
-    auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
-
-    llvm::Value * init = value
-        ? value->generateValue(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
-        : meta_type->getDefault(ctx);
-
-    init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx));
-
-    auto tv = meta::TypedValue::create(ctx, fn, meta_type, name->name());
-
-    ctx.ir_builder->CreateStore(init, tv->value);
-
-    ctx.locals[name->name()] = tv;
-
-    return init;
   }
+
+  auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
+
+  llvm::Value * init = value
+      ? value->generateValue(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
+      : meta_type->getDefault(ctx);
+
+  init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx));
+
+  auto tv = meta::TypedValue::create(ctx, fn, meta_type, name->name());
+
+  ctx.ir_builder->CreateStore(init, tv->value);
+
+  ctx.locals[name->name()] = tv;
+
+  return init;
 }
 
 std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {

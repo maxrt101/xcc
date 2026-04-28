@@ -106,6 +106,13 @@ public:
   struct Attribute {
     std::string                        name;
     std::vector<std::shared_ptr<Node>> args;
+
+    /**
+     * Validates `args`. Checks count & NodeTypes. Throws an exception on failure
+     *
+     * @param arg_types Ordered types of arguments
+     */
+    void validateArgsStrict(const std::vector<NodeType>& arg_types);
   };
 
   /**

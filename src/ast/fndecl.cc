@@ -37,8 +37,7 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
   if (hasAttribute("alias")) {
     auto attr = getAttribute("alias");
 
-    assertThrow(attr.args.size() == 1, CodegenException("Expected 1 argument in 'alias' attribute"));
-    assertThrow(attr.args[0]->is(AST_EXPR_IDENTIFIER), CodegenException("Argument to 'alias' attribute must be an identifier"));
+    attr.validateArgsStrict({AST_EXPR_IDENTIFIER});
 
     alias_to = attr.args[0]->as<Identifier>()->value;
 

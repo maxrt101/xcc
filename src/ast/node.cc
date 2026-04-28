@@ -36,6 +36,17 @@ static const std::unordered_map<NodeType, std::string> s_type_map {
 
 Node::Payload::Payload(NodeType type) : type(type) {}
 
+void Node::Attribute::validateArgsStrict(const std::vector<NodeType>& arg_types) {
+  assertThrow(args.size() == arg_types.size(),
+    CodegenException(std::format("Attribute '{}' expected {} args, got {}", name, args.size(), arg_types.size())));
+
+  for (size_t i = 0; i < arg_types.size(); ++i) {
+    assertThrow(args[i]->is(arg_types[i]),
+      CodegenException(std::format("Attribute '{}' expected {} as {} argument, got {}",
+        name, typeToString(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToString(args[i]->type))));
+  }
+}
+
 Node::Node(NodeType type) : type(type) {}
 
 Node::PayloadList Node::selectPayload(const PayloadList& payload) {

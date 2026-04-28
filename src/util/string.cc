@@ -1,4 +1,5 @@
 #include "xcc/util/string.h"
+#include <format>
 
 std::vector<std::string> xcc::util::strsplit(const std::string& str, const std::string& delimiter) {
   std::vector<std::string> result;
@@ -65,4 +66,14 @@ std::string xcc::util::strescseq(const std::string& str, bool add) {
   }
 
   return result;
+}
+
+std::string xcc::util::toStringWithOrdinalSuffix(int num) {
+  switch (num) {
+    case 1: return "1st";
+    case 2: return "2nd";
+    case 3: return "3rd";
+    default:
+      return std::format("{}th", num);
+  }
 }
