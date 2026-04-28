@@ -456,7 +456,7 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
 
   auto mod = ast::Module::create(name, res.body);
 
-  mod->addAttribute({"__xcc_tag_use", { ast::String::create(res.path) }});
+  mod->addAttribute({"__xcc_tag_used_from", { ast::String::create(res.path) }});
 
   return mod;
 }

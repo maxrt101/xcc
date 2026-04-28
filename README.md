@@ -16,26 +16,43 @@ it most certainly is a compiler. X - is just a cool letter that I like :)
 
 #### Build:  
  - `cmake -B build -S .`  
- - `cd build`  
- - `make` (if makefile generator is used, you can use ninja, or anything else that CMake supports)  
+ - `cmake --build build -j $(nproc)`  
 
 #### Run:  
  - `./build/xcc` - for a REPL (JIT powered interpreter)  
  - `./build/xcc -r FILE` - to run a file  
+ - `./build/xcc -c FILE -o OUT` - to compile a file  
+ - `XCC_LD=/path/to/ld ./build/xcc FILE1 FILE2 FILEN -o OUT` - to link or build files into an executable  
 
 #### Arguments:
 ```
-Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-t TARGET] [-m MACHINE] [-o OUT_FILE] IN_FILE...
-  -h, --help            - Print this message
-  -v, --version         - Print version
-  -c, --compile         - Compile into object file
-  -r, --run             - Run file using JIT
-  -t, --target TARGET   - Specify target triple
-                          with 'list' as TARGET - will list all targets
-  -m, --machine MACHINE - Specify target machine (cpu)
-                          with 'list' as MACHINE - will list all machines
-  -o, --output OUT_FILE - Set output file name (for -c)
-  IN_FILE...            - Input (source) files
+Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-l LIB] [-L PATH] [-I PATH] [-t TARGET] [-m MACHINE] [-o OUT_FILE] IN_FILE...
+Arguments:
+  -h, --help              - Print this message
+  -v, --version           - Print version
+  -c, --compile           - Compile into object file
+  -r, --run               - Run file using JIT
+  -l, --lib LIB           - Link LIB
+  -L, --lib-path LIB_PATH - Add library search path
+  -I, --mod-path MOD_PATH - Add module search path
+  -t, --target TARGET     - Specify target triple (use 'list' to see all)
+  -m, --machine MACHINE   - Specify target machine (cpu) (use 'list' to see all)
+  -o, --output OUT_FILE   - Set output file name
+  IN_FILE...              - Input (source/object) files
+Environment:
+  XCC_LD                  - Path to linker executable
+  XCC_LDFLAGS             - Flags to pass directly to linker
+```
+
+### Syntax  
+Here's a hello world program:  
+```
+use stdc;
+
+fn main(): i32 {
+  stdc::io::printf("Hello, World!\n");
+  return 0;
+}
 ```
 
 ### Features  
@@ -59,75 +76,12 @@ Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-t TARGET] [-m MACHINE] [-o OUT_FILE
  - JIT (which allows for REPL to exist)  
  - Runtime function resolution in the scope of running process using extern  
  - Compiling into object files
-
-### Syntax  
-Here's a hello world program:  
-```
-extern fn printf(fmt: i8*, ...): i32;
-
-fn main(): i32 {
-  printf("Hello, World!\n");
-  return 0;
-}
-```
-
-Here's a more complex program showing a bit more features:  
-```
-extern fn printf(fmt: i8*, ...): i32;
-extern fn malloc(size: u32): u8*;
-extern fn free(ptr: u8*): void;
-extern fn strlen(ptr: u8*): u32;
-
-struct buffer_t {
-  data: i8*;
-  size: u32;
-}
-
-struct context_t {
-  status: u32;
-  buf: buffer_t;
-}
-
-fn memcopy(dest: i8*, src: i8*, size: u32): u32 {
-  for (var i: u32 = 0; i < size; i = i + 1) {
-    dest[i] = src[i];
-  }
-  return 0;
-}
-
-fn context_init(ctx: context_t*, str: i8*): void {
-  ctx->buf.size = strlen(str) + 1;
-  ctx->buf.data = malloc(ctx->buf.size);
-
-  memcopy(ctx->buf.data, str, ctx->buf.size);
-
-  ctx->status = 1;
-}
-
-fn context_deinit(ctx: context_t *): void {
-  if (ctx->buf.data != 0) {
-    free(ctx->buf.data);
-  }
-}
-
-fn main(): i32 {
-  var s: context_t;
-
-  s.status = 0;
-
-  context_init(&s, "Hello, World!");
-
-  if (s.status == 1) {
-    printf("%d %p '%s'\n", s.buf.size, s.buf.data, s.buf.data);
-  } else {
-    printf("Context is in an invalid state!\n");
-  }
-
-  context_deinit(&s);
-
-  return 0;
-}
-```
+ - Scoped file modules (`use`, `use mod`, `::`)
+ - Nested modules (`mod name { ... }`)
+ - Attributes (`[]`)
+ - Function aliases (`[alias(...)]`)
+ - Environment variable resolution at compile-time
+ - Function pointers (`fn() -> void`)
 
 ### REPL  
 When running XCC executable without argument - you will be dropped into the REPL.  

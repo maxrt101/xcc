@@ -117,7 +117,7 @@ static int list_machines(xcc::args::Arguments& args) {
 static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
   if (args.files.size() > 1) {
     logger.warn("Ignoring input files after '{}'", args.files[0]);
-    logger.info("xcc in 'object-compile' mode accept only one file");
+    logger.info("xcc in 'object-compile' mode accepts only one file");
   }
 
   auto filename = args.files[0];
