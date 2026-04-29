@@ -15,6 +15,11 @@ std::shared_ptr<Node> While::clone() {
   return withAttrs(create(condition->clone(), body->clone()));
 }
 
+void While::visit(Visitor visitor) {
+  callVisitor(condition, visitor);
+  callVisitor(body, visitor);
+}
+
 llvm::Value * While::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   throw CodegenException("while loops are unsupported");
 }

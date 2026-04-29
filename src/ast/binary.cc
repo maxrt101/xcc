@@ -46,6 +46,11 @@ std::shared_ptr<Node> Binary::clone() {
   return withAttrs(create(operation, lhs->clone(), rhs->clone()));
 }
 
+void Binary::visit(Visitor visitor) {
+  callVisitor(lhs, visitor);
+  callVisitor(rhs, visitor);
+}
+
 llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto common_type = meta::Type::alignTypes(
     throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL")),

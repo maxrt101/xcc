@@ -29,6 +29,7 @@ public:
   static std::shared_ptr<MemberAccess> createByPointer(std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<xcc::meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;

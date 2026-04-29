@@ -18,9 +18,10 @@ public:
   static std::shared_ptr<If> create(std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch = nullptr);
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
-  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
+  std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
 };
 
 } /* namespace xcc::ast */

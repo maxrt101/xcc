@@ -26,6 +26,7 @@ public:
   static std::shared_ptr<Type> createFunction(std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
 };

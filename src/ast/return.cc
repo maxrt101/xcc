@@ -14,6 +14,10 @@ std::shared_ptr<Node> Return::clone() {
   return withAttrs(create(value->clone()));
 }
 
+void Return::visit(Visitor visitor) {
+  callVisitor(value, visitor);
+}
+
 llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   llvm::Value * val = nullptr;
 

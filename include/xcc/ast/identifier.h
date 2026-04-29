@@ -18,6 +18,7 @@ public:
   static std::shared_ptr<Identifier> create(const std::string& value, std::vector<std::string> scope = {});
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   std::string name() const;
 

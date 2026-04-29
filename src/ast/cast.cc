@@ -14,6 +14,11 @@ std::shared_ptr<Node> Cast::clone() {
   return withAttrs(create(expr->clone(), cast<Type>(type->clone())));
 }
 
+void Cast::visit(Visitor visitor) {
+  callVisitor(expr, visitor);
+  callVisitor(type, visitor);
+}
+
 llvm::Value * Cast::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   return codegen::castIfNotSame(ctx, expr->generateValue(ctx, {}), type->generateType(ctx, {})->getLLVMType(ctx));
 }

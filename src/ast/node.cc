@@ -30,6 +30,7 @@ static const std::unordered_map<NodeType, std::string> s_type_map {
     {AST_EXPR_TYPED_IDENTIFIER, "AST_EXPR_TYPED_IDENTIFIER"},
     {AST_EXPR_UNARY,            "AST_EXPR_UNARY"},
     {AST_MOD,                   "AST_MOD"},
+    {AST_MACRO,                 "AST_MACRO"},
     {AST_VAR_DECL,              "AST_VAR_DECL"},
     {AST_WHILE,                 "AST_WHILE"},
 };
@@ -136,3 +137,5 @@ std::shared_ptr<Empty> Empty::create() {
 std::shared_ptr<Node> Empty::clone() {
   return withAttrs(create());
 }
+
+void Empty::visit(Visitor visitor) {}

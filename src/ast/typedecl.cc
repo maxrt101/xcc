@@ -16,6 +16,11 @@ std::shared_ptr<Node> TypeDecl::clone() {
   return withAttrs(create(name->clone(), value->clone()));
 }
 
+void TypeDecl::visit(Visitor visitor) {
+  callVisitor(name, visitor);
+  callVisitor(value, visitor);
+}
+
 std::shared_ptr<meta::Type> TypeDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   assertThrow(name->is(AST_EXPR_IDENTIFIER), CodegenException("Type alias (declaration) name must be an identifier"));
   assertThrow(value->is(AST_EXPR_TYPE), CodegenException("Type alias (declaration) value must be a type expr"));

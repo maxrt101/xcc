@@ -22,6 +22,7 @@ public:
   static std::shared_ptr<TypedIdentifier> create(std::shared_ptr<Identifier> name, std::shared_ptr<Type> type, std::shared_ptr<Node> value = nullptr);
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext &ctx, PayloadList payload) override;
 };

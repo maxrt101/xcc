@@ -15,6 +15,10 @@ std::shared_ptr<Node> Unary::clone() {
   return withAttrs(create(operation, rhs->clone()));
 }
 
+void Unary::visit(Visitor visitor) {
+  callVisitor(rhs, visitor);
+}
+
 llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   switch (operation.type) {
     case TOKEN_STAR: {

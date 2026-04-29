@@ -32,6 +32,7 @@ enum TokenType {
   TOKEN_USE,
   TOKEN_MOD,
   TOKEN_TYPE,
+  TOKEN_MACRO,
 
   // Braces/Parenthesis
   TOKEN_LEFT_BRACE,

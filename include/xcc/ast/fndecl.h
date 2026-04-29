@@ -37,6 +37,7 @@ public:
   );
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;
 

@@ -40,6 +40,8 @@ std::shared_ptr<Node> Number::clone() {
   throw CodegenException("Invalid number literal");
 }
 
+void Number::visit(Visitor visitor) {}
+
 llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   return generateValueWithoutLoad(ctx, payload);
 }

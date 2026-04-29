@@ -16,6 +16,14 @@ std::shared_ptr<Node> Call::clone() {
   return withAttrs(create(callee->clone(), cloneVector(args)));
 }
 
+void Call::visit(Visitor visitor) {
+  callVisitor(callee, visitor);
+
+  for (auto& node : args) {
+    callVisitor(node, visitor);
+  }
+}
+
 llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto info = getCalleeInfo(ctx, payload, true);
 

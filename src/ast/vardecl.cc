@@ -34,6 +34,12 @@ std::shared_ptr<Node> VarDecl::clone() {
   ));
 }
 
+void VarDecl::visit(Visitor visitor) {
+  callVisitor(name, visitor);
+  callVisitor(type, visitor);
+  callVisitor(value, visitor);
+}
+
 llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
   assertThrow(type || value, CodegenException("Value and type is missing from variable declaration"));

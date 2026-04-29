@@ -23,6 +23,11 @@ std::shared_ptr<Node> FnDef::clone() {
   ));
 }
 
+void FnDef::visit(Visitor visitor) {
+  callVisitor(decl, visitor);
+  callVisitor(body, visitor);
+}
+
 llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   decl->generateFunction(ctx, {});
 

@@ -14,6 +14,11 @@ std::shared_ptr<Node> Module::clone() {
   return withAttrs(create(name->clone(), body ? cast<Block>(body->clone()) : nullptr));
 }
 
+void Module::visit(Visitor visitor) {
+  callVisitor(name, visitor);
+  callVisitor(body, visitor);
+}
+
 std::string Module::getName() const {
   assertThrow(name->is(AST_EXPR_IDENTIFIER), CodegenException("Module name must be an identifier"));
 

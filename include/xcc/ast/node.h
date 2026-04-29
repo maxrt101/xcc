@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <functional>
 
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Function.h>
@@ -50,6 +51,7 @@ enum NodeType {
   AST_RETURN,                 // return expr
 
   AST_MOD,                    // module
+  AST_MACRO,                  // Macro
 };
 
 /**
@@ -120,6 +122,13 @@ public:
    * Shortcut for a vector of Attributes
    */
   using AttributeList = std::vector<Attribute>;
+
+  /**
+   * Visitor functor
+   *
+   * If node needs to be modified, return new node, if not - return nullptr
+   */
+  using Visitor = std::function<std::shared_ptr<Node>(std::shared_ptr<Node>)>;
 
 public:
   NodeType      type;
@@ -258,6 +267,11 @@ public:
   virtual std::shared_ptr<Node> clone() = 0;
 
   /**
+   * Visitor implementation
+   */
+  virtual void visit(Visitor visitor) = 0;
+
+  /**
    * Generates llvm::Function from node
    *
    * Part of codegen API. Implemented when node has a relation to functions (fndecl/fndef/etc.)
@@ -315,8 +329,6 @@ public:
    */
   virtual std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload);
 
-  // TODO: Add a visitor. `virtual void visit(std::function<void(Node*)> visitor);
-
   /**
    * Converts node type to its string representation
    *
@@ -347,6 +359,19 @@ protected:
     node->attributes = attributes;
     return node;
   }
+
+  template <typename T>
+  void callVisitor(std::shared_ptr<T>& node, Visitor visitor) {
+    if (!node) return;
+
+    node->visit(visitor);
+
+    auto res = visitor(cast<Node>(node));
+
+    if (res) {
+      node = cast<T>(res);
+    }
+  }
 };
 
 /**
@@ -360,6 +385,7 @@ public:
   static std::shared_ptr<Empty> create();
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 };
 
 } /* namespace xcc::ast */

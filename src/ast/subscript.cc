@@ -15,6 +15,11 @@ std::shared_ptr<Node> Subscript::clone() {
   return withAttrs(create(lhs->clone(), rhs->clone()));
 }
 
+void Subscript::visit(Visitor visitor) {
+  callVisitor(lhs, visitor);
+  callVisitor(rhs, visitor);
+}
+
 llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto base_type = throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL"));
   auto element_ptr = generateValueWithoutLoad(ctx, payload);

@@ -20,6 +20,11 @@ std::shared_ptr<Node> MemberAccess::clone() {
   return withAttrs(std::make_shared<MemberAccess>(kind, lhs->clone(), cast<Identifier>(rhs->clone())));
 }
 
+void MemberAccess::visit(Visitor visitor) {
+  callVisitor(lhs, visitor);
+  callVisitor(rhs, visitor);
+}
+
 llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 

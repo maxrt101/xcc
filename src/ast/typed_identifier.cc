@@ -18,6 +18,12 @@ std::shared_ptr<Node> TypedIdentifier::clone() {
   ));
 }
 
+void TypedIdentifier::visit(Visitor visitor) {
+  callVisitor(name, visitor);
+  callVisitor(value_type, visitor);
+  callVisitor(value, visitor);
+}
+
 std::shared_ptr<xcc::meta::Type> TypedIdentifier::generateType(codegen::ModuleContext &ctx, PayloadList payload) {
   return value_type->generateType(ctx, {});
 }

@@ -20,6 +20,13 @@ std::shared_ptr<Node> For::clone() {
   ));
 }
 
+void For::visit(Visitor visitor) {
+  callVisitor(init, visitor);
+  callVisitor(cond, visitor);
+  callVisitor(step, visitor);
+  callVisitor(body, visitor);
+}
+
 llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 

@@ -17,6 +17,12 @@ std::shared_ptr<Node> If::clone() {
   return withAttrs(create(condition->clone(), then_branch->clone(), else_branch ? else_branch->clone() : nullptr));
 }
 
+void If::visit(Visitor visitor) {
+  callVisitor(condition, visitor);
+  callVisitor(then_branch, visitor);
+  callVisitor(else_branch, visitor);
+}
+
 llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto cond_val = throwIfNull(condition->generateValue(ctx, {}), CodegenException("Error generating condition of 'if' statement (condition generated NULL)"));
 

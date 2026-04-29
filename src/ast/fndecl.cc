@@ -40,6 +40,15 @@ std::shared_ptr<Node> FnDecl::clone() {
   ));
 }
 
+void FnDecl::visit(Visitor visitor) {
+  callVisitor(name, visitor);
+  callVisitor(return_type, visitor);
+
+  for (auto& node : args) {
+    callVisitor(node, visitor);
+  }
+}
+
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   std::string fn_name = name->name();
   std::string symbol_name = fn_name;

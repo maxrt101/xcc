@@ -19,6 +19,7 @@ public:
   static std::shared_ptr<Unary> create(Token operation, std::shared_ptr<Node> rhs);
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;

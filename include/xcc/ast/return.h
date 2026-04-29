@@ -15,6 +15,7 @@ public:
   static std::shared_ptr<Return> create(std::shared_ptr<Node> value = nullptr);
 
   std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;

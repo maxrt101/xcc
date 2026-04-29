@@ -13,6 +13,8 @@ std::shared_ptr<Node> String::clone() {
   return withAttrs(create(value));
 }
 
+void String::visit(Visitor visitor) {}
+
 llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto hash = std::hash<std::string>{}(value);
   auto name = ".str." + std::to_string(hash);

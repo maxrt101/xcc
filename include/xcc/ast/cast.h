@@ -3,8 +3,6 @@
 #include "xcc/ast/node.h"
 #include "xcc/ast/type.h"
 
-#include <string>
-
 namespace xcc::ast {
 
 class Cast : public Node {
@@ -16,9 +14,10 @@ public:
   Cast(std::shared_ptr<Node> expr, std::shared_ptr<Type> type);
   ~Cast() override = default;
 
-  std::shared_ptr<Node> clone() override;
-
   static std::shared_ptr<Cast> create(std::shared_ptr<Node> expr, std::shared_ptr<Type> type);
+
+  std::shared_ptr<Node> clone() override;
+  void visit(Visitor visitor) override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;

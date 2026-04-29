@@ -29,6 +29,11 @@ std::shared_ptr<Node> Assign::clone() {
   return withAttrs(create(kind, lhs->clone(), rhs->clone()));
 }
 
+void Assign::visit(Visitor visitor) {
+  callVisitor(lhs, visitor);
+  callVisitor(rhs, visitor);
+}
+
 llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   llvm::Value * value = nullptr;
 

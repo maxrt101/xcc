@@ -16,6 +16,8 @@ std::shared_ptr<Node> Identifier::clone() {
   return withAttrs(create(value, scope));
 }
 
+void Identifier::visit(Visitor visitor) {}
+
 std::string Identifier::name() const {
   std::string prefix;
 

@@ -25,6 +25,18 @@ std::shared_ptr<Node> Struct::clone() {
   return withAttrs(create(cast<Identifier>(name->clone()), cloneVector(fields), cloneVector(methods)));
 }
 
+void Struct::visit(Visitor visitor) {
+  callVisitor(name, visitor);
+
+  for (auto& node : fields) {
+    callVisitor(node, visitor);
+  }
+
+  for (auto& node : methods) {
+    callVisitor(node, visitor);
+  }
+}
+
 std::shared_ptr<meta::Type> Struct::generateType(codegen::ModuleContext &ctx, PayloadList payload) {
   return generateTypeForValueWithoutLoad(ctx, payload);
 }

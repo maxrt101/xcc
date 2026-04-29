@@ -28,6 +28,18 @@ std::shared_ptr<Node> Type::clone() {
   return withAttrs(create(name->clone(), pointer));
 }
 
+void Type::visit(Visitor visitor) {
+  if (function) {
+    callVisitor(returnType, visitor);
+
+    for (auto& node : args) {
+      callVisitor(node, visitor);
+    }
+  } else {
+    callVisitor(name, visitor);
+  }
+}
+
 std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   if (function) {
     std::vector<std::shared_ptr<meta::Type>> args;
