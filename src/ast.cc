@@ -90,6 +90,20 @@ void ast::printNode(Node* node, Node* parent, int indent) {
       break;
     }
 
+    case AST_EXPR_MACRO_CALL: {
+      auto call = node->as<MacroCall>();
+      printNode(call->name.get(), parent, indent);
+      logger.print("!(");
+      for (auto& arg : call->args) {
+        printNode(arg.get(), call, indent);
+        if (arg != call->args.back()) {
+          logger.print(", ");
+        }
+      }
+      logger.print(")");
+      break;
+    }
+
     case AST_EXPR_CAST: {
       auto cast = node->as<Cast>();
       printNode(cast->expr.get(), parent, indent);
@@ -199,19 +213,21 @@ void ast::printNode(Node* node, Node* parent, int indent) {
 
     case AST_BLOCK: {
       auto block = node->as<Block>();
-      // printIndent(indent);
       logger.print(" {{\n");
       for (auto& stmt : block->body) {
         if (stmt->is(AST_EMPTY)) continue;
         printIndent(indent + 2);
         printNode(stmt.get(), block, indent + 2);
         if (!stmt->isAnyOf(AST_BLOCK, AST_FUNCTION_DECL, AST_FUNCTION_DEF, AST_IF, AST_FOR, AST_WHILE, AST_STRUCT)) {
-          logger.print(";\n");
+          if (!stmt->isAnyOf(AST_MOD, AST_MACRO)) {
+            logger.print(";");
+          }
+          logger.print("\n");
         }
       }
       printIndent(indent);
       logger.print("}}");
-      if (!parent->isAnyOf(AST_IF, AST_FOR, AST_WHILE, AST_MOD)) {
+      if (!parent->isAnyOf(AST_IF, AST_FOR, AST_WHILE, AST_MOD, AST_MACRO)) {
         logger.print("\n");
       }
       break;
@@ -323,6 +339,20 @@ void ast::printNode(Node* node, Node* parent, int indent) {
       if (!module->body->body.empty()) {
         printNode(module->body.get(), module, indent);
       }
+      break;
+    }
+
+    case AST_MACRO: {
+      auto macro = node->as<Macro>();
+      logger.print("macro {}(", macro->name->name());
+      for (auto& arg : macro->args) {
+        printNode(arg.get(), macro, indent);
+        if (arg != macro->args.back()) {
+          logger.print(", ");
+        }
+      }
+      logger.print(")");
+      printNode(macro->body.get(), macro, indent);
       break;
     }
 

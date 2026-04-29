@@ -121,6 +121,18 @@ std::string GlobalContext::getModulePrefix() const {
   return res;
 }
 
+void GlobalContext::registerMacro(const std::string& name, std::shared_ptr<ast::Macro> macro) {
+  macros[name] = macro;
+}
+
+std::shared_ptr<ast::Macro> GlobalContext::getMacro(const std::string& name) const {
+  if (macros.contains(name)) {
+    return macros.at(name);
+  }
+
+  return nullptr;
+}
+
 void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   if (!globalModule->llvm.ctx || !globalModule->llvm.module) {
     globalModule = ModuleContext::create(*this, "<global>");

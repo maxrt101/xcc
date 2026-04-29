@@ -24,6 +24,93 @@ static void processAttributes(const std::shared_ptr<ast::Block>& block) {
 }
 
 /**
+ * Register all available macros
+ *
+ * @param globalContext Global Context
+ * @param root          Root AST Node
+ */
+static void registerMacros(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::shared_ptr<ast::Block>&       root
+) {
+  root->visit([&globalContext](auto node) {
+    if (node->is(ast::AST_MACRO)) {
+      auto macro = ast::Node::cast<ast::Macro>(node);
+
+      globalContext->registerMacro(macro->name->name(), macro);
+    }
+
+    return nullptr;
+  });
+}
+
+/**
+ * Expand macro arguments with the ones passed via MacroCall inside of macro body
+ *
+ * @param macro Macro Definition
+ * @param call  Macro Call
+ * @param body  Macro bodu (cloned!)
+ */
+static void processMacroCall(
+  std::shared_ptr<ast::Macro>     macro,
+  std::shared_ptr<ast::MacroCall> call,
+  std::shared_ptr<ast::Node>      body
+) {
+  body->visit([macro, call](auto node) -> std::shared_ptr<ast::Node> {
+    if (node->is(ast::AST_EXPR_IDENTIFIER)) {
+      auto arg = node->template as<ast::Identifier>()->name();
+
+      int argn = -1;
+
+      for (int i = 0; i < macro->args.size(); ++i) {
+        if (macro->args[i]->value == arg) {
+          argn = i;
+          break;
+        }
+      }
+
+      if (argn == -1) {
+        return nullptr;
+      }
+
+      return call->args[argn]->clone();
+    }
+
+    return nullptr;
+  });
+}
+
+/**
+ * Find and expand all ast::MacroCall nodes
+ *
+ * @param globalContext Global Context
+ * @param root          Root AST node
+ */
+static void processMacros(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::shared_ptr<ast::Block>&       root
+) {
+  root->visit([&globalContext](auto node) -> std::shared_ptr<ast::Node> {
+    if (node->is(ast::AST_EXPR_MACRO_CALL)) {
+      auto call  = ast::Node::cast<ast::MacroCall>(node);
+      auto name  = call->name->name();
+      auto macro = globalContext->getMacro(name);
+
+      assertThrow(macro != nullptr, CodegenException("No macro named " + name));
+      assertThrow(macro->args.size() == call->args.size(), CodegenException("Argument count mismatch for macro call " + name));
+
+      auto body = macro->body->clone();
+
+      processMacroCall(macro, call, body);
+
+      return body;
+    }
+
+    return nullptr;
+  });
+}
+
+/**
  * Compile function (both declarations & definitions)
  *
  * @param globalContext Global Context
@@ -82,7 +169,9 @@ static void compileBlock(
       globalContext->popModule();
     } else if (node->is(ast::AST_TYPE_DECL)) {
       node->generateType(*globalContext->globalModule, {});
-    } else if (node->is(ast::AST_EMPTY)) {
+    } else if (node->is(ast::AST_BLOCK)) {
+      compileBlock(globalContext, result, ast::Node::cast<ast::Block>(node), isRepl);
+    } else if (node->isAnyOf(ast::AST_EMPTY, ast::AST_MACRO)) {
       // Ignore
     } else {
       if (isRepl) {
@@ -147,10 +236,18 @@ CompilationResult xcc::compile(
 
   auto ast = parser.parse(isRepl);
 
+#if USE_PRINT_AST
+  logger.info("AST (After Parsing):");
+  printAst(ast);
+#endif
+
   processAttributes(ast);
 
+  registerMacros(globalContext, ast);
+  processMacros(globalContext, ast);
+
 #if USE_PRINT_AST
-  logger.info("AST:");
+  logger.info("AST (After Attribute & Macro processing):");
   printAst(ast);
 #endif
 

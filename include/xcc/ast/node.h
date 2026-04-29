@@ -29,6 +29,7 @@ enum NodeType {
   AST_EXPR_IDENTIFIER,        // [a-zA-Z_][a-zA-Z0-9_]+ [:: id] - id
 
   AST_EXPR_CALL,              // id (expr, ...)
+  AST_EXPR_MACRO_CALL,        // id ! (expr, ...)
   AST_EXPR_CAST,              // expr as type
   AST_EXPR_BINARY,            // lhs op rhs
   AST_EXPR_UNARY,             // op rhs
@@ -51,7 +52,7 @@ enum NodeType {
   AST_RETURN,                 // return expr
 
   AST_MOD,                    // module
-  AST_MACRO,                  // Macro
+  AST_MACRO,                  // macro id (id, ...) block
 };
 
 /**

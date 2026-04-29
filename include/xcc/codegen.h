@@ -24,6 +24,7 @@
 #include <map>
 
 #include "xcc/jit.h"
+#include "xcc/ast.h"
 #include "xcc/meta/value.h"
 #include "xcc/meta/function.h"
 #include "xcc/ast/fndecl.h"
@@ -64,7 +65,11 @@ public:
   /* Current Function Name */
   std::string current_function;
 
+  /* Stack of module in order of processing */
   std::vector<std::string> moduleStack;
+
+  /* */
+  std::unordered_map<std::string, std::shared_ptr<ast::Macro>> macros;
 
 public:
   GlobalContext();
@@ -115,7 +120,10 @@ public:
 
   void pushModule(const std::string& name);
   void popModule();
-  std::string getModulePrefix() const;
+  [[nodiscard]] std::string getModulePrefix() const;
+
+  void registerMacro(const std::string& name, std::shared_ptr<ast::Macro> macro);
+  std::shared_ptr<ast::Macro> getMacro(const std::string& name) const;
 
   void runExpr(std::shared_ptr<ast::Node> expr);
 

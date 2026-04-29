@@ -155,9 +155,9 @@ private:
 
   // Statements
   std::shared_ptr<ast::Node> parseFunction(bool isMethod);
-  std::shared_ptr<ast::Block> parseBlock();
+  std::shared_ptr<ast::Block> parseBlock(bool parseTopLevel = false);
   std::shared_ptr<ast::Node> parseVar(bool global);
-  std::shared_ptr<ast::Node> parseStruct();
+  std::shared_ptr<ast::Node> parseStruct(const ast::Node::AttributeList& attrs);
   std::shared_ptr<ast::Node> parseIf();
   std::shared_ptr<ast::Node> parseFor();
   std::shared_ptr<ast::Node> parseWhile();
@@ -165,9 +165,10 @@ private:
   std::shared_ptr<ast::Node> parseUse(const ast::Node::AttributeList& attrs);
   std::shared_ptr<ast::Node> parseMod(const ast::Node::AttributeList& attrs);
   std::shared_ptr<ast::Node> parseTypeDeclaration(const ast::Node::AttributeList& attrs);
+  std::shared_ptr<ast::Node> parseMacro(const ast::Node::AttributeList& attrs);
 
   // Generic
-  std::shared_ptr<ast::Node> parseStmt();
+  std::shared_ptr<ast::Node> parseStmt(bool parseTopLevel = false);
   std::shared_ptr<ast::Node> parseExpr();
 
   // Expressions
@@ -178,12 +179,12 @@ private:
   std::shared_ptr<ast::Node> parseTerm();
   std::shared_ptr<ast::Node> parseFactor();
   std::shared_ptr<ast::Node> parseCast();
-  std::shared_ptr<ast::Node> parseCall(std::shared_ptr<ast::Node> callee);
   std::shared_ptr<ast::Node> parseUnary();
   std::shared_ptr<ast::Node> parseSubscript();
   std::shared_ptr<ast::Node> parseNumber();
   std::shared_ptr<ast::Node> parseRvalue();
   std::shared_ptr<ast::Node> parseLvalueAndCall();
+  std::shared_ptr<ast::Node> parseCall(std::shared_ptr<ast::Node> callee);
 
   /**
    * Parse an attribute list, that can precede any top-level declaration, e.g. `[a, b(c)]`

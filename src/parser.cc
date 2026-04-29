@@ -254,7 +254,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   return ast::FnDef::create(fndecl, body);
 }
 
-std::shared_ptr<ast::Block> Parser::parseBlock() {
+std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
     throw ParserException(current().line, "Expected '{'");
   }
@@ -267,7 +267,7 @@ std::shared_ptr<ast::Block> Parser::parseBlock() {
     if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
       break;
     }
-    nodes.push_back(parseStmt());
+    nodes.push_back(parseStmt(parseTopLevel));
     shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_SEMICOLON);
   } while (shouldContinue);
 
@@ -288,7 +288,7 @@ std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
   return ast::VarDecl::create(valdecl->name, valdecl->value_type, valdecl->value, global);
 }
 
-std::shared_ptr<ast::Node> Parser::parseStruct() {
+std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& attrs) {
   if (!checkAdvance(TOKEN_STRUCT)) {
     throw ParserException(current().line, "Expected 'struct'");
   }
@@ -526,19 +526,57 @@ std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::Attribu
   return ast::TypeDecl::create(name, type);
 }
 
-std::shared_ptr<ast::Node> Parser::parseStmt() {
+std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& attrs) {
+  if (!checkAdvance(TOKEN_MACRO)) {
+    throw ParserException(current().line, "Expected 'macro'");
+  }
+
+  auto id = parseIdentifierWithCurrentScope("for macro name");
+
+  if (!checkAdvance(TOKEN_LEFT_PAREN)) {
+    throw ParserException(current().line, "Expected '(' after macro name");
+  }
+
+  std::vector<std::shared_ptr<ast::Identifier>> args;
+
+  if (!check(TOKEN_RIGHT_PAREN)) {
+    do {
+      if (isAtEnd() || check(TOKEN_RIGHT_PAREN)) {
+        break;
+      }
+
+      args.push_back(parseIdentifier("for macro argument"));
+    } while (checkAdvance(TOKEN_COMMA));
+  }
+
+  if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
+    throw ParserException(current().line, "Expected ')' after macro arguments (macro definition)");
+  }
+
+  auto body = parseBlock(true);
+
+  return ast::Macro::create(id, args, body);
+}
+
+std::shared_ptr<ast::Node> Parser::parseStmt(bool parseTopLevel) {
   switch (current().type) {
     case TOKEN_VAR:         return parseVar(false);
     case TOKEN_IF:          return parseIf();
     case TOKEN_FOR:         return parseFor();
     case TOKEN_WHILE:       return parseWhile();
     case TOKEN_RETURN:      return parseReturn();
-    case TOKEN_LEFT_BRACE:  return parseBlock();
+    case TOKEN_EXTERN:
+    case TOKEN_FN:          return parseTopLevel ? parseFunction(false) : throw CodegenException("Unexpected 'fn' in current context");
+    case TOKEN_STRUCT:      return parseTopLevel ? parseStruct({})      : throw CodegenException("Unexpected 'struct' in current context");
     default:                return parseExpr();
   }
 }
 
 std::shared_ptr<ast::Node> Parser::parseExpr() {
+  if (check(TOKEN_LEFT_BRACE)) {
+    return parseBlock();
+  }
+
   return parseAssignment();
 }
 
@@ -758,19 +796,28 @@ std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
 
   auto id = parseScopedIdentifier("for function name (or not?)");
 
-  if (check(TOKEN_LEFT_PAREN)) {
-    /* Function Call */
+  if (check(TOKEN_LEFT_PAREN) || (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN))) {
+    /* Function or Macro Call */
     return parseCall(id);
   }
 
-  return std::dynamic_pointer_cast<ast::Node>(id);
+  return ast::Node::cast<ast::Node>(id);
 }
 
 std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) {
   std::vector<std::shared_ptr<ast::Node>> args;
 
+  bool isMacro = false;
+
+  if (checkAdvance(TOKEN_NOT)) {
+    assertThrow(callee->is(ast::AST_EXPR_IDENTIFIER),
+      ParserException("macro callee can only be an identifier"));
+    isMacro = true;
+  }
+
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    throw ParserException(current().line, "Expected '(' after function name (function call)");
+    throw ParserException(current().line,
+      std::format("Expected '(' after {} name (call)", isMacro ? "macro" : "function"));
   }
 
   if (!check(TOKEN_RIGHT_PAREN)) {
@@ -784,7 +831,13 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   }
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    throw ParserException(current().line, "Expected ')' after function arguments (function call)");
+    throw ParserException(current().line,
+      std::format("Expected ')' after {} arguments (call)", isMacro ? "macro" : "function"));
+  }
+
+
+  if (isMacro) {
+    return ast::MacroCall::create(ast::Node::cast<ast::Identifier>(callee), args);
   }
 
   return ast::Call::create(callee, args);
@@ -905,7 +958,7 @@ std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_p
   auto result = ast::Block::create({});
 
   for (auto & node : body->body) {
-    if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL)) {
+    if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL, ast::AST_MACRO)) {
       result->body.push_back(node);
     } else if (node->is(ast::AST_MOD)) {
       auto mod = node->as<ast::Module>();
@@ -948,7 +1001,7 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
   }
 
   if (check(TOKEN_STRUCT)) {
-    return parseStruct();
+    return parseStruct(attrs);
   }
 
   if (check(TOKEN_USE)) {
@@ -963,8 +1016,22 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
     return parseTypeDeclaration(attrs);
   }
 
+  if (check(TOKEN_MACRO)) {
+    return parseMacro(attrs);
+  }
+
   if (isRepl) {
     return parseStmt();
+  }
+
+  try {
+    // Allow macro calls to be parsed at top-level
+    auto id = parseScopedIdentifier("for macro name (this is a last resort to parse something)");
+    if (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN)) {
+      return parseCall(id);
+    }
+  } catch (ParserException&) {
+    // Ignore, there is a better worded exception at the end of this function
   }
 
   throw ParserException(current().line, "Unexpected token at top-level scope: '" + current().value + "' (" + Token::typeToString(current().type) + ")");
