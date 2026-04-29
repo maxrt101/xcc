@@ -351,5 +351,41 @@
       "stdout": ["powi=16\n", "powf=18.0625\n", "\\*v.data=FFFFFFFF\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 40,
+    "name": "cat! macro",
+    "file": "40.xc",
+    "expect": {
+      "stdout": ["cat=42\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 41,
+    "name": "sizeof! macro",
+    "file": "41.xc",
+    "expect": {
+      "stdout": ["i8=1\n", "i16=2\n", "i32=4\n", "i64=8\n", "f32=4\n", "f64=8\n", "usize=8\n", "Test=12\n", "x=8\n", "t=12\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 42,
+    "name": "is_same! macro",
+    "file": "42.xc",
+    "expect": {
+      "stdout": ["i32=1\n", "a=1\n", "add32=1\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 43,
+    "name": "typeof! macro",
+    "file": "43.xc",
+    "expect": {
+      "stdout": ["y is i64: 1\n", "f is F: 1\n", "f is add32: 1\n", "x is i32: 1\n"],
+      "retcode": 0
+    }
   }
 ]
