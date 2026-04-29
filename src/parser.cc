@@ -106,13 +106,13 @@ std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string
   return id;
 }
 
-std::shared_ptr<ast::Type> Parser::parseType() {
+std::shared_ptr<ast::Node> Parser::parseType() {
   if (checkAdvance(TOKEN_FN)) {
     if (!checkAdvance(TOKEN_LEFT_PAREN)) {
       throw ParserException(current().line, "Expected '(' after 'fn' for type");
     }
 
-    std::vector<std::shared_ptr<ast::Type>> args;
+    std::vector<std::shared_ptr<ast::Node>> args;
     bool isVariadic = false;
 
     do {
@@ -132,12 +132,16 @@ std::shared_ptr<ast::Type> Parser::parseType() {
       throw ParserException(current().line, "Expected '->' after function type args");
     }
 
-    std::shared_ptr<ast::Type> returnType = parseType();
+    std::shared_ptr<ast::Node> returnType = parseType();
 
     return ast::Type::createFunction(returnType, args, isVariadic);
   }
 
   auto id = parseScopedIdentifier("for type name");
+
+  if (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN)) {
+    return parseCall(id);
+  }
 
   // Check if referenced type was declared inside of this module
   auto isDeclaredInModule = std::find(module.typeAliases.begin(), module.typeAliases.end(), id->value) != module.typeAliases.end();
@@ -163,7 +167,7 @@ std::shared_ptr<ast::Type> Parser::parseType() {
 
 std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl() {
   std::shared_ptr<ast::Identifier> name = parseIdentifier("for variable name");
-  std::shared_ptr<ast::Type> type;
+  std::shared_ptr<ast::Node> type;
   std::shared_ptr<ast::Node> value;
 
   if (checkAdvance(TOKEN_COLON)) {
@@ -197,7 +201,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   }
 
   std::vector<std::shared_ptr<ast::TypedIdentifier>> args;
-  std::shared_ptr<ast::Type> return_type;
+  std::shared_ptr<ast::Node> return_type;
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
     throw ParserException(current().line, "Expected '(' after function name");

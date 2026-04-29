@@ -179,6 +179,11 @@ public:
     return ((this->tag == expected) || ...);
   }
 
+  /**
+   * Generate AST Type Node from meta type
+   */
+  std::shared_ptr<ast::Node> toAst() const;
+
   static std::shared_ptr<Type> create(TypeTag tag);
   static std::shared_ptr<Type> fromTypeName(codegen::GlobalContext& ctx, const std::string& name);
 

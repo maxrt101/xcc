@@ -145,12 +145,12 @@ void ast::printNode(Node* node, Node* parent, int indent) {
           if (i + 1 < type->args.size()) {
             logger.print(", ");
           }
-          if (type->isVariadic) {
-            logger.print("...");
-          }
-          logger.print(") -> ");
-          printNode(type->returnType.get(), type, indent);
         }
+        if (type->isVariadic) {
+          logger.print("...");
+        }
+        logger.print(") -> ");
+        printNode(type->returnType.get(), type, indent);
       } else {
         printNode(type->name.get(), type, indent);
         if (type->pointer) {
@@ -164,7 +164,7 @@ void ast::printNode(Node* node, Node* parent, int indent) {
     case AST_EXPR_TYPED_IDENTIFIER: {
       auto typed = node->as<TypedIdentifier>();
       printNode(typed->name.get(), typed, indent);
-      if (typed->value_type && typed->value_type->name) {
+      if (typed->value_type) {
         logger.print(": ");
         printNode(typed->value_type.get(), typed, indent);
       }
@@ -237,7 +237,7 @@ void ast::printNode(Node* node, Node* parent, int indent) {
       auto vardecl = node->as<VarDecl>();
       logger.print("var ");
       printNode(vardecl->name.get(), vardecl, indent);
-      if (vardecl->type && (vardecl->type->name || vardecl->type->function)) {
+      if (vardecl->type) {
         logger.print(": ");
         printNode(vardecl->type.get(), vardecl, indent);
       }

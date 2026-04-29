@@ -15,16 +15,18 @@ constexpr char ANONYMOUS_EXPR_FN_NAME[] = "__anonymous__";
 
 static auto logger = xcc::util::log::Logger("CODEGEN");
 
-GlobalContext::GlobalContext() {
+GlobalContext::GlobalContext(util::Target target) : target(target) {
   jit = JIT::create();
 
   tsc = std::make_unique<llvm::LLVMContext>();
 
-  globalModule = ModuleContext::create(*this, "<global>");
+  globalModule = ModuleContext::create(*this, "<global>", &target);
+
+  registerBuiltinMacros(*this);
 }
 
-std::unique_ptr<GlobalContext> GlobalContext::create() {
-  return std::make_unique<GlobalContext>();
+std::unique_ptr<GlobalContext> GlobalContext::create(util::Target target) {
+  return std::make_unique<GlobalContext>(std::move(target));
 }
 
 std::unique_ptr<ModuleContext> GlobalContext::createModule(const std::string& name) {
@@ -54,13 +56,6 @@ void GlobalContext::mergeModules() const {
 
   // TODO: ?
   // pendingModules.clear();
-}
-
-void GlobalContext::setTarget(util::Target target) {
-  this->target = target;
-
-  globalModule->llvm.module->setDataLayout(target.machine->createDataLayout());
-  globalModule->llvm.module->setTargetTriple(target.target_triple);
 }
 
 void GlobalContext::addFunction(const std::string& name, std::shared_ptr<meta::Function> fn) {
@@ -227,11 +222,12 @@ void GlobalContext::runFunction(const std::string& name) {
   CodegenException::throwIfError(rt->remove());
 }
 
-ModuleContext::ModuleContext(GlobalContext& global, const std::string& name) : name(name), globalContext(global) {
+ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, util::Target * target) : name(name), globalContext(global) {
   llvm.ctx = globalContext.tsc.getContext();
   llvm.module = std::make_unique<llvm::Module>(name, *llvm.ctx);
 
-  llvm.module->setDataLayout(global.jit->getDataLayout());
+  llvm.module->setDataLayout(target   ? target->machine->createDataLayout() : globalContext.globalModule->llvm.module->getDataLayout());
+  llvm.module->setTargetTriple(target ? target->target_triple               : globalContext.globalModule->llvm.module->getTargetTriple());
 
   ir_builder = std::make_unique<llvm::IRBuilder<>>(*llvm.ctx);
 
@@ -259,8 +255,8 @@ ModuleContext::ModuleContext(GlobalContext& global, const std::string& name) : n
 #endif
 }
 
-std::unique_ptr<ModuleContext> ModuleContext::create(GlobalContext& global, const std::string& name) {
-  return std::make_unique<ModuleContext>(global, name);
+std::unique_ptr<ModuleContext> ModuleContext::create(GlobalContext& global, const std::string& name, util::Target * target) {
+  return std::make_unique<ModuleContext>(global, name, target);
 }
 
 llvm::Function * ModuleContext::getFunction(const std::string& name) {

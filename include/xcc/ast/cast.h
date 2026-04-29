@@ -8,13 +8,13 @@ namespace xcc::ast {
 class Cast : public Node {
 public:
   std::shared_ptr<Node> expr;
-  std::shared_ptr<Type> type;
+  std::shared_ptr<Node> type;
 
 public:
-  Cast(std::shared_ptr<Node> expr, std::shared_ptr<Type> type);
+  Cast(std::shared_ptr<Node> expr, std::shared_ptr<Node> type);
   ~Cast() override = default;
 
-  static std::shared_ptr<Cast> create(std::shared_ptr<Node> expr, std::shared_ptr<Type> type);
+  static std::shared_ptr<Cast> create(std::shared_ptr<Node> expr, std::shared_ptr<Node> type);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor) override;

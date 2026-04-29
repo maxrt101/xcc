@@ -8,7 +8,13 @@ Macro::Macro(
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     std::shared_ptr<Block>                   body
-) : Node(AST_MACRO), name(std::move(name)), args(std::move(args)), body(std::move(body)) {}
+) : Node(AST_MACRO), name(std::move(name)), args(std::move(args)), body(std::move(body)), native(false) {}
+
+Macro::Macro(
+    std::shared_ptr<Identifier>              name,
+    std::vector<std::shared_ptr<Identifier>> args,
+    NativeFn                                 fn
+) : Node(AST_MACRO), name(std::move(name)), args(std::move(args)), native(true), fn(fn) {}
 
 std::shared_ptr<Macro> Macro::create(
   std::shared_ptr<Identifier>              name,
@@ -16,6 +22,14 @@ std::shared_ptr<Macro> Macro::create(
   std::shared_ptr<Block>                   body
 ) {
   return std::make_shared<Macro>(std::move(name), std::move(args), std::move(body));
+}
+
+std::shared_ptr<Macro> Macro::createNative(
+    std::shared_ptr<Identifier>              name,
+    std::vector<std::shared_ptr<Identifier>> args,
+    NativeFn                                 fn
+) {
+  return std::make_shared<Macro>(std::move(name), std::move(args), fn);
 }
 
 std::shared_ptr<Node> Macro::clone() {

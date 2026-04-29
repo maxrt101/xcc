@@ -12,14 +12,14 @@ namespace xcc::ast {
 class VarDecl : public Node {
 public:
   std::shared_ptr<Identifier> name;
-  std::shared_ptr<Type> type;
+  std::shared_ptr<Node> type;
   std::shared_ptr<Node> value;
   bool global;
 
 public:
   VarDecl(
       std::shared_ptr<Identifier> name,
-      std::shared_ptr<Type> type,
+      std::shared_ptr<Node> type,
       std::shared_ptr<Node> value = nullptr,
       bool global = false
   );
@@ -28,7 +28,7 @@ public:
 
   static std::shared_ptr<VarDecl> create(
       std::shared_ptr<Identifier> name,
-      std::shared_ptr<Type> type,
+      std::shared_ptr<Node> type,
       std::shared_ptr<Node> value = nullptr,
       bool global = false
   );

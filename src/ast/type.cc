@@ -9,14 +9,14 @@ using namespace xcc::ast;
 Type::Type(std::shared_ptr<Node> name, bool pointer)
   : Node(AST_EXPR_TYPE), name(std::move(name)), pointer(pointer), function(false) {}
 
-Type::Type(std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic)
+Type::Type(std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic)
   : Node(AST_EXPR_TYPE), function(true), isVariadic(isVariadic), returnType(returnType), args(args) {}
 
 std::shared_ptr<Type> Type::create(std::shared_ptr<Node> name, bool pointer) {
   return std::make_shared<Type>(std::move(name), pointer);
 }
 
-std::shared_ptr<Type> Type::createFunction(std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic) {
+std::shared_ptr<Type> Type::createFunction(std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic) {
   return std::make_shared<Type>(std::move(returnType), std::move(args), isVariadic);
 }
 

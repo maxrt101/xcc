@@ -150,8 +150,7 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
       xcc::compile_to_object(globalContext, file, out, getModPaths(filename, args));
 
       auto target = globalContext->target;
-      globalContext = xcc::codegen::GlobalContext::create();
-      globalContext->setTarget(target);
+      globalContext = xcc::codegen::GlobalContext::create(target);
       files_to_link.push_back(out);
     }
   }
@@ -270,9 +269,7 @@ static int xcc_main(int argc, char ** argv) {
 
   auto target = xcc::init(args.target, args.machine);
 
-  auto globalContext = xcc::codegen::GlobalContext::create();
-
-  globalContext->setTarget(target);
+  auto globalContext = xcc::codegen::GlobalContext::create(target);
 
   if (!args.files.empty()) {
     if (args.run) {

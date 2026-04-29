@@ -146,7 +146,7 @@ private:
   /**
    * Parses type
    */
-  std::shared_ptr<ast::Type> parseType();
+  std::shared_ptr<ast::Node> parseType();
 
   /**
    * Parses a value declaration, e.g. `a: b = c`

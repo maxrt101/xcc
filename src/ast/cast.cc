@@ -3,10 +3,10 @@
 
 using namespace xcc::ast;
 
-Cast::Cast(std::shared_ptr<Node> expr, std::shared_ptr<Type> type)
+Cast::Cast(std::shared_ptr<Node> expr, std::shared_ptr<Node> type)
   : Node(AST_EXPR_CAST), expr(std::move(expr)), type(std::move(type)) {}
 
-std::shared_ptr<Cast> Cast::create(std::shared_ptr<Node> expr, std::shared_ptr<Type> type) {
+std::shared_ptr<Cast> Cast::create(std::shared_ptr<Node> expr, std::shared_ptr<Node> type) {
   return std::make_shared<Cast>(std::move(expr), std::move(type));
 }
 

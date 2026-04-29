@@ -24,6 +24,26 @@ static void processAttributes(const std::shared_ptr<ast::Block>& block) {
 }
 
 /**
+ * Find and process all `type` and `struct` declarations, for types to be available
+ * during macro expansion phase
+ *
+ * @param globalContext Global Context
+ * @param root          Root AST Node
+ */
+static void registerCustomTypes(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::shared_ptr<ast::Block>&       root
+) {
+  root->visit([&globalContext](auto node) {
+    if (node->isAnyOf(ast::AST_STRUCT, ast::AST_TYPE_DECL)) {
+      node->generateType(*globalContext->globalModule, {});
+    }
+
+    return nullptr;
+  });
+}
+
+/**
  * Register all available macros
  *
  * @param globalContext Global Context
@@ -49,7 +69,7 @@ static void registerMacros(
  *
  * @param macro Macro Definition
  * @param call  Macro Call
- * @param body  Macro bodu (cloned!)
+ * @param body  Macro body (cloned!)
  */
 static void processMacroCall(
   std::shared_ptr<ast::Macro>     macro,
@@ -90,7 +110,27 @@ static void processMacros(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
   const std::shared_ptr<ast::Block>&       root
 ) {
-  root->visit([&globalContext](auto node) -> std::shared_ptr<ast::Node> {
+  auto ctx = ast::Macro::NativeContext {*globalContext};
+
+  root->visit([&globalContext, &ctx](auto node) -> std::shared_ptr<ast::Node> {
+    if (node->is(ast::AST_VAR_DECL)) {
+      ctx.vardecls[node->template as<ast::VarDecl>()->name->name()] = node;
+    }
+
+    if (node->is(ast::AST_FUNCTION_DECL)) {
+      auto fndecl = node->template as<ast::FnDecl>();
+
+      ctx.fndecls[fndecl->name->name()] = node;
+
+      // Save argument declarations. Old ones will get overwritten.
+      // There is a side effect - arguments will be accessible outside of function definition
+      // TODO: Maybe tried a combined approach - if node is fndef - run recursively, saving
+      //       args into a stack, if not - process by visit()
+      for (auto& arg : fndecl->args) {
+        ctx.args[arg->name->name()] = arg;
+      }
+    }
+
     if (node->is(ast::AST_EXPR_MACRO_CALL)) {
       auto call  = ast::Node::cast<ast::MacroCall>(node);
       auto name  = call->name->name();
@@ -98,6 +138,10 @@ static void processMacros(
 
       assertThrow(macro != nullptr, CodegenException("No macro named " + name));
       assertThrow(macro->args.size() == call->args.size(), CodegenException("Argument count mismatch for macro call " + name));
+
+      if (macro->native) {
+        return macro->fn(ctx, call);
+      }
 
       auto body = macro->body->clone();
 
@@ -242,7 +286,7 @@ CompilationResult xcc::compile(
 #endif
 
   processAttributes(ast);
-
+  registerCustomTypes(globalContext, ast);
   registerMacros(globalContext, ast);
   processMacros(globalContext, ast);
 

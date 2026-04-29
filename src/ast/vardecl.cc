@@ -7,7 +7,7 @@ using namespace xcc::ast;
 
 VarDecl::VarDecl(
   std::shared_ptr<Identifier> name,
-  std::shared_ptr<Type> type,
+  std::shared_ptr<Node> type,
   std::shared_ptr<Node> value,
   bool global
 ) : Node(AST_VAR_DECL),
@@ -18,7 +18,7 @@ VarDecl::VarDecl(
 
 std::shared_ptr<VarDecl> VarDecl::create(
     std::shared_ptr<Identifier> name,
-    std::shared_ptr<Type> type,
+    std::shared_ptr<Node> type,
     std::shared_ptr<Node> value,
     bool global
 ) {
@@ -28,7 +28,7 @@ std::shared_ptr<VarDecl> VarDecl::create(
 std::shared_ptr<Node> VarDecl::clone() {
   return withAttrs(create(cast<Identifier>(
     name->clone()),
-    type ? cast<Type>(type->clone()) : nullptr,
+    type ? type->clone() : nullptr,
     value ? value->clone() : nullptr,
     global
   ));

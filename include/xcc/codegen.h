@@ -68,17 +68,17 @@ public:
   /* Stack of module in order of processing */
   std::vector<std::string> moduleStack;
 
-  /* */
+  /* Defined macros */
   std::unordered_map<std::string, std::shared_ptr<ast::Macro>> macros;
 
 public:
-  GlobalContext();
+  GlobalContext(util::Target target);
   ~GlobalContext() = default;
 
   /**
    * Creates GlobalContext. Should be used instead of raw constructor
    */
-  static std::unique_ptr<GlobalContext> create();
+  static std::unique_ptr<GlobalContext> create(util::Target target);
 
   /**
    * Creates new module (e.g. for a new function) tied to global context
@@ -101,11 +101,6 @@ public:
    * Merges all added modules into global module from global context
    */
   void mergeModules() const;
-
-  /**
-   * Set target
-   */
-  void setTarget(util::Target target);
 
   void addFunction(const std::string& name, std::shared_ptr<meta::Function> fn);
   std::shared_ptr<meta::Function> getMetaFunction(const std::string& name);
@@ -167,9 +162,9 @@ public:
 #endif
 
 public:
-  explicit ModuleContext(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME);
+  explicit ModuleContext(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME, util::Target * target = nullptr);
 
-  static std::unique_ptr<ModuleContext> create(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME);
+  static std::unique_ptr<ModuleContext> create(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME, util::Target * target = nullptr);
 
   llvm::Function * getFunction(const std::string& name);
 
@@ -202,6 +197,11 @@ inline llvm::Value * castIfNotSame(ModuleContext& ctx, llvm::Value * val, llvm::
   }
   return val;
 }
+
+/**
+ * Register built-in macros into GlobalContext
+ */
+void registerBuiltinMacros(GlobalContext& ctx);
 
 }
 

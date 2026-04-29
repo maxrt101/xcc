@@ -10,7 +10,7 @@ static auto logger = xcc::util::log::Logger("FNDECL");
 
 FnDecl::FnDecl(
     std::shared_ptr<Identifier> name,
-    std::shared_ptr<Type> return_type,
+    std::shared_ptr<Node> return_type,
     std::vector<std::shared_ptr<TypedIdentifier>> args,
     bool isExtern,
     bool isVariadic
@@ -23,7 +23,7 @@ FnDecl::FnDecl(
 
 std::shared_ptr<FnDecl> FnDecl::create(
     std::shared_ptr<Identifier> name,
-    std::shared_ptr<Type> return_type,
+    std::shared_ptr<Node> return_type,
     std::vector<std::shared_ptr<TypedIdentifier>> args,
     bool isExtern,
     bool isVariadic
@@ -34,7 +34,7 @@ std::shared_ptr<FnDecl> FnDecl::create(
 std::shared_ptr<Node> FnDecl::clone() {
   return withAttrs(create(
     cast<Identifier>(name->clone()),
-    cast<Type>(return_type->clone()),
+    return_type->clone(),
     cloneVector(args),
     isExtern, isVariadic
   ));

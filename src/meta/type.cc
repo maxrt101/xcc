@@ -11,11 +11,43 @@ std::unordered_map<std::string, std::shared_ptr<Type>> Type::customTypes;
 Type::Type(TypeTag tag) : tag(tag) {}
 
 bool Type::operator==(Type& rhs) {
-  return tag == rhs.tag;
+  if (tag != rhs.tag) {
+    return false;
+  }
+
+  if (tag == TypeTag::PTR) {
+    return ptr.pointedType == rhs.ptr.pointedType;
+  }
+
+  if (tag == TypeTag::STRUCT) {
+    return _struct.name == rhs._struct.name;
+  }
+
+  if (tag == TypeTag::FUNCTION) {
+    if (*fn.returnType != *rhs.fn.returnType) {
+      return false;
+    }
+
+    if (fn.isVariadic != rhs.fn.isVariadic) {
+      return false;
+    }
+
+    if (fn.args.size() != rhs.fn.args.size()) {
+      return false;
+    }
+
+    for (size_t i = 0; i < fn.args.size(); ++i) {
+      if (*fn.args[i] != *rhs.fn.args[i]) {
+        return false;
+      }
+    }
+  }
+
+  return true;
 }
 
 bool Type::operator!=(Type& rhs) {
-  return tag != rhs.tag;
+  return !(*this == rhs);
 }
 
 TypeTag Type::getTag() const {
@@ -316,6 +348,41 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
     case TypeTag::VOID:
     default:
       return nullptr;
+  }
+}
+
+std::shared_ptr<xcc::ast::Node> Type::toAst() const {
+  switch (tag) {
+    case TypeTag::VOID:  return ast::Type::create(ast::Identifier::create("void"));
+    case TypeTag::U8:    return ast::Type::create(ast::Identifier::create("u8"));
+    case TypeTag::U16:   return ast::Type::create(ast::Identifier::create("u16"));
+    case TypeTag::U32:   return ast::Type::create(ast::Identifier::create("u32"));
+    case TypeTag::U64:   return ast::Type::create(ast::Identifier::create("u64"));
+    case TypeTag::I8:    return ast::Type::create(ast::Identifier::create("i8"));
+    case TypeTag::I16:   return ast::Type::create(ast::Identifier::create("i16"));
+    case TypeTag::I32:   return ast::Type::create(ast::Identifier::create("i32"));
+    case TypeTag::I64:   return ast::Type::create(ast::Identifier::create("i64"));
+    case TypeTag::F32:   return ast::Type::create(ast::Identifier::create("f32"));
+    case TypeTag::F64:   return ast::Type::create(ast::Identifier::create("f64"));
+    case TypeTag::ISIZE: return ast::Type::create(ast::Identifier::create("isize"));
+    case TypeTag::USIZE: return ast::Type::create(ast::Identifier::create("usize"));
+    case TypeTag::PTR:   return ast::Type::create(ptr.pointedType->toAst(), true);
+    case TypeTag::FUNCTION: {
+      std::vector<std::shared_ptr<ast::Node>> args;
+
+      for (auto& arg : fn.args) {
+        args.push_back(arg->toAst());
+      }
+
+      return ast::Type::createFunction(fn.returnType->toAst(), args, fn.isVariadic);
+    }
+
+    case TypeTag::STRUCT: {
+      return ast::Type::create(ast::Identifier::create(_struct.name), false);
+    }
+
+    default:
+      return xcc::ast::Empty::create();
   }
 }
 
