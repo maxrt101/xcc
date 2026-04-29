@@ -324,5 +324,32 @@
       "stdout": ["s=abc\n", "\\*p=42\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 37,
+    "name": "Blocks in expressions",
+    "file": "37.xc",
+    "expect": {
+      "stdout": ["block=42\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 38,
+    "name": "Macros (expr/stmt)",
+    "file": "38.xc",
+    "expect": {
+      "stdout": ["add=42\n", "69\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 39,
+    "name": "Macros (decls)",
+    "file": "39.xc",
+    "expect": {
+      "stdout": ["powi=16\n", "powf=18.0625\n", "\\*v.data=FFFFFFFF\n"],
+      "retcode": 0
+    }
   }
 ]
