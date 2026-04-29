@@ -16,6 +16,13 @@ std::shared_ptr<FnDef> FnDef::create(std::shared_ptr<FnDecl> decl, std::shared_p
   return std::make_shared<FnDef>(std::move(decl), std::move(body));
 }
 
+std::shared_ptr<Node> FnDef::clone() {
+  return withAttrs(create(
+    cast<FnDecl>(decl->clone()),
+    cast<Block>(body->clone())
+  ));
+}
+
 llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   decl->generateFunction(ctx, {});
 

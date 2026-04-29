@@ -13,9 +13,11 @@ public:
 
 public:
   Assign(Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
-  virtual ~Assign() override = default;
+  ~Assign() override = default;
 
   static std::shared_ptr<Assign> create(Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;

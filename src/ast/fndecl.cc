@@ -31,6 +31,15 @@ std::shared_ptr<FnDecl> FnDecl::create(
   return std::make_shared<FnDecl>(std::move(name), std::move(return_type), std::move(args), isExtern, isVariadic);
 }
 
+std::shared_ptr<Node> FnDecl::clone() {
+  return withAttrs(create(
+    cast<Identifier>(name->clone()),
+    cast<Type>(return_type->clone()),
+    cloneVector(args),
+    isExtern, isVariadic
+  ));
+}
+
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   std::string fn_name = name->name();
   std::string symbol_name = fn_name;

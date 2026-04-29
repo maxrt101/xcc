@@ -16,6 +16,8 @@ public:
 
   static std::shared_ptr<Module> create(std::shared_ptr<Node> name, std::shared_ptr<Block> body = nullptr);
 
+  std::shared_ptr<Node> clone() override;
+
   std::string getName() const;
 };
 

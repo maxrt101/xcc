@@ -14,7 +14,9 @@ public:
 
 public:
   Cast(std::shared_ptr<Node> expr, std::shared_ptr<Type> type);
-  virtual ~Cast() override = default;
+  ~Cast() override = default;
+
+  std::shared_ptr<Node> clone() override;
 
   static std::shared_ptr<Cast> create(std::shared_ptr<Node> expr, std::shared_ptr<Type> type);
 

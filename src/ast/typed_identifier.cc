@@ -10,6 +10,14 @@ std::shared_ptr<TypedIdentifier> TypedIdentifier::create(std::shared_ptr<Identif
   return std::make_shared<TypedIdentifier>(std::move(name), std::move(type), std::move(value));
 }
 
+std::shared_ptr<Node> TypedIdentifier::clone() {
+  return withAttrs(create(cast<Identifier>(
+    name->clone()),
+    value_type ? cast<Type>(value_type->clone()) : nullptr,
+    value ? value->clone() : nullptr
+  ));
+}
+
 std::shared_ptr<xcc::meta::Type> TypedIdentifier::generateType(codegen::ModuleContext &ctx, PayloadList payload) {
   return value_type->generateType(ctx, {});
 }

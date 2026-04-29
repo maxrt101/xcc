@@ -13,9 +13,11 @@ public:
 
 public:
   Subscript(std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
-  virtual ~Subscript() override = default;
+  ~Subscript() override = default;
 
   static std::shared_ptr<Subscript> create(std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;

@@ -151,7 +151,7 @@ CompilationResult xcc::compile(
 
 #if USE_PRINT_AST
   logger.info("AST:");
-  ast::printAst(ast);
+  printAst(ast);
 #endif
 
   CompilationResult result;

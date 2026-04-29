@@ -13,6 +13,10 @@ std::shared_ptr<If> If::create(std::shared_ptr<Node> condition, std::shared_ptr<
   return std::make_shared<If>(std::move(condition), std::move(then_branch), std::move(else_branch));
 }
 
+std::shared_ptr<Node> If::clone() {
+  return withAttrs(create(condition->clone(), then_branch->clone(), else_branch ? else_branch->clone() : nullptr));
+}
+
 llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto cond_val = throwIfNull(condition->generateValue(ctx, {}), CodegenException("Error generating condition of 'if' statement (condition generated NULL)"));
 

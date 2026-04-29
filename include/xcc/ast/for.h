@@ -14,9 +14,11 @@ public:
 
 public:
   For(std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
-  virtual ~For() override = default;
+  ~For() override = default;
 
   static std::shared_ptr<For> create(std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
 };

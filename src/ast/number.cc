@@ -28,6 +28,18 @@ std::shared_ptr<Number> Number::createFloating(double value) {
   return number;
 }
 
+std::shared_ptr<Node> Number::clone() {
+  if (tag == INTEGER) {
+    return withAttrs(createInteger(value.integer));
+  }
+
+  if (tag == FLOATING) {
+    return withAttrs(createFloating(value.floating));
+  }
+
+  throw CodegenException("Invalid number literal");
+}
+
 llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   return generateValueWithoutLoad(ctx, payload);
 }
@@ -46,7 +58,9 @@ llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, Payl
             ? (float)  value.floating
             : (double) value.floating)
     );
-  } else if (tag == INTEGER) {
+  }
+
+  if (tag == INTEGER) {
     return llvm::ConstantInt::get(llvm::IntegerType::get(*ctx.llvm.ctx, bits), value.integer);
   }
 

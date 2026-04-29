@@ -13,9 +13,11 @@ public:
 
 public:
   FnDef(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
-  virtual ~FnDef() override = default;
+  ~FnDef() override = default;
 
   static std::shared_ptr<FnDef> create(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;
 

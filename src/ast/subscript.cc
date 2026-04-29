@@ -11,6 +11,10 @@ std::shared_ptr<Subscript> Subscript::create(std::shared_ptr<Node> lhs, std::sha
   return std::make_shared<Subscript>(std::move(lhs), std::move(rhs));
 }
 
+std::shared_ptr<Node> Subscript::clone() {
+  return withAttrs(create(lhs->clone(), rhs->clone()));
+}
+
 llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto base_type = throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL"));
   auto element_ptr = generateValueWithoutLoad(ctx, payload);

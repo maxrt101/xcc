@@ -12,9 +12,11 @@ public:
 
 public:
   explicit String(std::string value);
-  virtual ~String() override = default;
+  ~String() override = default;
 
   static std::shared_ptr<String> create(std::string value);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;

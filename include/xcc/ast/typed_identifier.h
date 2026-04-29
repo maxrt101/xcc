@@ -17,9 +17,11 @@ public:
 
 public:
   TypedIdentifier(std::shared_ptr<Identifier> name, std::shared_ptr<Type> type, std::shared_ptr<Node> value = nullptr);
-  virtual ~TypedIdentifier() override = default;
+  ~TypedIdentifier() override = default;
 
   static std::shared_ptr<TypedIdentifier> create(std::shared_ptr<Identifier> name, std::shared_ptr<Type> type, std::shared_ptr<Node> value = nullptr);
+
+  std::shared_ptr<Node> clone() override;
 
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext &ctx, PayloadList payload) override;
 };

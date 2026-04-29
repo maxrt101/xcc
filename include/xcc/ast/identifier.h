@@ -13,9 +13,11 @@ public:
 
 public:
   explicit Identifier(std::string value, std::vector<std::string> scope = {});
-  virtual ~Identifier() override = default;
+  ~Identifier() override = default;
 
   static std::shared_ptr<Identifier> create(const std::string& value, std::vector<std::string> scope = {});
+
+  std::shared_ptr<Node> clone() override;
 
   std::string name() const;
 

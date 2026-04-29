@@ -11,6 +11,10 @@ std::shared_ptr<Unary> Unary::create(Token operation, std::shared_ptr<Node> rhs)
   return std::make_shared<Unary>(std::move(operation), std::move(rhs));
 }
 
+std::shared_ptr<Node> Unary::clone() {
+  return withAttrs(create(operation, rhs->clone()));
+}
+
 llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   switch (operation.type) {
     case TOKEN_STAR: {

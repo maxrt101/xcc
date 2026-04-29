@@ -30,6 +30,8 @@ public:
       std::vector<std::shared_ptr<Node>> methods = {}
   );
 
+  std::shared_ptr<Node> clone() override;
+
   std::shared_ptr<xcc::meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext &ctx, PayloadList payload) override;
 };

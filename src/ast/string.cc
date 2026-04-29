@@ -9,6 +9,10 @@ std::shared_ptr<String> String::create(std::string value) {
   return std::make_shared<String>(std::move(value));
 }
 
+std::shared_ptr<Node> String::clone() {
+  return withAttrs(create(value));
+}
+
 llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto hash = std::hash<std::string>{}(value);
   auto name = ".str." + std::to_string(hash);

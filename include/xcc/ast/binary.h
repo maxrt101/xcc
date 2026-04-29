@@ -12,9 +12,11 @@ public:
 
 public:
   Binary(Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
-  virtual ~Binary() override = default;
+  ~Binary() override = default;
 
   static std::shared_ptr<Binary> create(Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;

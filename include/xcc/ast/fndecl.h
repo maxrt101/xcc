@@ -26,7 +26,7 @@ public:
       bool isVariadic = false
   );
 
-  virtual ~FnDecl() override = default;
+  ~FnDecl() override = default;
 
   static std::shared_ptr<FnDecl> create(
       std::shared_ptr<Identifier> name,
@@ -35,6 +35,8 @@ public:
       bool isExtern = false,
       bool isVariadic = false
   );
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;
 

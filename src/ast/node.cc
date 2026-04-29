@@ -132,3 +132,7 @@ Empty::Empty() : Node(AST_EMPTY) {}
 std::shared_ptr<Empty> Empty::create() {
   return std::make_shared<Empty>();
 }
+
+std::shared_ptr<Node> Empty::clone() {
+  return withAttrs(create());
+}

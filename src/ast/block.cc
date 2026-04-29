@@ -7,7 +7,11 @@ Block::Block(std::vector<std::shared_ptr<Node>> body)
   : Node(AST_BLOCK), body(std::move(body)) {}
 
 std::shared_ptr<Block> Block::create(std::vector<std::shared_ptr<Node>> body) {
-  return std::make_shared<Block>(body);
+  return std::make_shared<Block>(std::move(body));
+}
+
+std::shared_ptr<Node> Block::clone() {
+  return withAttrs(create(cloneVector(body)));
 }
 
 llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payload) {

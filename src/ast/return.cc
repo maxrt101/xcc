@@ -10,6 +10,10 @@ std::shared_ptr<Return> Return::create(std::shared_ptr<Node> value) {
   return std::make_shared<Return>(std::move(value));
 }
 
+std::shared_ptr<Node> Return::clone() {
+  return withAttrs(create(value->clone()));
+}
+
 llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   llvm::Value * val = nullptr;
 

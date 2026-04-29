@@ -24,7 +24,7 @@ public:
       bool global = false
   );
 
-  virtual ~VarDecl() override = default;
+  ~VarDecl() override = default;
 
   static std::shared_ptr<VarDecl> create(
       std::shared_ptr<Identifier> name,
@@ -32,6 +32,8 @@ public:
       std::shared_ptr<Node> value = nullptr,
       bool global = false
   );
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;

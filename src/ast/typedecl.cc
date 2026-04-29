@@ -12,7 +12,11 @@ std::shared_ptr<TypeDecl> TypeDecl::create(std::shared_ptr<Node> name, std::shar
   return std::make_shared<TypeDecl>(std::move(name), std::move(value));
 }
 
-std::shared_ptr<xcc::meta::Type> TypeDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+std::shared_ptr<Node> TypeDecl::clone() {
+  return withAttrs(create(name->clone(), value->clone()));
+}
+
+std::shared_ptr<meta::Type> TypeDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   assertThrow(name->is(AST_EXPR_IDENTIFIER), CodegenException("Type alias (declaration) name must be an identifier"));
   assertThrow(value->is(AST_EXPR_TYPE), CodegenException("Type alias (declaration) value must be a type expr"));
 

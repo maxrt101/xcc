@@ -25,6 +25,10 @@ std::shared_ptr<Assign> Assign::create(Token kind, std::shared_ptr<Node> lhs, st
   return std::make_shared<Assign>(std::move(kind), std::move(lhs), std::move(rhs));
 }
 
+std::shared_ptr<Node> Assign::clone() {
+  return withAttrs(create(kind, lhs->clone(), rhs->clone()));
+}
+
 llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   llvm::Value * value = nullptr;
 

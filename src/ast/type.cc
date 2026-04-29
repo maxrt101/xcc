@@ -20,6 +20,14 @@ std::shared_ptr<Type> Type::createFunction(std::shared_ptr<Type> returnType, std
   return std::make_shared<Type>(std::move(returnType), std::move(args), isVariadic);
 }
 
+std::shared_ptr<Node> Type::clone() {
+  if (function) {
+    return withAttrs(createFunction(cast<Type>(returnType->clone()), cloneVector(args), isVariadic));
+  }
+
+  return withAttrs(create(name->clone(), pointer));
+}
+
 std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   if (function) {
     std::vector<std::shared_ptr<meta::Type>> args;

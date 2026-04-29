@@ -12,6 +12,10 @@ std::shared_ptr<Identifier> Identifier::create(const std::string& value, std::ve
   return std::make_shared<Identifier>(value, scope);
 }
 
+std::shared_ptr<Node> Identifier::clone() {
+  return withAttrs(create(value, scope));
+}
+
 std::string Identifier::name() const {
   std::string prefix;
 

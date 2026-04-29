@@ -11,11 +11,13 @@ public:
 
 public:
   explicit TypeDecl(std::shared_ptr<Node> name, std::shared_ptr<Node> value);
-  virtual ~TypeDecl() override = default;
+  ~TypeDecl() override = default;
 
   static std::shared_ptr<TypeDecl> create(std::shared_ptr<Node> name, std::shared_ptr<Node> value);
 
-  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
+  std::shared_ptr<Node> clone() override;
+
+  std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
 };
 
 } /* namespace xcc::ast */

@@ -11,9 +11,11 @@ public:
 
 public:
   While(std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
-  virtual ~While() override = default;
+  ~While() override = default;
 
   static std::shared_ptr<While> create(std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
 };

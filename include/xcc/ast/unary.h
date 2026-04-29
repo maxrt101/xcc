@@ -14,9 +14,11 @@ public:
 
 public:
   Unary(Token operation, std::shared_ptr<Node> rhs);
-  virtual ~Unary() override = default;
+  ~Unary() override = default;
 
   static std::shared_ptr<Unary> create(Token operation, std::shared_ptr<Node> rhs);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;

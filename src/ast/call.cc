@@ -12,6 +12,10 @@ std::shared_ptr<Call> Call::create(std::shared_ptr<Node> name, std::vector<std::
   return std::make_shared<Call>(std::move(name), std::move(args));
 }
 
+std::shared_ptr<Node> Call::clone() {
+  return withAttrs(create(callee->clone(), cloneVector(args)));
+}
+
 llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto info = getCalleeInfo(ctx, payload, true);
 

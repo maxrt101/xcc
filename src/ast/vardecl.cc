@@ -25,6 +25,15 @@ std::shared_ptr<VarDecl> VarDecl::create(
   return std::make_shared<VarDecl>(std::move(name), std::move(type), std::move(value), global);
 }
 
+std::shared_ptr<Node> VarDecl::clone() {
+  return withAttrs(create(cast<Identifier>(
+    name->clone()),
+    type ? cast<Type>(type->clone()) : nullptr,
+    value ? value->clone() : nullptr,
+    global
+  ));
+}
+
 llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
   assertThrow(type || value, CodegenException("Value and type is missing from variable declaration"));

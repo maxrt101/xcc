@@ -182,7 +182,7 @@ public:
    * @param ptr Pointer to generic node
    */
   template <typename T>
-  static std::shared_ptr<T> cast(std::shared_ptr<Node>& ptr) {
+  static std::shared_ptr<T> cast(std::shared_ptr<Node> ptr) {
     return std::dynamic_pointer_cast<T>(ptr);
   }
 
@@ -205,7 +205,7 @@ public:
    * @param ptr Pointer to node
    */
   template <typename T>
-  static std::shared_ptr<Node> cast(std::shared_ptr<T>& ptr) {
+  static std::shared_ptr<Node> cast(std::shared_ptr<T> ptr) {
     return std::dynamic_pointer_cast<Node>(ptr);
   }
 
@@ -249,6 +249,13 @@ public:
    * @return Attribute reference
    */
   Attribute& getAttribute(const std::string& name);
+
+  /**
+   * Perform a clone (deep copy) of current node;
+   *
+   * @return Identical node to current
+   */
+  virtual std::shared_ptr<Node> clone() = 0;
 
   /**
    * Generates llvm::Function from node
@@ -316,6 +323,30 @@ public:
    * @param type Node type
    */
   static std::string typeToString(NodeType type);
+
+  /**
+   * Clone a vector of nodes
+   */
+  template <typename T>
+  [[nodiscard]] static std::vector<std::shared_ptr<T>> cloneVector(std::vector<std::shared_ptr<T>> nodes) {
+    std::vector<std::shared_ptr<T>> cloned;
+
+    for (auto& node : nodes) {
+      cloned.push_back(cast<T>(node->clone()));
+    }
+
+    return cloned;
+  }
+
+protected:
+  /**
+   * Add attributes from this to node & return node;
+   */
+  template <typename T>
+  [[nodiscard]] std::shared_ptr<T> withAttrs(std::shared_ptr<T> node) const {
+    node->attributes = attributes;
+    return node;
+  }
 };
 
 /**
@@ -327,6 +358,8 @@ public:
   ~Empty() override = default;
 
   static std::shared_ptr<Empty> create();
+
+  std::shared_ptr<Node> clone() override;
 };
 
 } /* namespace xcc::ast */

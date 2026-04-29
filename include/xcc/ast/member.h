@@ -23,10 +23,12 @@ public:
 
 public:
   MemberAccess(MemberAccessKind kind, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
-  virtual ~MemberAccess() override = default;
+  ~MemberAccess() override = default;
 
   static std::shared_ptr<MemberAccess> createByValue(std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
   static std::shared_ptr<MemberAccess> createByPointer(std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<xcc::meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;

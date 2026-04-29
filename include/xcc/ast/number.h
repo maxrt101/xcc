@@ -28,10 +28,12 @@ public:
 
 public:
   Number();
-  virtual ~Number() override = default;
+  ~Number() override = default;
 
   static std::shared_ptr<Number> createInteger(int64_t value);
   static std::shared_ptr<Number> createFloating(double value);
+
+  std::shared_ptr<Node> clone() override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;

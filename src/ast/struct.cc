@@ -21,6 +21,10 @@ std::shared_ptr<Struct> Struct::create(
   return std::make_shared<Struct>(std::move(name), std::move(fields), std::move(methods));
 }
 
+std::shared_ptr<Node> Struct::clone() {
+  return withAttrs(create(cast<Identifier>(name->clone()), cloneVector(fields), cloneVector(methods)));
+}
+
 std::shared_ptr<meta::Type> Struct::generateType(codegen::ModuleContext &ctx, PayloadList payload) {
   return generateTypeForValueWithoutLoad(ctx, payload);
 }
