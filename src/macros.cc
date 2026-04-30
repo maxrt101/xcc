@@ -3,6 +3,23 @@
 #include "xcc/codegen.h"
 #include "xcc/util/log.h"
 
+#define __GET_NUM_VAL(__n) (__n->tag == Number::FLOATING ? __n->value.floating : __n->value.integer)
+
+#define __BIN_OP(__name, __ctx, __call, __op)                                                                           \
+  assertThrow(__call->args[0]->is(AST_EXPR_NUMBER), CodegenException("Expected number for first argument to " __name)); \
+  assertThrow(__call->args[1]->is(AST_EXPR_NUMBER), CodegenException("Expected number for second argument to " __name));\
+  auto a1 = __call->args[0]->as<Number>();                                                                              \
+  auto a2 = __call->args[1]->as<Number>();                                                                              \
+  bool is_float = a1->tag == Number::FLOATING || a2->tag == Number::FLOATING;                                           \
+  double result = __GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2);                                                             \
+  return is_float ? Number::createFloating(result) : Number::createInteger(result);
+
+#define __UN_OP(__name, __ctx, __call, __op)                                                                            \
+  assertThrow(__call->args[0]->is(AST_EXPR_NUMBER), CodegenException("Expected number as argument to " __name));        \
+  auto a = __call->args[0]->as<Number>();                                                                               \
+  assertThrow(a->tag == Number::INTEGER, CodegenException("Expected integer as argument to " __name));                  \
+  return Number::createInteger(__op a->value.integer);
+
 using namespace xcc;
 using namespace xcc::ast;
 
@@ -117,15 +134,29 @@ static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::s
   return Number::createInteger(*type1 == *type2 ? 1 : 0);
 }
 
-static std::shared_ptr<Node> xcc_macro_str(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+static std::shared_ptr<Node> xcc_macro_str(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+  return String::create(call->args[0]->toString(nullptr, call.get(), 0, false));
+}
 
-static std::shared_ptr<Node> xcc_macro_add(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+static std::shared_ptr<Node> xcc_macro_strf(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+  return String::create(call->args[0]->toString(nullptr, call.get(), 0, true));
+}
 
-static std::shared_ptr<Node> xcc_macro_sub(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+static std::shared_ptr<Node> xcc_macro_add(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+  __BIN_OP("add!", ctx, call, +);
+}
 
-static std::shared_ptr<Node> xcc_macro_inc(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+static std::shared_ptr<Node> xcc_macro_sub(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+  __BIN_OP("sub!", ctx, call, -);
+}
 
-static std::shared_ptr<Node> xcc_macro_dec(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+static std::shared_ptr<Node> xcc_macro_inc(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+  __UN_OP("inc!", ctx, call, ++);
+}
+
+static std::shared_ptr<Node> xcc_macro_dec(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+  __UN_OP("dec!", ctx, call, --);
+}
 
 static std::vector builtin_macros = {
   createNativeMacro("cat",     {"a", "b"}, xcc_macro_cat),
@@ -133,6 +164,7 @@ static std::vector builtin_macros = {
   createNativeMacro("typeof",  {"expr"},   xcc_macro_typeof),
   createNativeMacro("is_same", {"a", "b"}, xcc_macro_is_same),
   createNativeMacro("str",     {"expr"},   xcc_macro_str),
+  createNativeMacro("strf",    {"expr"},   xcc_macro_strf),
 
   createNativeMacro("add",     {"a", "b"}, xcc_macro_add),
   createNativeMacro("sub",     {"a", "b"}, xcc_macro_sub),
