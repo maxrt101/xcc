@@ -390,7 +390,7 @@
   },
   {
     "id": 44,
-    "name": "add!, sub!, inc!, dec! macros",
+    "name": "add!, sub!, inc!, dec!, int! macros",
     "file": "44.xc",
     "expect": {
       "stdout": ["2=2\n", "3=3\n", "4=4\n", "5=5\n", "42=42\n"],
@@ -416,6 +416,15 @@
         "fn test\\(a: i32, b: i32\\) \\-> i32 \\{ return a \\+ b; \\}\n",
         "fn test\\(a: i32, b: i32\\) \\-> i32 \\{\n  return a \\+ b;\n\\}\n"
       ],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 47,
+    "name": "cond! macro",
+    "file": "47.xc",
+    "expect": {
+      "stdout": ["first=true\n", "second=false\n"],
       "retcode": 0
     }
   }
