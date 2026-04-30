@@ -18,3 +18,16 @@ bool ast::isOrIsLastInBlock(std::shared_ptr<Node> node, NodeType type) {
 
   return false;
 }
+
+std::shared_ptr<Node> ast::getOrGetLastInBlock(std::shared_ptr<Node> node, NodeType type) {
+  if (node->is(type)) {
+    return node;
+  }
+
+  if (node->is(AST_BLOCK)) {
+    auto block = node->as<Block>();
+    return getOrGetLastInBlock(block->body.back(), type);
+  }
+
+  return nullptr;
+}

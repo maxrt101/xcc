@@ -35,4 +35,12 @@ namespace xcc::ast {
  */
 bool isOrIsLastInBlock(std::shared_ptr<Node> node, NodeType type);
 
+/**
+ * Returns `node`, if it is of type `type`
+ * Returns last child of `node`, if the node is of type AST_BLOCK and
+ * child is of type `type`
+ * Returns nullptr if none of the conditions above are met
+ */
+std::shared_ptr<Node> getOrGetLastInBlock(std::shared_ptr<Node> node, NodeType type);
+
 }
