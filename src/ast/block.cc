@@ -45,9 +45,7 @@ std::string Block::toString(Node * grandparent, Node * parent, int indent, bool 
     }
   }
 
-  if (newline) {
-    res += getIndent(indent);
-  }
+  res += newline ? getIndent(indent) : " ";
 
   res += "}";
 

@@ -55,7 +55,7 @@ std::string Binary::toString(Node * grandparent, Node * parent, int indent, bool
   return std::format("{} {} {}",
     lhs->toString(parent, this, indent, false),
     operation.toString(),
-    lhs->toString(parent, this, indent, false)
+    rhs->toString(parent, this, indent, false)
   );
 }
 
