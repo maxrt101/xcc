@@ -6,23 +6,52 @@
 #define __GET_NUM_VAL(__n) \
   (__n->tag == Number::FLOATING ? __n->value.floating : __n->value.integer)
 
-#define __BIN_OP(__name, __ctx, __call, __op)                                                                         \
+#define __ARITHMETIC_UNARY_OP(__name, __ctx, __call, __op)                                                            \
   assertThrow(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
-    CodegenException("Expected number for first argument to " __name));                                               \
+      CodegenException("Expected number as argument to " __name));                                                    \
+  auto a = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->template as<Number>();                              \
+  assertThrow(a->tag == Number::INTEGER, CodegenException("Expected integer as argument to " __name));                \
+  return Number::createInteger(__op a->value.integer);
+
+#define __ARITHMETIC_BINARY_OP(__name, __ctx, __call, __op)                                                           \
+  assertThrow(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
+      CodegenException("Expected number for first argument to " __name));                                             \
   assertThrow(isOrIsLastInBlock(__call->args[1], AST_EXPR_NUMBER),                                                    \
-    CodegenException("Expected number for second argument to " __name));                                              \
-  auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->as<Number>();                                      \
-  auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_NUMBER)->as<Number>();                                      \
+      CodegenException("Expected number for second argument to " __name));                                            \
+  auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->template as<Number>();                             \
+  auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_NUMBER)->template as<Number>();                             \
   bool is_float = a1->tag == Number::FLOATING || a2->tag == Number::FLOATING;                                         \
   double result = __GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2);                                                           \
   return is_float ? Number::createFloating(result) : Number::createInteger(result);
 
-#define __UN_OP(__name, __ctx, __call, __op)                                                                          \
+#define __LOGIC_BINARY_OP_STR(__name, __ctx, __call, __op)                                                            \
+  assertThrow(isOrIsLastInBlock(__call->args[0], AST_EXPR_STRING),                                                    \
+      CodegenException("Expected number for first argument to " __name));                                             \
+  assertThrow(isOrIsLastInBlock(__call->args[1], AST_EXPR_STRING),                                                    \
+      CodegenException("Expected number for second argument to " __name));                                            \
+  auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_STRING)->template as<String>();                             \
+  auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_STRING)->template as<String>();                             \
+  return Number::createInteger(a1->value __op a2->value ? 1 : 0);
+
+#define __LOGIC_BINARY_OP_NUM(__name, __ctx, __call, __op)                                                            \
   assertThrow(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
-    CodegenException("Expected number as argument to " __name));                                                      \
-  auto a = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->as<Number>();                                       \
-  assertThrow(a->tag == Number::INTEGER, CodegenException("Expected integer as argument to " __name));                \
-  return Number::createInteger(__op a->value.integer);
+      CodegenException("Expected number for first argument to " __name));                                             \
+  assertThrow(isOrIsLastInBlock(__call->args[1], AST_EXPR_NUMBER),                                                    \
+      CodegenException("Expected number for second argument to " __name));                                            \
+  auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->template as<Number>();                             \
+  auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_NUMBER)->template as<Number>();                             \
+  return Number::createInteger(__GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2) ? 1 : 0);
+
+#define __LOGIC_BINARY_OP(__name, __ctx, __call, __op)                                                                \
+  if (isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER)                                                             \
+   && isOrIsLastInBlock(__call->args[1], AST_EXPR_NUMBER)) {                                                          \
+    __LOGIC_BINARY_OP_NUM(__name, __ctx, __call, __op);                                                               \
+  } else if (isOrIsLastInBlock(__call->args[0], AST_EXPR_STRING)                                                      \
+          && isOrIsLastInBlock(__call->args[1], AST_EXPR_STRING)) {                                                   \
+    __LOGIC_BINARY_OP_STR(__name, __ctx, __call, __op);                                                               \
+  } else {                                                                                                            \
+    throw CodegenException(__name " expects either 2 strings or 2 numbers");                                         \
+  }
 
 using namespace xcc;
 using namespace xcc::ast;
@@ -104,11 +133,11 @@ static std::shared_ptr<Macro> createNativeMacro(std::string name, std::vector<st
   return Macro::createNative(Identifier::create(name), id_args, fn);
 }
 
-static std::shared_ptr<Node> xcc_macro_cat(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+static std::shared_ptr<Node> xcc_macro_cat(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
   return Identifier::create(getStr(call->args[0]) + getStr(call->args[1]));
 }
 
-static std::shared_ptr<Node> xcc_macro_sizeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+static std::shared_ptr<Node> xcc_macro_sizeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
   auto mod = ctx.global.createModule("<eval>");
 
   std::shared_ptr<meta::Type> type = evalType(ctx, *mod, call->args[0]);
@@ -119,7 +148,7 @@ static std::shared_ptr<Node> xcc_macro_sizeof(Macro::NativeContext& ctx, std::sh
   return Number::createInteger(size);
 }
 
-static std::shared_ptr<Node> xcc_macro_typeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+static std::shared_ptr<Node> xcc_macro_typeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
   auto mod  = ctx.global.createModule("<eval>");
 
   std::shared_ptr<meta::Type> type = evalType(ctx, *mod, call->args[0]);
@@ -127,7 +156,7 @@ static std::shared_ptr<Node> xcc_macro_typeof(Macro::NativeContext& ctx, std::sh
   return type->toAst();
 }
 
-static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
   auto mod  = ctx.global.createModule("<eval>");
 
   std::shared_ptr<meta::Type> type1 = evalType(ctx, *mod, call->args[0]);
@@ -136,15 +165,15 @@ static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::s
   return Number::createInteger(*type1 == *type2 ? 1 : 0);
 }
 
-static std::shared_ptr<Node> xcc_macro_str(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+static std::shared_ptr<Node> xcc_macro_str(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
   return String::create(call->args[0]->toString(nullptr, call.get(), 0, false));
 }
 
-static std::shared_ptr<Node> xcc_macro_strf(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+static std::shared_ptr<Node> xcc_macro_strf(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
   return String::create(call->args[0]->toString(nullptr, call.get(), 0, true));
 }
 
-static std::shared_ptr<Node> xcc_macro_int(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+static std::shared_ptr<Node> xcc_macro_int(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
   assertThrow(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING), CodegenException("int! expects a string as an argument"));
   auto s = getOrGetLastInBlock(call->args[0], AST_EXPR_STRING)->as<String>();
 
@@ -157,23 +186,7 @@ static std::shared_ptr<Node> xcc_macro_int(Macro::NativeContext& ctx, std::share
   return Number::createInteger(std::stol(res.value, nullptr, res.base));
 }
 
-static std::shared_ptr<Node> xcc_macro_add(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
-  __BIN_OP("add!", ctx, call, +);
-}
-
-static std::shared_ptr<Node> xcc_macro_sub(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
-  __BIN_OP("sub!", ctx, call, -);
-}
-
-static std::shared_ptr<Node> xcc_macro_inc(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
-  __UN_OP("inc!", ctx, call, ++);
-}
-
-static std::shared_ptr<Node> xcc_macro_dec(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
-  __UN_OP("dec!", ctx, call, --);
-}
-
-static std::shared_ptr<Node> xcc_macro_cond(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+static std::shared_ptr<Node> xcc_macro_cond(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
   assertThrow(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER), CodegenException("cond! expects a number as first argument"));
 
   auto cond = getOrGetLastInBlock(call->args[0], AST_EXPR_NUMBER)->as<Number>();
@@ -190,13 +203,23 @@ static std::vector builtin_macros = {
   createNativeMacro("str",     {"expr"},                 xcc_macro_str),
   createNativeMacro("strf",    {"expr"},                 xcc_macro_strf),
   createNativeMacro("int",     {"expr"},                 xcc_macro_int),
-
-  createNativeMacro("add",     {"a", "b"},               xcc_macro_add),
-  createNativeMacro("sub",     {"a", "b"},               xcc_macro_sub),
-  createNativeMacro("inc",     {"x"},                    xcc_macro_inc),
-  createNativeMacro("dec",     {"x"},                    xcc_macro_dec),
-
   createNativeMacro("cond",    {"cond", "then", "else"}, xcc_macro_cond),
+
+  createNativeMacro("inc", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP("inc!",  ctx, call, ++); }),
+  createNativeMacro("dec", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP("dec!",  ctx, call, --); }),
+  createNativeMacro("add", {"a", "b"}, [](auto& ctx, auto& call) { __ARITHMETIC_BINARY_OP("add!", ctx, call, +);  }),
+  createNativeMacro("sub", {"a", "b"}, [](auto& ctx, auto& call) { __ARITHMETIC_BINARY_OP("sub!", ctx, call, -);  }),
+  createNativeMacro("mul", {"a", "b"}, [](auto& ctx, auto& call) { __ARITHMETIC_BINARY_OP("mul!", ctx, call, *);  }),
+  createNativeMacro("div", {"a", "b"}, [](auto& ctx, auto& call) { __ARITHMETIC_BINARY_OP("div!", ctx, call, /);  }),
+  createNativeMacro("eq",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP(     "eq!",  ctx, call, ==); }),
+  createNativeMacro("ne",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP(     "ne!",  ctx, call, !=); }),
+  createNativeMacro("lt",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "lt!",  ctx, call, <);  }),
+  createNativeMacro("le",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "le!",  ctx, call, <=); }),
+  createNativeMacro("gt",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "gt!",  ctx, call, >);  }),
+  createNativeMacro("ge",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "ge!",  ctx, call, >=); }),
+  createNativeMacro("and", {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "and!", ctx, call, &&); }),
+  createNativeMacro("or", {"a", "b"},  [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "or!",  ctx, call, ||); }),
+  createNativeMacro("not", {"expr"},   [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "not!", ctx, call, !);  }),
 };
 
 void codegen::registerBuiltinMacros(GlobalContext& ctx) {
