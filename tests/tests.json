@@ -387,5 +387,32 @@
       "stdout": ["y is i64: 1\n", "f is F: 1\n", "f is add32: 1\n", "x is i32: 1\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 44,
+    "name": "add!, sub!, inc!, dec! macros",
+    "file": "44.xc",
+    "expect": {
+      "stdout": ["2=2\n", "3=3\n", "4=4\n", "5=5\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 45,
+    "name": "Macro call in macro call",
+    "file": "45.xc",
+    "expect": {
+      "stdout": ["res=7\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 46,
+    "name": "str! macro",
+    "file": "46.xc",
+    "expect": {
+      "stdout": ["1 \\+ 2 \\+ x\n", "fn test\\(a: i32, b: i32\\) \\-> i32 \\{ return a \\+ b; \\}\n"],
+      "retcode": 0
+    }
   }
 ]
