@@ -830,7 +830,9 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
         break;
       }
 
-      args.push_back(parseExpr());
+      // Parse *any* node for macros arg. Use isRepl=true for this, which allows for
+      // parsing exprs from top-level context
+      args.push_back(isMacro ? parseOneTopLevelNode(true, {}) : parseExpr());
     } while (checkAdvance(TOKEN_COMMA));
   }
 
