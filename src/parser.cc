@@ -815,8 +815,8 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
         break;
       }
 
-      // Parse *any* node for macros arg. Use isRepl=true for this, which allows for
-      // parsing exprs from top-level context
+      /* Parse *any* node for macros arg. Use isRepl=true for this, which allows for
+       * parsing exprs from top-level context */
       args.push_back(isMacro ? parseOneTopLevelNode(true, {}) : parseExpr());
     } while (checkAdvance(TOKEN_COMMA));
   }
@@ -825,7 +825,6 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
     throw ParserException(current().line,
       std::format("Expected ')' after {} arguments (call)", isMacro ? "macro" : "function"));
   }
-
 
   if (isMacro) {
     return ast::MacroCall::create(ast::Node::cast<ast::Identifier>(callee), args);
