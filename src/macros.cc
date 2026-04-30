@@ -129,8 +129,6 @@ static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::s
   std::shared_ptr<meta::Type> type1 = evalType(ctx, *mod, call->args[0]);
   std::shared_ptr<meta::Type> type2 = evalType(ctx, *mod, call->args[1]);
 
-  logger.warn("is_same! a={} b={} {}", type1->toString(), type2->toString(), *type1 == *type2);
-
   return Number::createInteger(*type1 == *type2 ? 1 : 0);
 }
 
@@ -140,6 +138,19 @@ static std::shared_ptr<Node> xcc_macro_str(Macro::NativeContext& ctx, std::share
 
 static std::shared_ptr<Node> xcc_macro_strf(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
   return String::create(call->args[0]->toString(nullptr, call.get(), 0, true));
+}
+
+static std::shared_ptr<Node> xcc_macro_int(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
+  assertThrow(call->args[0]->is(AST_EXPR_STRING), CodegenException("int! expects a string as an argument"));
+  auto s = call->args[0]->as<String>();
+
+  if (s->value.find('.') != std::string::npos) {
+    return Number::createFloating(std::stod(s->value));
+  }
+
+  auto res = util::determineBase(s->value);
+
+  return Number::createInteger(std::stol(res.value, nullptr, res.base));
 }
 
 static std::shared_ptr<Node> xcc_macro_add(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {
@@ -165,6 +176,7 @@ static std::vector builtin_macros = {
   createNativeMacro("is_same", {"a", "b"}, xcc_macro_is_same),
   createNativeMacro("str",     {"expr"},   xcc_macro_str),
   createNativeMacro("strf",    {"expr"},   xcc_macro_strf),
+  createNativeMacro("int",     {"expr"},   xcc_macro_int),
 
   createNativeMacro("add",     {"a", "b"}, xcc_macro_add),
   createNativeMacro("sub",     {"a", "b"}, xcc_macro_sub),
