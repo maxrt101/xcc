@@ -408,10 +408,14 @@
   },
   {
     "id": 46,
-    "name": "str! macro",
+    "name": "str! & strf! macros",
     "file": "46.xc",
     "expect": {
-      "stdout": ["1 \\+ 2 \\+ x\n", "fn test\\(a: i32, b: i32\\) \\-> i32 \\{ return a \\+ b; \\}\n"],
+      "stdout": [
+        "1 \\+ 2 \\+ x\n",
+        "fn test\\(a: i32, b: i32\\) \\-> i32 \\{ return a \\+ b; \\}\n",
+        "fn test\\(a: i32, b: i32\\) \\-> i32 \\{\n  return a \\+ b;\n\\}\n"
+      ],
       "retcode": 0
     }
   }
