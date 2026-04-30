@@ -275,8 +275,10 @@ public:
   /**
    * Recursively convert tree to string
    *
-   * @param parent Parent node (for root - can be nullptr)
-   * @param indent Indentation level
+   * @param grandparent Grandparent node (for root - can be nullptr)
+   * @param parent      Parent node (for root - can be nullptr)
+   * @param indent      Indentation level
+   * @param newline     Should print new lines
    */
   virtual std::string toString(Node * grandparent, Node * parent, int indent, bool newline) = 0;
 
@@ -345,8 +347,16 @@ public:
    */
   static std::string typeToString(NodeType type);
 
+  /**
+   * Used to generate indent in toString
+   *
+   * @param indent Intent level (not in chars)
+   */
   static std::string getIndent(int indent);
 
+  /**
+   * Convert current Node's AttributeList to string
+   */
   std::string attributesToString(int indent, bool newline);
 
   /**
