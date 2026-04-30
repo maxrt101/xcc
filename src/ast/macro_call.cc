@@ -24,11 +24,11 @@ std::shared_ptr<Node> MacroCall::clone() {
 }
 
 void MacroCall::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(name, visitor, ignoreSubtree);
-
   for (auto& arg : args) {
     callVisitor(arg, visitor, ignoreSubtree);
   }
+
+  callVisitor(name, visitor, ignoreSubtree);
 }
 
 std::string MacroCall::toString(Node * grandparent, Node * parent, int indent, bool newline) {
