@@ -28,6 +28,13 @@ void FnDef::visit(Visitor visitor) {
   callVisitor(body, visitor);
 }
 
+std::string FnDef::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("{} {}",
+    decl->toString(parent, this, indent, newline),
+    body->toString(parent, this, indent, newline)
+  );
+}
+
 llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   decl->generateFunction(ctx, {});
 

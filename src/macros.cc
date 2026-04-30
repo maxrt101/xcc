@@ -117,12 +117,27 @@ static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::s
   return Number::createInteger(*type1 == *type2 ? 1 : 0);
 }
 
+static std::shared_ptr<Node> xcc_macro_str(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+
+static std::shared_ptr<Node> xcc_macro_add(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+
+static std::shared_ptr<Node> xcc_macro_sub(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+
+static std::shared_ptr<Node> xcc_macro_inc(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
+
+static std::shared_ptr<Node> xcc_macro_dec(Macro::NativeContext& ctx, std::shared_ptr<MacroCall> call) {}
 
 static std::vector builtin_macros = {
   createNativeMacro("cat",     {"a", "b"}, xcc_macro_cat),
   createNativeMacro("sizeof",  {"expr"},   xcc_macro_sizeof),
   createNativeMacro("typeof",  {"expr"},   xcc_macro_typeof),
   createNativeMacro("is_same", {"a", "b"}, xcc_macro_is_same),
+  createNativeMacro("str",     {"expr"},   xcc_macro_str),
+
+  createNativeMacro("add",     {"a", "b"}, xcc_macro_add),
+  createNativeMacro("sub",     {"a", "b"}, xcc_macro_sub),
+  createNativeMacro("inc",     {"x"},      xcc_macro_inc),
+  createNativeMacro("dec",     {"x"},      xcc_macro_dec),
 };
 
 void codegen::registerBuiltinMacros(GlobalContext& ctx) {

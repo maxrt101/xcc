@@ -40,6 +40,20 @@ void VarDecl::visit(Visitor visitor) {
   callVisitor(value, visitor);
 }
 
+std::string VarDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res = "var " + name->toString(parent, this, indent, false);
+
+  if (type) {
+    res += ": " + type->toString(parent, this, indent, false);
+  }
+
+  if (value) {
+    res += " = " + value->toString(parent, this, indent, false);
+  }
+
+  return res;
+}
+
 llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
   assertThrow(type || value, CodegenException("Value and type is missing from variable declaration"));

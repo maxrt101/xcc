@@ -19,6 +19,13 @@ void Cast::visit(Visitor visitor) {
   callVisitor(type, visitor);
 }
 
+std::string Cast::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("{} as {}",
+    expr->toString(parent, this, indent, false),
+    type->toString(parent, this, indent, false)
+  );
+}
+
 llvm::Value * Cast::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   return codegen::castIfNotSame(ctx, expr->generateValue(ctx, {}), type->generateType(ctx, {})->getLLVMType(ctx));
 }

@@ -34,6 +34,13 @@ void Assign::visit(Visitor visitor) {
   callVisitor(rhs, visitor);
 }
 
+std::string Assign::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("{} = {}",
+    lhs->toString(parent, this, indent, false),
+    rhs->toString(parent, this, indent, false)
+  );
+}
+
 llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   llvm::Value * value = nullptr;
 

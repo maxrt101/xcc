@@ -18,6 +18,10 @@ void Return::visit(Visitor visitor) {
   callVisitor(value, visitor);
 }
 
+std::string Return::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("return {}", value->toString(parent, this, indent, false));
+}
+
 llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   llvm::Value * val = nullptr;
 

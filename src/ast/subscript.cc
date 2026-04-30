@@ -20,6 +20,13 @@ void Subscript::visit(Visitor visitor) {
   callVisitor(rhs, visitor);
 }
 
+std::string Subscript::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("{}[{}]",
+    lhs->toString(parent, this, indent, false),
+    rhs->toString(parent, this, indent, false)
+  );
+}
+
 llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto base_type = throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL"));
   auto element_ptr = generateValueWithoutLoad(ctx, payload);

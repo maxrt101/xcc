@@ -19,6 +19,10 @@ void Unary::visit(Visitor visitor) {
   callVisitor(rhs, visitor);
 }
 
+std::string Unary::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return operation.toString() + rhs->toString(parent, this, indent, false);
+}
+
 llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   switch (operation.type) {
     case TOKEN_STAR: {

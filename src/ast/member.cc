@@ -25,6 +25,13 @@ void MemberAccess::visit(Visitor visitor) {
   callVisitor(rhs, visitor);
 }
 
+std::string MemberAccess::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("{}.{}",
+    lhs->toString(parent, this, indent, false),
+    rhs->toString(parent, this, indent, false)
+  );
+}
+
 llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 

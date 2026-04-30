@@ -1,6 +1,7 @@
 #include "xcc/ast/mod.h"
 #include "xcc/exceptions.h"
 #include "xcc/ast/identifier.h"
+#include <format>
 
 using namespace xcc::ast;
 
@@ -17,6 +18,13 @@ std::shared_ptr<Node> Module::clone() {
 void Module::visit(Visitor visitor) {
   callVisitor(name, visitor);
   callVisitor(body, visitor);
+}
+
+std::string Module::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("module {} {}",
+    name->toString(parent, this, indent, false),
+    body->toString(parent, this, indent, newline)
+  );
 }
 
 std::string Module::getName() const {

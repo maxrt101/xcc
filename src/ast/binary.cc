@@ -51,6 +51,14 @@ void Binary::visit(Visitor visitor) {
   callVisitor(rhs, visitor);
 }
 
+std::string Binary::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("{} {} {}",
+    lhs->toString(parent, this, indent, false),
+    operation.toString(),
+    lhs->toString(parent, this, indent, false)
+  );
+}
+
 llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto common_type = meta::Type::alignTypes(
     throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL")),

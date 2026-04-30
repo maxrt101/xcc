@@ -21,6 +21,13 @@ void TypeDecl::visit(Visitor visitor) {
   callVisitor(value, visitor);
 }
 
+std::string TypeDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("type {} = {}",
+    name->toString(parent, this, indent, false),
+    value->toString(parent, this, indent, false)
+  );
+}
+
 std::shared_ptr<meta::Type> TypeDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   assertThrow(name->is(AST_EXPR_IDENTIFIER), CodegenException("Type alias (declaration) name must be an identifier"));
   assertThrow(value->is(AST_EXPR_TYPE), CodegenException("Type alias (declaration) value must be a type expr"));

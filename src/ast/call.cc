@@ -24,6 +24,20 @@ void Call::visit(Visitor visitor) {
   }
 }
 
+std::string Call::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res = callee->toString(parent, this, indent, newline) + "(";
+
+  for (size_t i = 0; i < args.size(); ++i) {
+    res += args[i]->toString(parent, this, indent, false);
+
+    if (i + 1 < args.size()) {
+      res += ", ";
+    }
+  }
+
+  return res + ")";
+}
+
 llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto info = getCalleeInfo(ctx, payload, true);
 

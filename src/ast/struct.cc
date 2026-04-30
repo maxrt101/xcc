@@ -37,6 +37,35 @@ void Struct::visit(Visitor visitor) {
   }
 }
 
+std::string Struct::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res = std::format("struct {} {{",
+    name->toString(parent, this, indent, false)
+  );
+
+  res += newline ? "\n" : " ";
+
+  for (auto& field : fields) {
+    res += newline ? getIndent(indent + 1) : " ";
+    res += field->toString(parent, this, indent, false);
+    res += ";";
+    res += newline ? "\n" : " ";
+  }
+
+  for (auto& method : methods) {
+    res += newline ? getIndent(indent + 1) : " ";
+    res += method->toString(parent, this, indent, newline);
+    res += newline ? "\n" : " ";
+  }
+
+  if (newline) {
+    res += getIndent(indent) + "}\n";
+  } else {
+    res += "}";
+  }
+
+  return res;
+}
+
 std::shared_ptr<meta::Type> Struct::generateType(codegen::ModuleContext &ctx, PayloadList payload) {
   return generateTypeForValueWithoutLoad(ctx, payload);
 }

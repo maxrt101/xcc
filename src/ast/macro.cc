@@ -1,5 +1,5 @@
 #include "xcc/ast/macro.h"
-#include <utility>
+#include <format>
 
 using namespace xcc;
 using namespace xcc::ast;
@@ -42,5 +42,21 @@ std::shared_ptr<Node> Macro::clone() {
 
 void Macro::visit(Visitor visitor) {
   // TODO: Decide if needs to be visited
+}
+
+std::string Macro::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res = std::format("macro {}(", name->toString(parent, this, indent, newline));
+
+  for (size_t i = 0; i < args.size(); ++i) {
+    res += args[i]->toString(parent, this, indent, false);
+
+    if (i + 1 < args.size()) {
+      res += ", ";
+    }
+  }
+
+  res += std::format(") {}", body->toString(parent, this, indent, newline));
+
+  return res;
 }
 

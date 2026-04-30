@@ -40,6 +40,28 @@ void Type::visit(Visitor visitor) {
   }
 }
 
+std::string Type::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res;
+
+  if (function) {
+    res = "fn (";
+
+    for (size_t i = 0; i < args.size(); ++i) {
+      res += args[i]->toString(parent, this, indent, false);
+
+      if (i + 1 < args.size()) {
+        res += ", ";
+      }
+    }
+
+    res += ") -> " + returnType->toString(parent, this, indent, false);
+  } else {
+    res = name->toString(parent, this, indent, false);
+  }
+
+  return res;
+}
+
 std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   if (function) {
     std::vector<std::shared_ptr<meta::Type>> args;

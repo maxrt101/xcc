@@ -19,6 +19,7 @@ public:
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor) override;
+  std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   std::string name() const;
 

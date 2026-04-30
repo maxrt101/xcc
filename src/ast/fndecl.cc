@@ -49,6 +49,29 @@ void FnDecl::visit(Visitor visitor) {
   }
 }
 
+std::string FnDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res = std::format("{}fn {}(",
+    isExtern ? "extern " : "",
+    name->toString(parent, this, indent, false)
+  );
+
+  for (size_t i = 0; i < args.size(); ++i) {
+    res += args[i]->toString(parent, this, indent, false);
+
+    if (i + 1 < args.size()) {
+      res += ", ";
+    }
+  }
+
+  if (isVariadic) {
+    res += ", ...";
+  }
+
+  res += std::format(") -> {}", return_type->toString(parent, this, indent, false));
+
+  return res;
+}
+
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   std::string fn_name = name->name();
   std::string symbol_name = fn_name;

@@ -282,7 +282,7 @@ CompilationResult xcc::compile(
 
 #if USE_PRINT_AST
   logger.info("AST (After Parsing):");
-  printAst(ast);
+  logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
 #endif
 
   processAttributes(ast);
@@ -292,7 +292,7 @@ CompilationResult xcc::compile(
 
 #if USE_PRINT_AST
   logger.info("AST (After Attribute & Macro processing):");
-  printAst(ast);
+  logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
 #endif
 
   CompilationResult result;

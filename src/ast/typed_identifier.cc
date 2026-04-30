@@ -24,6 +24,20 @@ void TypedIdentifier::visit(Visitor visitor) {
   callVisitor(value, visitor);
 }
 
+std::string TypedIdentifier::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res = name->toString(parent, this, indent, false);
+
+  if (value_type) {
+    res += ": " + value_type->toString(parent, this, indent, false);
+  }
+
+  if (value) {
+    res += " = " + value->toString(parent, this, indent, false);
+  }
+
+  return res;
+}
+
 std::shared_ptr<xcc::meta::Type> TypedIdentifier::generateType(codegen::ModuleContext &ctx, PayloadList payload) {
   return value_type->generateType(ctx, {});
 }

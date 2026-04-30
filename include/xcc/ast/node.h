@@ -273,6 +273,14 @@ public:
   virtual void visit(Visitor visitor) = 0;
 
   /**
+   * Recursively convert tree to string
+   *
+   * @param parent Parent node (for root - can be nullptr)
+   * @param indent Indentation level
+   */
+  virtual std::string toString(Node * grandparent, Node * parent, int indent, bool newline) = 0;
+
+  /**
    * Generates llvm::Function from node
    *
    * Part of codegen API. Implemented when node has a relation to functions (fndecl/fndef/etc.)
@@ -337,6 +345,10 @@ public:
    */
   static std::string typeToString(NodeType type);
 
+  static std::string getIndent(int indent);
+
+  std::string attributesToString(int indent, bool newline);
+
   /**
    * Clone a vector of nodes
    */
@@ -387,6 +399,7 @@ public:
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor) override;
+  std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 };
 
 } /* namespace xcc::ast */

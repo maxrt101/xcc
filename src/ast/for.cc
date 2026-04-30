@@ -27,6 +27,15 @@ void For::visit(Visitor visitor) {
   callVisitor(body, visitor);
 }
 
+std::string For::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("for ({}; {}; {}) {}",
+    init->toString(parent, this, indent, newline),
+    cond->toString(parent, this, indent, newline),
+    step->toString(parent, this, indent, newline),
+    body->toString(parent, this, indent, newline)
+  );
+}
+
 llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 

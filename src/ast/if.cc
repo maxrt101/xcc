@@ -23,6 +23,19 @@ void If::visit(Visitor visitor) {
   callVisitor(else_branch, visitor);
 }
 
+std::string If::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res = std::format("if ({}) {}",
+    condition->toString(parent, this, indent, newline),
+    then_branch->toString(parent, this, indent, newline)
+  );
+
+  if (else_branch) {
+    res += " else " + else_branch->toString(parent, this, indent, newline);
+  }
+
+  return res;
+}
+
 llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto cond_val = throwIfNull(condition->generateValue(ctx, {}), CodegenException("Error generating condition of 'if' statement (condition generated NULL)"));
 

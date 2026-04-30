@@ -128,6 +128,53 @@ std::string Node::typeToString(NodeType type) {
   return "UNKNOWN";
 }
 
+std::string Node::getIndent(int indent) {
+  std::string res;
+
+  for (int i = 0; i < indent; ++i) {
+    res += "  ";
+  }
+
+  return res;
+}
+
+std::string Node::attributesToString(int indent, bool newline) {
+  if (attributes.empty()) {
+    return "";
+  }
+
+  std::string res = "[";
+
+  for (size_t i = 0; i < attributes.size(); ++i) {
+    auto& attr = attributes[i];
+
+    res += attr.name;
+
+    if (!attr.args.empty()) {
+      res += "(";
+      for (size_t j = 0; j < attr.args.size(); ++j) {
+        res += attr.args[i]->toString(nullptr, this, indent, newline);
+        if (j + 1 < attr.args.size()) {
+          res += ", ";
+        }
+      }
+      res += ")";
+    }
+
+    if (i + 1 < attributes.size()) {
+      res += ", ";
+    }
+  }
+
+  res += "]";
+
+  if (newline) {
+    res += "\n";
+  }
+
+  return res;
+}
+
 Empty::Empty() : Node(AST_EMPTY) {}
 
 std::shared_ptr<Empty> Empty::create() {
@@ -139,3 +186,7 @@ std::shared_ptr<Node> Empty::clone() {
 }
 
 void Empty::visit(Visitor visitor) {}
+
+std::string Empty::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return "";
+}

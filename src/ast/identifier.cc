@@ -18,6 +18,16 @@ std::shared_ptr<Node> Identifier::clone() {
 
 void Identifier::visit(Visitor visitor) {}
 
+std::string Identifier::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res;
+
+  for (auto& part : scope) {
+    res += part + "::";
+  }
+
+  return res + value;
+}
+
 std::string Identifier::name() const {
   std::string prefix;
 

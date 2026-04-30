@@ -1,5 +1,6 @@
 #include "xcc/ast/string.h"
 #include "xcc/codegen.h"
+#include "xcc/util/string.h"
 
 using namespace xcc::ast;
 
@@ -14,6 +15,10 @@ std::shared_ptr<Node> String::clone() {
 }
 
 void String::visit(Visitor visitor) {}
+
+std::string String::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  return std::format("\"{}\"", util::strescseq(value, false));
+}
 
 llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto hash = std::hash<std::string>{}(value);

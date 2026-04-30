@@ -1,5 +1,5 @@
 #include "xcc/ast/macro_call.h"
-#include <utility>
+#include <format>
 
 using namespace xcc;
 using namespace xcc::ast;
@@ -27,3 +27,16 @@ void MacroCall::visit(Visitor visitor) {
   // TODO: Decide if needs to be visited
 }
 
+std::string MacroCall::toString(Node * grandparent, Node * parent, int indent, bool newline) {
+  std::string res = std::format("{}!(", name->toString(parent, this, indent, false));
+
+  for (size_t i = 0; i < args.size(); ++i) {
+    res += args[i]->toString(parent, this, indent, false);
+
+    if (i + 1 < args.size()) {
+      res += ", ";
+    }
+  }
+
+  return res + ")";
+}

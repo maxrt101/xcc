@@ -1,7 +1,10 @@
 #include "xcc/attrs.h"
+#include "xcc/util/log.h"
 #include <unordered_map>
 
 using namespace xcc;
+
+auto logger = xcc::util::log::Logger("ATTR");
 
 static void xcc_attr_exclude(const ast::Node::Attribute& attr, ast::Node* node) {
   // Soundness: it's okay to slice objects here, because Empty has no additional
@@ -10,7 +13,7 @@ static void xcc_attr_exclude(const ast::Node::Attribute& attr, ast::Node* node) 
 }
 
 static void xcc_attr_dump_ast(const ast::Node::Attribute& attr, ast::Node* node) {
-  ast::printNode(node, node, 0);
+  logger.print("{}\n", node->toString(nullptr, nullptr, 0, true));
 }
 
 static std::unordered_map<std::string, attr::Handler> attr_handlers = {
