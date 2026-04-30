@@ -24,7 +24,7 @@ public:
     std::unordered_map<std::string, std::shared_ptr<Node>> args;
   };
 
-  using NativeFn = std::function<std::shared_ptr<Node>(NativeContext&, std::shared_ptr<MacroCall>)>;
+  using NativeFn = std::function<std::shared_ptr<Node>(NativeContext&, std::shared_ptr<MacroCall>&)>;
 
   std::shared_ptr<Identifier>              name;
   std::vector<std::shared_ptr<Identifier>> args;
