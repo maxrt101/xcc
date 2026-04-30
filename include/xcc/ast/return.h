@@ -15,7 +15,7 @@ public:
   static std::shared_ptr<Return> create(std::shared_ptr<Node> value = nullptr);
 
   std::shared_ptr<Node> clone() override;
-  void visit(Visitor visitor) override;
+  void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;

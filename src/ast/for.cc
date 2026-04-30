@@ -20,11 +20,11 @@ std::shared_ptr<Node> For::clone() {
   ));
 }
 
-void For::visit(Visitor visitor) {
-  callVisitor(init, visitor);
-  callVisitor(cond, visitor);
-  callVisitor(step, visitor);
-  callVisitor(body, visitor);
+void For::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(init, visitor, ignoreSubtree);
+  callVisitor(cond, visitor, ignoreSubtree);
+  callVisitor(step, visitor, ignoreSubtree);
+  callVisitor(body, visitor, ignoreSubtree);
 }
 
 std::string For::toString(Node * grandparent, Node * parent, int indent, bool newline) {

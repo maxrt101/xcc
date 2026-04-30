@@ -14,9 +14,9 @@ std::shared_ptr<Node> Cast::clone() {
   return withAttrs(create(expr->clone(), cast<Type>(type->clone())));
 }
 
-void Cast::visit(Visitor visitor) {
-  callVisitor(expr, visitor);
-  callVisitor(type, visitor);
+void Cast::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(expr, visitor, ignoreSubtree);
+  callVisitor(type, visitor, ignoreSubtree);
 }
 
 std::string Cast::toString(Node * grandparent, Node * parent, int indent, bool newline) {

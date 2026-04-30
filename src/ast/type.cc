@@ -28,15 +28,15 @@ std::shared_ptr<Node> Type::clone() {
   return withAttrs(create(name->clone(), pointer));
 }
 
-void Type::visit(Visitor visitor) {
+void Type::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   if (function) {
-    callVisitor(returnType, visitor);
+    callVisitor(returnType, visitor, ignoreSubtree);
 
     for (auto& node : args) {
-      callVisitor(node, visitor);
+      callVisitor(node, visitor, ignoreSubtree);
     }
   } else {
-    callVisitor(name, visitor);
+    callVisitor(name, visitor, ignoreSubtree);
   }
 }
 

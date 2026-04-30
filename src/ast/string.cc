@@ -14,7 +14,7 @@ std::shared_ptr<Node> String::clone() {
   return withAttrs(create(value));
 }
 
-void String::visit(Visitor visitor) {}
+void String::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string String::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   return std::format("\"{}\"", util::strescseq(value, false));

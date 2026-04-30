@@ -40,7 +40,7 @@ static void registerCustomTypes(
     }
 
     return nullptr;
-  });
+  }, {ast::AST_MACRO, ast::AST_EXPR_MACRO_CALL});
 }
 
 /**
@@ -61,7 +61,7 @@ static void registerMacros(
     }
 
     return nullptr;
-  });
+  }, {});
 }
 
 /**
@@ -97,7 +97,7 @@ static void processMacroCall(
     }
 
     return nullptr;
-  });
+  }, {});
 }
 
 /**
@@ -147,11 +147,14 @@ static void processMacros(
 
       processMacroCall(macro, call, body);
 
+      logger.info("Macro call: '{}':", call->toString(nullptr, nullptr, 0, false));
+      logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
+
       return body;
     }
 
     return nullptr;
-  });
+  }, {});
 }
 
 /**

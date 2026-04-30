@@ -50,6 +50,16 @@ void Node::Attribute::validateArgsStrict(const std::vector<NodeType>& arg_types)
 
 Node::Node(NodeType type) : type(type) {}
 
+bool Node::isAnyOf(std::vector<NodeType> expected) const {
+  for (auto& typ : expected) {
+    if (is(typ)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 Node::PayloadList Node::selectPayload(const PayloadList& payload) {
   PayloadList result;
 
@@ -185,7 +195,7 @@ std::shared_ptr<Node> Empty::clone() {
   return withAttrs(create());
 }
 
-void Empty::visit(Visitor visitor) {}
+void Empty::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string Empty::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   return "";

@@ -20,9 +20,9 @@ std::shared_ptr<Node> MemberAccess::clone() {
   return withAttrs(std::make_shared<MemberAccess>(kind, lhs->clone(), cast<Identifier>(rhs->clone())));
 }
 
-void MemberAccess::visit(Visitor visitor) {
-  callVisitor(lhs, visitor);
-  callVisitor(rhs, visitor);
+void MemberAccess::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(lhs, visitor, ignoreSubtree);
+  callVisitor(rhs, visitor, ignoreSubtree);
 }
 
 std::string MemberAccess::toString(Node * grandparent, Node * parent, int indent, bool newline) {

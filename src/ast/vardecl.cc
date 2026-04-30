@@ -34,10 +34,10 @@ std::shared_ptr<Node> VarDecl::clone() {
   ));
 }
 
-void VarDecl::visit(Visitor visitor) {
-  callVisitor(name, visitor);
-  callVisitor(type, visitor);
-  callVisitor(value, visitor);
+void VarDecl::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(name, visitor, ignoreSubtree);
+  callVisitor(type, visitor, ignoreSubtree);
+  callVisitor(value, visitor, ignoreSubtree);
 }
 
 std::string VarDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {

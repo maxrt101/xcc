@@ -18,7 +18,7 @@ public:
   static std::shared_ptr<FnDef> create(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
 
   std::shared_ptr<Node> clone() override;
-  void visit(Visitor visitor) override;
+  void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;

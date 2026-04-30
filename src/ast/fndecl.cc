@@ -40,12 +40,12 @@ std::shared_ptr<Node> FnDecl::clone() {
   ));
 }
 
-void FnDecl::visit(Visitor visitor) {
-  callVisitor(name, visitor);
-  callVisitor(return_type, visitor);
+void FnDecl::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(name, visitor, ignoreSubtree);
+  callVisitor(return_type, visitor, ignoreSubtree);
 
   for (auto& node : args) {
-    callVisitor(node, visitor);
+    callVisitor(node, visitor, ignoreSubtree);
   }
 }
 

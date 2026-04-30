@@ -14,9 +14,9 @@ std::shared_ptr<Node> Block::clone() {
   return withAttrs(create(cloneVector(body)));
 }
 
-void Block::visit(Visitor visitor) {
+void Block::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   for (auto& node : body) {
-    callVisitor(node, visitor);
+    callVisitor(node, visitor, ignoreSubtree);
   }
 }
 
@@ -36,7 +36,7 @@ std::string Block::toString(Node * grandparent, Node * parent, int indent, bool 
     res += newline ? getIndent(indent + 1) : " ";
     res += node->toString(parent, this, indent + 1, newline);
 
-    if (!node->isAnyOf(AST_FUNCTION_DEF, AST_STRUCT, AST_MOD, AST_IF, AST_FOR, AST_WHILE)) {
+    if (!node->isAnyOf(AST_FUNCTION_DEF, AST_STRUCT, AST_MOD, AST_IF, AST_FOR, AST_WHILE, AST_MACRO)) {
       res += ";";
     }
 

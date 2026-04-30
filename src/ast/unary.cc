@@ -15,8 +15,8 @@ std::shared_ptr<Node> Unary::clone() {
   return withAttrs(create(operation, rhs->clone()));
 }
 
-void Unary::visit(Visitor visitor) {
-  callVisitor(rhs, visitor);
+void Unary::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(rhs, visitor, ignoreSubtree);
 }
 
 std::string Unary::toString(Node * grandparent, Node * parent, int indent, bool newline) {

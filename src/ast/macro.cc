@@ -40,14 +40,14 @@ std::shared_ptr<Node> Macro::clone() {
   ));
 }
 
-void Macro::visit(Visitor visitor) {
-  callVisitor(name, visitor);
+void Macro::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(name, visitor, ignoreSubtree);
 
   for (auto& arg : args) {
-    callVisitor(arg, visitor);
+    callVisitor(arg, visitor, ignoreSubtree);
   }
 
-  callVisitor(body, visitor);
+  callVisitor(body, visitor, ignoreSubtree);
 }
 
 std::string Macro::toString(Node * grandparent, Node * parent, int indent, bool newline) {

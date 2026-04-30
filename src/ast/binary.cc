@@ -46,9 +46,9 @@ std::shared_ptr<Node> Binary::clone() {
   return withAttrs(create(operation, lhs->clone(), rhs->clone()));
 }
 
-void Binary::visit(Visitor visitor) {
-  callVisitor(lhs, visitor);
-  callVisitor(rhs, visitor);
+void Binary::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(lhs, visitor, ignoreSubtree);
+  callVisitor(rhs, visitor, ignoreSubtree);
 }
 
 std::string Binary::toString(Node * grandparent, Node * parent, int indent, bool newline) {

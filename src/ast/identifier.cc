@@ -16,7 +16,7 @@ std::shared_ptr<Node> Identifier::clone() {
   return withAttrs(create(value, scope));
 }
 
-void Identifier::visit(Visitor visitor) {}
+void Identifier::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string Identifier::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   std::string res;

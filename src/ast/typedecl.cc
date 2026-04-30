@@ -16,9 +16,9 @@ std::shared_ptr<Node> TypeDecl::clone() {
   return withAttrs(create(name->clone(), value->clone()));
 }
 
-void TypeDecl::visit(Visitor visitor) {
-  callVisitor(name, visitor);
-  callVisitor(value, visitor);
+void TypeDecl::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(name, visitor, ignoreSubtree);
+  callVisitor(value, visitor, ignoreSubtree);
 }
 
 std::string TypeDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {

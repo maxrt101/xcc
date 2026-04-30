@@ -17,7 +17,7 @@ public:
   static std::shared_ptr<Module> create(std::shared_ptr<Node> name, std::shared_ptr<Block> body = nullptr);
 
   std::shared_ptr<Node> clone() override;
-  void visit(Visitor visitor) override;
+  void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   std::string getName() const;

@@ -16,11 +16,11 @@ std::shared_ptr<Node> Call::clone() {
   return withAttrs(create(callee->clone(), cloneVector(args)));
 }
 
-void Call::visit(Visitor visitor) {
-  callVisitor(callee, visitor);
+void Call::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(callee, visitor, ignoreSubtree);
 
   for (auto& node : args) {
-    callVisitor(node, visitor);
+    callVisitor(node, visitor, ignoreSubtree);
   }
 }
 

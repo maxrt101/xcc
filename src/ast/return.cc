@@ -14,8 +14,8 @@ std::shared_ptr<Node> Return::clone() {
   return withAttrs(create(value->clone()));
 }
 
-void Return::visit(Visitor visitor) {
-  callVisitor(value, visitor);
+void Return::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(value, visitor, ignoreSubtree);
 }
 
 std::string Return::toString(Node * grandparent, Node * parent, int indent, bool newline) {

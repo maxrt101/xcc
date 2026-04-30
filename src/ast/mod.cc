@@ -15,9 +15,9 @@ std::shared_ptr<Node> Module::clone() {
   return withAttrs(create(name->clone(), body ? cast<Block>(body->clone()) : nullptr));
 }
 
-void Module::visit(Visitor visitor) {
-  callVisitor(name, visitor);
-  callVisitor(body, visitor);
+void Module::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(name, visitor, ignoreSubtree);
+  callVisitor(body, visitor, ignoreSubtree);
 }
 
 std::string Module::toString(Node * grandparent, Node * parent, int indent, bool newline) {

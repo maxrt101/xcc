@@ -23,9 +23,9 @@ std::shared_ptr<Node> FnDef::clone() {
   ));
 }
 
-void FnDef::visit(Visitor visitor) {
-  callVisitor(decl, visitor);
-  callVisitor(body, visitor);
+void FnDef::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(decl, visitor, ignoreSubtree);
+  callVisitor(body, visitor, ignoreSubtree);
 }
 
 std::string FnDef::toString(Node * grandparent, Node * parent, int indent, bool newline) {

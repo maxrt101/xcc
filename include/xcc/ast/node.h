@@ -170,6 +170,13 @@ public:
    *
    * @param expected Node type list against current node's type
    */
+  bool isAnyOf(std::vector<NodeType> expected) const;
+
+  /**
+   * Checks if current node is any of `expected` types
+   *
+   * @param expected Node type list against current node's type
+   */
   template <typename ...Types>
   bool isAnyOf(Types... expected) const {
     return ((this->type == expected) || ...);
@@ -270,7 +277,7 @@ public:
   /**
    * Visitor implementation
    */
-  virtual void visit(Visitor visitor) = 0;
+  virtual void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) = 0;
 
   /**
    * Recursively convert tree to string
@@ -384,10 +391,10 @@ protected:
   }
 
   template <typename T>
-  void callVisitor(std::shared_ptr<T>& node, Visitor visitor) {
-    if (!node) return;
+  void callVisitor(std::shared_ptr<T>& node, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+    if (!node || node->isAnyOf(ignoreSubtree)) return;
 
-    node->visit(visitor);
+    node->visit(visitor, ignoreSubtree);
 
     auto res = visitor(cast<Node>(node));
 
@@ -408,7 +415,7 @@ public:
   static std::shared_ptr<Empty> create();
 
   std::shared_ptr<Node> clone() override;
-  void visit(Visitor visitor) override;
+  void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 };
 
