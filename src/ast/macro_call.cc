@@ -24,7 +24,11 @@ std::shared_ptr<Node> MacroCall::clone() {
 }
 
 void MacroCall::visit(Visitor visitor) {
-  // TODO: Decide if needs to be visited
+  callVisitor(name, visitor);
+
+  for (auto& arg : args) {
+    callVisitor(arg, visitor);
+  }
 }
 
 std::string MacroCall::toString(Node * grandparent, Node * parent, int indent, bool newline) {

@@ -41,7 +41,13 @@ std::shared_ptr<Node> Macro::clone() {
 }
 
 void Macro::visit(Visitor visitor) {
-  // TODO: Decide if needs to be visited
+  callVisitor(name, visitor);
+
+  for (auto& arg : args) {
+    callVisitor(arg, visitor);
+  }
+
+  callVisitor(body, visitor);
 }
 
 std::string Macro::toString(Node * grandparent, Node * parent, int indent, bool newline) {
