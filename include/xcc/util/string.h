@@ -5,6 +5,12 @@
 #include <cstdint>
 
 namespace xcc::util {
+
+struct BaseDetermineResult {
+  int         base;
+  std::string value;
+};
+
 /**
  * Splits string into a vector of parts using delimiter
  *
@@ -71,5 +77,10 @@ constexpr uint64_t strhash(const char * s) {
  * @return stringified number with ordinal suffix
  */
 std::string toStringWithOrdinalSuffix(int num);
+
+/**
+ * Determine base of number literal, returning base & value without prefix
+ */
+BaseDetermineResult determineBase(const std::string& value);
 
 }

@@ -77,3 +77,25 @@ std::string xcc::util::toStringWithOrdinalSuffix(int num) {
       return std::format("{}th", num);
   }
 }
+
+xcc::util::BaseDetermineResult xcc::util::determineBase(const std::string& value) {
+  BaseDetermineResult res = {.base = 10, .value = value};
+
+  int prefix_len = 2;
+
+  if (value.size() > 2 && value[0] == '0') {
+    if (value[1] == 'x') {
+      res.base = 16;
+    } else if (value[1] == 'b') {
+      res.base = 2;
+    } else if (value[1] == 'o') {
+      res.base = 8;
+    } else {
+      res.base = 8;
+      prefix_len = 1;
+    }
+    res.value = value.substr(prefix_len);
+  }
+
+  return res;
+}

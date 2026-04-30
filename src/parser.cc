@@ -702,24 +702,9 @@ std::shared_ptr<ast::Node> Parser::parseNumber() {
 
   std::string value = previous().value;
 
-  int base       = 10;
-  int prefix_len = 2;
+  auto res = util::determineBase(value);
 
-  if (value.size() > 2 && value[0] == '0') {
-    if (value[1] == 'x') {
-      base = 16;
-    } else if (value[1] == 'b') {
-      base = 2;
-    } else if (value[1] == 'o') {
-      base = 8;
-    } else {
-      base = 8;
-      prefix_len = 1;
-    }
-    value = value.substr(prefix_len);
-  }
-
-  return ast::Number::createInteger(std::stol(value, nullptr, base));
+  return ast::Number::createInteger(std::stol(res.value, nullptr, res.base));
 }
 
 std::shared_ptr<ast::Node> Parser::parseRvalue() {
