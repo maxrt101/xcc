@@ -112,7 +112,7 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
         elements.push_back(member.second->getLLVMType(ctx));
       }
 
-      return llvm::StructType::get(*ctx.llvm.ctx, elements, false);
+      return llvm::StructType::get(*ctx.llvm.ctx, elements, _struct.packed);
     }
 
     default:
@@ -174,7 +174,13 @@ std::string Type::toString() const {
       return result + "): " + fn.returnType->toString();
     }
     case TypeTag::STRUCT: {
-      std::string result = "struct {";
+      std::string result;
+
+      if (_struct.packed) {
+        result += "[packed] ";
+      }
+
+      result += "struct {";
       for (size_t i = 0; i < _struct.members.size(); ++i) {
         result += _struct.members[i].first;
         result += ": ";
@@ -519,10 +525,11 @@ std::shared_ptr<Type> Type::createFunction(
   return type;
 }
 
-std::shared_ptr<Type> Type::createStruct(std::string name, StructMembers members) {
+std::shared_ptr<Type> Type::createStruct(std::string name, StructMembers members, bool packed) {
   auto type = create(TypeTag::STRUCT);
   type->_struct.name    = std::move(name);
   type->_struct.members = std::move(members);
+  type->_struct.packed  = packed;
   return type;
 }
 

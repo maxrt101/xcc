@@ -70,6 +70,7 @@ private:
   struct {
     std::string   name;
     StructMembers members;
+    bool          packed;
   } _struct;
 
   /** Global static storage for all user-defined types */
@@ -206,7 +207,7 @@ public:
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
   static std::shared_ptr<Type> createFunction(
     std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);
-  static std::shared_ptr<Type> createStruct(std::string name, StructMembers members);
+  static std::shared_ptr<Type> createStruct(std::string name, StructMembers members, bool packed = false);
 
   static std::shared_ptr<Type> inferFromNode(codegen::ModuleContext& ctx, std::shared_ptr<ast::Node> node);
 

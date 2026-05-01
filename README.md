@@ -93,7 +93,7 @@ fn main() -> i32 {
  - [ ] Compound struct initialization  
  - [ ] Destructors (or something like `defer`)  
  - [ ] Lambdas (closures)
- - [ ] The rest of gcc/clang attributes (alias & section are done)  
+ - [ ] The rest of gcc/clang attributes (alias, section & packed are done)  
  - [ ] Full variadic support  
  - [ ] Stable ABI/FFI  
  - [ ] String interpolation  
