@@ -83,7 +83,7 @@ fn main() -> i32 {
  - [X] Environment variable resolution at compile-time
  - [X] Function pointers (`fn() -> void`)
  - [X] Target/Machine selection via command line (which enables cross-compiling)  
- - [ ] Macros  
+ - [X] Macros  
  - [ ] Procedural macros  
  - [ ] Port of libc (stdc)  
  - [ ] Standard library  
