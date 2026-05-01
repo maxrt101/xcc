@@ -457,5 +457,14 @@
       "stdout": ["first=true\n", "second=false\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 48,
+    "name": "repeat! macro",
+    "file": "48.xc",
+    "expect": {
+      "stdout": ["0\n1\n2\n3\n4\n"],
+      "retcode": 0
+    }
   }
 ]
