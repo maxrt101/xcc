@@ -43,4 +43,18 @@ bool isOrIsLastInBlock(std::shared_ptr<Node> node, NodeType type);
  */
 std::shared_ptr<Node> getOrGetLastInBlock(std::shared_ptr<Node> node, NodeType type);
 
+namespace subtree {
+
+/**
+ * Recursively replace identifier with node
+ */
+void replaceIdentifierWithNode(const std::shared_ptr<Node>& node, const std::string& oldValue, std::shared_ptr<Node> newNode);
+
+/**
+ * Recursively replace value of identifiers
+ */
+void replaceIdentifier(const std::shared_ptr<Node>& node, const std::string& oldValue, const std::string& newValue);
+
+}
+
 }
