@@ -50,7 +50,7 @@
           && isOrIsLastInBlock(__call->args[1], AST_EXPR_STRING)) {                                                   \
     __LOGIC_BINARY_OP_STR(__name, __ctx, __call, __op);                                                               \
   } else {                                                                                                            \
-    throw CodegenException(__name " expects either 2 strings or 2 numbers");                                         \
+    throw CodegenException(__name " expects either 2 strings or 2 numbers");                                          \
   }
 
 using namespace xcc;
@@ -225,8 +225,8 @@ static std::vector builtin_macros = {
   createNativeMacro("cond",    {"cond", "then", "else"}, xcc_macro_cond),
   createNativeMacro("repeat",  {"n", "var", "expr"},     xcc_macro_repeat),
 
-  createNativeMacro("inc", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP("inc!",  ctx, call, ++); }),
-  createNativeMacro("dec", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP("dec!",  ctx, call, --); }),
+  createNativeMacro("inc", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "inc!", ctx, call, ++); }),
+  createNativeMacro("dec", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "dec!", ctx, call, --); }),
   createNativeMacro("add", {"a", "b"}, [](auto& ctx, auto& call) { __ARITHMETIC_BINARY_OP("add!", ctx, call, +);  }),
   createNativeMacro("sub", {"a", "b"}, [](auto& ctx, auto& call) { __ARITHMETIC_BINARY_OP("sub!", ctx, call, -);  }),
   createNativeMacro("mul", {"a", "b"}, [](auto& ctx, auto& call) { __ARITHMETIC_BINARY_OP("mul!", ctx, call, *);  }),
