@@ -14,6 +14,7 @@ static auto logger = xcc::util::log::Logger("XCC");
  * @param block AST Block
  */
 static void processAttributes(const std::shared_ptr<ast::Block>& block) {
+  // TODO: Use visitor
   for (auto& node : block->body) {
     if (!node->attributes.empty()) {
       for (auto& attr : node->attributes) {
@@ -143,18 +144,23 @@ static void processMacros(
         return macro->fn(ctx, call);
       }
 
-      auto body = macro->body->clone();
+      auto body = ast::Node::cast<ast::Block>(macro->body->clone());
 
       processMacroCall(macro, call, body);
 
       logger.info("Macro call: '{}':", call->toString(nullptr, nullptr, 0, false));
       logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
 
+      processMacros(globalContext, body);
+
+      logger.info("After macro expansion:");
+      logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
+
       return body;
     }
 
     return nullptr;
-  }, {});
+  }, {ast::AST_MACRO});
 }
 
 /**
