@@ -195,6 +195,25 @@ static std::shared_ptr<Node> xcc_macro_cond(Macro::NativeContext& ctx, std::shar
   return (cond->value.integer ? call->args[1] : call->args[2])->clone();
 }
 
+static std::shared_ptr<Node> xcc_macro_repeat(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+  assertThrow(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER),     CodegenException("repeat! expects a number as first argument"));
+  assertThrow(isOrIsLastInBlock(call->args[1], AST_EXPR_IDENTIFIER), CodegenException("repeat! expects a variable name as second argument"));
+
+  auto n = getOrGetLastInBlock(call->args[0], AST_EXPR_NUMBER)->as<Number>();
+  assertThrow(n->tag == Number::INTEGER, CodegenException("Expected integer as first argument to repeat!"));
+
+  auto var = getOrGetLastInBlock(call->args[1], AST_EXPR_IDENTIFIER)->as<Identifier>()->name();
+
+  auto block = Block::create({});
+
+  for (size_t i = 0; i < n->value.integer; ++i) {
+    block->body.push_back(call->args[2]->clone());
+    subtree::replaceIdentifierWithNode(block->body.back(), var, Number::createInteger(i));
+  }
+
+  return block;
+}
+
 static std::vector builtin_macros = {
   createNativeMacro("cat",     {"a", "b"},               xcc_macro_cat),
   createNativeMacro("sizeof",  {"expr"},                 xcc_macro_sizeof),
@@ -204,6 +223,7 @@ static std::vector builtin_macros = {
   createNativeMacro("strf",    {"expr"},                 xcc_macro_strf),
   createNativeMacro("int",     {"expr"},                 xcc_macro_int),
   createNativeMacro("cond",    {"cond", "then", "else"}, xcc_macro_cond),
+  createNativeMacro("repeat",  {"n", "var", "expr"},     xcc_macro_repeat),
 
   createNativeMacro("inc", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP("inc!",  ctx, call, ++); }),
   createNativeMacro("dec", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP("dec!",  ctx, call, --); }),
