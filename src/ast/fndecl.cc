@@ -82,9 +82,12 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
   if (hasAttribute("alias")) {
     auto attr = getAttribute("alias");
 
-    attr.validateArgsStrict({AST_EXPR_IDENTIFIER});
+    attr.validateArgs({{AST_EXPR_IDENTIFIER, AST_EXPR_STRING}});
 
-    alias_to = attr.args[0]->as<Identifier>()->name();
+    alias_to = attr.args[0]->is(AST_EXPR_IDENTIFIER)
+      ? attr.args[0]->as<Identifier>()->name()
+      : attr.args[0]->as<String>()->value;
+
     symbol_name = alias_to;
   }
 

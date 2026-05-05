@@ -46,6 +46,20 @@ static const std::unordered_map<NodeType, NodeString> s_type_map {
 
 Node::Payload::Payload(NodeType type) : type(type) {}
 
+static std::string formArgTypeList(const std::vector<NodeType>& arg_types) {
+  std::string res;
+
+  for (size_t i = 0; i < arg_types.size(); i++) {
+    res += Node::typeToHumanReadableString(arg_types[i]);
+
+    if (i + 1 < arg_types.size()) {
+      res += ", ";
+    }
+  }
+
+  return res;
+}
+
 void Node::Attribute::validateArgsStrict(const std::vector<NodeType>& arg_types) {
   assertRaise(args.size() == arg_types.size(),
     Error(ERROR_ATTR_ARG_COUNT_MISMATCH, span, "Attribute '{}' expected {} args, got {}", name, args.size(), arg_types.size()));
@@ -54,6 +68,25 @@ void Node::Attribute::validateArgsStrict(const std::vector<NodeType>& arg_types)
     assertRaise(args[i]->is(arg_types[i]),
       Error(ERROR_ATTR_ARG_TYPE_MISMATCH, span, "Attribute '{}' expected {} as {} argument, got {}",
         name, typeToHumanReadableString(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToHumanReadableString(args[i]->type)));
+  }
+}
+
+void Node::Attribute::validateArgs(const std::vector<std::vector<NodeType>>& arg_types) {
+  assertRaise(args.size() == arg_types.size(),
+    Error(ERROR_ATTR_ARG_COUNT_MISMATCH, span, "Attribute '{}' expected {} args, got {}", name, args.size(), arg_types.size()));
+
+  for (size_t i = 0; i < arg_types.size(); ++i) {
+    bool has = false;
+
+    for (size_t j = 0; j < arg_types[i].size(); ++j) {
+      if (args[i]->is(arg_types[i][j])) {
+        has = true;
+      }
+    }
+
+    assertRaise(has,
+      Error(ERROR_ATTR_ARG_TYPE_MISMATCH, span, "Attribute '{}' expected any of {} as {} argument, got {}",
+        name, formArgTypeList(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToHumanReadableString(args[i]->type)));
   }
 }
 
