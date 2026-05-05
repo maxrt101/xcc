@@ -141,20 +141,38 @@ static void processMacros(
       assertRaise(macro->args.size() == call->args.size(), Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->span, "'{}'", name));
 
       if (macro->native) {
-        return macro->fn(ctx, call);
+        auto res = macro->fn(ctx, call);
+
+        res->addAttribute({
+          "__xcc_macro_expanded_from",
+          {ast::Identifier::create(macro->span, name)},
+          call->span
+        });
+
+        return res;
       }
 
       auto body = ast::Node::cast<ast::Block>(macro->body->clone());
 
-      processMacroCall(macro, call, body);
+      try {
+        processMacroCall(macro, call, body);
 
-      logger.info("Macro call: '{}':", call->toString(nullptr, nullptr, 0, false));
-      logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
+        logger.info("Macro call: '{}':", call->toString(nullptr, nullptr, 0, false));
+        logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
 
-      processMacros(globalContext, body);
+        processMacros(globalContext, body);
 
-      logger.info("After macro expansion:");
-      logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
+        logger.info("After macro expansion:");
+        logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
+      } catch (CompilationException& ex) {
+        ex.error.note(macro->span, "During expansion of macro {}", name).raise();
+      }
+
+      body->addAttribute({
+        "__xcc_macro_expanded_from",
+        {ast::Identifier::create(macro->span, name)},
+        call->span
+      });
 
       return body;
     }
