@@ -9,7 +9,7 @@ namespace xcc
 {
 using FileId = size_t;
 
-constexpr FileId BuildInFileId = ULONG_MAX;
+constexpr FileId BuiltInFileId = ULONG_MAX;
 
 class File {
 public:
