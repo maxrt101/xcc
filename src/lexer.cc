@@ -62,6 +62,7 @@ static const PrefixTree<TokenType> s_token_patterns(TOKEN_EOF, {
     {"&&",      TOKEN_AND},
     {"||",      TOKEN_OR},
     {"!",       TOKEN_NOT},
+    {"~",       TOKEN_TILDA},
 });
 
 static const std::unordered_map<TokenType, std::string> s_token_type_name_map {
@@ -123,6 +124,7 @@ static const std::unordered_map<TokenType, std::string> s_token_type_name_map {
     {TOKEN_AND,                 "TOKEN_AND"},
     {TOKEN_OR,                  "TOKEN_OR"},
     {TOKEN_NOT,                 "TOKEN_NOT"},
+    {TOKEN_TILDA,               "TOKEN_TILDA"},
 };
 
 static const std::unordered_map<TokenType, std::string> s_token_type_value_map {
@@ -184,6 +186,7 @@ static const std::unordered_map<TokenType, std::string> s_token_type_value_map {
     {TOKEN_AND,                 "&&"},
     {TOKEN_OR,                  "||"},
     {TOKEN_NOT,                 "!"},
+    {TOKEN_TILDA,               "~"},
 };
 
 static bool isBase16Char(char c) {
@@ -383,7 +386,7 @@ std::vector<Token> Lexer::tokenize() {
 
     auto [token_type, token_size] = s_token_patterns.find(text, current_index);
 
-    bool identifier = isalnumstr(s_token_type_value_map.at(token_type)) && isIdentifierChar(text[current_index + token_size]);
+    bool identifier = token_type != TOKEN_EOF && isalnumstr(s_token_type_value_map.at(token_type)) && isIdentifierChar(text[current_index + token_size]);
 
     if (token_type != TOKEN_EOF && !identifier) {
       result.push_back({token_type, "", {fileId, current_index, token_size}});
@@ -400,6 +403,8 @@ std::vector<Token> Lexer::tokenize() {
     } else if (isdigit(current())) {
       // TODO: add hex, floating point, octal, bin, etc
       tokenizeNumber();
+    } else {
+      Error(ERROR_UNEXPECTED_CHAR, {fileId, current_index, 1}, "'{}'", current()).raise();
     }
   }
 

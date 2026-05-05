@@ -84,6 +84,7 @@ enum TokenType {
   TOKEN_AND,
   TOKEN_OR,
   TOKEN_NOT,
+  TOKEN_TILDA,
 
   TOKEN_COUNT,
 };
