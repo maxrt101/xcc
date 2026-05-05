@@ -102,6 +102,18 @@ static void processMacroCall(
 }
 
 /**
+ * Recursively mark each generated node with provided attribute and a new span
+ */
+static void markExpandedMacro(std::shared_ptr<ast::Node> body, ast::Node::Attribute attr, SourceSpan span) {
+  body->visit([&attr, &span](auto node) -> std::shared_ptr<ast::Node> {
+    node->addAttribute(attr);
+    node->span = span;
+
+    return nullptr;
+  }, {});
+}
+
+/**
  * Find and expand all ast::MacroCall nodes
  *
  * @param globalContext Global Context
@@ -143,11 +155,12 @@ static void processMacros(
       if (macro->native) {
         auto res = macro->fn(ctx, call);
 
-        res->addAttribute({
+        // Attach expansion markers & set span to call site
+        markExpandedMacro(res, {
           "__xcc_macro_expanded_from",
           {ast::Identifier::create(macro->span, name)},
           call->span
-        });
+        }, call->span);
 
         return res;
       }
@@ -156,23 +169,17 @@ static void processMacros(
 
       try {
         processMacroCall(macro, call, body);
-
-        logger.info("Macro call: '{}':", call->toString(nullptr, nullptr, 0, false));
-        logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
-
         processMacros(globalContext, body);
-
-        logger.info("After macro expansion:");
-        logger.print("{}\n", body->toString(nullptr, nullptr, 0, true));
       } catch (CompilationException& ex) {
         ex.error.note(macro->span, "During expansion of macro {}", name).raise();
       }
 
-      body->addAttribute({
+      // Attach expansion markers & set span to call site
+      markExpandedMacro(body, {
         "__xcc_macro_expanded_from",
         {ast::Identifier::create(macro->span, name)},
         call->span
-      });
+      }, call->span);
 
       return body;
     }
@@ -288,7 +295,7 @@ CompilationResult xcc::compile(
   auto lexer  = Lexer(file);
   auto tokens = lexer.tokenize();
 
-// #if USE_PRINT_TOKENS
+#if USE_PRINT_TOKENS
   auto f = FileManager::get(file);
   logger.info("TOKENS:");
   for (auto& token : tokens) {
@@ -301,7 +308,7 @@ CompilationResult xcc::compile(
       token.span.fileId, token.span.offset, token.span.length,
       f->contents.substr(token.span.offset, token.span.length));
   }
-// #endif
+#endif
 
   auto parser = Parser(file, tokens);
 
@@ -321,7 +328,7 @@ CompilationResult xcc::compile(
   registerMacros(globalContext, ast);
   processMacros(globalContext, ast);
 
-#if USE_PRINT_AST
+#if USE_PRINT_EXPANDED_AST
   logger.info("AST (After Attribute & Macro processing):");
   logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
 #endif
