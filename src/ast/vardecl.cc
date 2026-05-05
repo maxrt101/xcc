@@ -58,7 +58,11 @@ std::string VarDecl::toString(Node * grandparent, Node * parent, int indent, boo
 
 llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
-  assertRaise(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span, ""));
+  assertRaiseFromNode(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span, ""), this);
+
+  if (type) {
+    assertRaiseFromNode(isOrIsLastInBlock(type, AST_EXPR_TYPE), Error(ERROR_NOT_A_TYPE, type->span, "got a {}", typeToHumanReadableString(getOrGetLastInBlock(type)->type)), this);
+  }
 
   auto meta_type = type ? type->generateType(ctx, {}) : meta::Type::inferFromNode(ctx, value);
 
@@ -92,7 +96,7 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
       ? value->generateValue(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
       : meta_type->getDefault(ctx);
 
-  init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx));
+  init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx), value->span);
 
   auto tv = meta::TypedValue::create(ctx, fn, meta_type, name->name());
 

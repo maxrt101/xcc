@@ -29,7 +29,7 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     val = value->generateValue(ctx, {});
 
     if (auto fn = ctx.globalContext.getCurrentFunction()) {
-      val = codegen::castIfNotSame(ctx, val, fn->getLLVMReturnType(ctx));
+      val = codegen::castIfNotSame(ctx, val, fn->getLLVMReturnType(ctx), value->span);
     }
 
     ctx.ir_builder->CreateRet(val);

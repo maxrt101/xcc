@@ -67,7 +67,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     if (meta_fn->returnType->isVoid()) {
       ctx.ir_builder->CreateRetVoid();
     } else {
-      last_val = codegen::castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx));
+      last_val = codegen::castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx), body->body.back()->span);
       ctx.ir_builder->CreateRet(last_val);
     }
   }

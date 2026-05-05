@@ -76,7 +76,8 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
       lhs->generateValue(ctx, {}),
       Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL")
     ),
-    common_type->getLLVMType(ctx)
+    common_type->getLLVMType(ctx),
+    lhs->span
   );
 
   auto rhs_val = castIfNotSame(
@@ -85,7 +86,8 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
       rhs->generateValue(ctx, {}),
       Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Value is NULL")
     ),
-    common_type->getLLVMType(ctx)
+    common_type->getLLVMType(ctx),
+    rhs->span
   );
 
   if (auto binop = findBinaryOperation(s_binops, binop::Meta::fromType(operation.type, common_type))) {

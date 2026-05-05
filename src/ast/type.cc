@@ -56,7 +56,7 @@ std::string Type::toString(Node * grandparent, Node * parent, int indent, bool n
 
     res += ") -> " + returnType->toString(parent, this, indent, false);
   } else {
-    res = name->toString(parent, this, indent, false);
+    res = name->toString(parent, this, indent, false) + (pointer ? "*" : "");
   }
 
   return res;
@@ -75,7 +75,7 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
 
   /* Basic type - identifier + optional pointer */
   if (name->is(AST_EXPR_IDENTIFIER)) {
-    auto baseType = meta::Type::fromTypeName(ctx.globalContext, name->as<Identifier>()->name());
+    auto baseType = meta::Type::fromTypeName(ctx.globalContext, name->as<Identifier>()->name(), name->span);
     return pointer ? meta::Type::createPointer(baseType) : baseType;
   }
 
@@ -85,5 +85,5 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
     return pointer ? meta::Type::createPointer(baseType) : baseType;
   }
 
-  throw Error(ERROR_INTERNAL_UNEXPECTED_NODE, name->span, "Unexpected type node '" + Node::typeToString(name->type) + "' (" + std::to_string(name->type) +")");
+  Error(ERROR_INTERNAL_UNEXPECTED_NODE, name->span, "Unexpected {} at type", typeToHumanReadableString(name->type)).raise();
 }

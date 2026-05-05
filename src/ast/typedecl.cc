@@ -29,8 +29,8 @@ std::string TypeDecl::toString(Node * grandparent, Node * parent, int indent, bo
 }
 
 std::shared_ptr<meta::Type> TypeDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  assertRaise(name->is(AST_EXPR_IDENTIFIER), Error(ERROR_TYPE_ALIAS_NAME_NOT_IDENTIFIER, name->span, ""));
-  assertRaise(value->is(AST_EXPR_TYPE), Error(ERROR_TYPE_ALIAS_VALUE_NOT_TYPE, value->span, ""));
+  assertRaiseFromNode(name->is(AST_EXPR_IDENTIFIER), Error(ERROR_TYPE_ALIAS_NAME_NOT_IDENTIFIER, name->span, ""), this);
+  assertRaiseFromNode(value->is(AST_EXPR_TYPE), Error(ERROR_TYPE_ALIAS_VALUE_NOT_TYPE, value->span, ""), this);
 
   auto alias = name->as<Identifier>()->name();
 
@@ -38,5 +38,5 @@ std::shared_ptr<meta::Type> TypeDecl::generateType(codegen::ModuleContext& ctx, 
     meta::Type::registerCustomType(alias, value->as<Type>()->generateType(ctx, payload));
   }
 
-  return meta::Type::fromTypeName(ctx.globalContext, alias);
+  return meta::Type::fromTypeName(ctx.globalContext, alias, name->span);
 }

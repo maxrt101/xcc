@@ -37,7 +37,7 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 
   if (kind == MEMBER_ACCESS_POINTER) {
-    assertRaise(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, "'{}'", type->toString()));
+    assertRaiseFromNode(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, "'{}'", type->toString()), this);
     type = type->getPointedType();
   }
 
@@ -45,7 +45,7 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
     Error(ERROR_INVALID_TYPE, span, "Type '{}' is not a struct", type->toString()).raiseFromNode(this);
   }
 
-  assertRaise(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()));
+  assertRaiseFromNode(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()), this);
 
   llvm::Value * value_to_load;
 
@@ -62,11 +62,11 @@ std::shared_ptr<xcc::meta::Type> MemberAccess::generateTypeForValueWithoutLoad(c
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 
   if (kind == MEMBER_ACCESS_POINTER) {
-    assertRaise(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, "'{}'", type->toString()));
+    assertRaiseFromNode(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, "'{}'", type->toString()), this);
     type = type->getPointedType();
   }
 
-  assertRaise(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()));
+  assertRaiseFromNode(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()), this);
 
   return type->getMemberType(rhs->name());
 }

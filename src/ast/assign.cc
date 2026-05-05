@@ -55,7 +55,8 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   value = codegen::castIfNotSame(
     ctx,
     throwIfNull(value, std::runtime_error("assignment value generated NULL")),
-    lhs->generateTypeForValueWithoutLoad(ctx, {})->getLLVMType(ctx)
+    lhs->generateTypeForValueWithoutLoad(ctx, {})->getLLVMType(ctx),
+    span
   );
 
   return ctx.ir_builder->CreateStore(

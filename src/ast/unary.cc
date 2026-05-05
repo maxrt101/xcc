@@ -39,7 +39,7 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
 
   switch (operation.type) {
     case TOKEN_AMP: {
-      assertRaise(rhs->is(ast::AST_EXPR_IDENTIFIER), Error(ERROR_INVALID_UNARY_AMP_RHS, rhs->span, ""));
+      assertRaiseFromNode(rhs->is(ast::AST_EXPR_IDENTIFIER), Error(ERROR_INVALID_UNARY_AMP_RHS, rhs->span, ""), this);
 
       auto identifier = rhs->as<ast::Identifier>();
 
@@ -51,6 +51,19 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
         Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").raiseFromNode(this);
       }
       return raiseIfNull(rhs->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Value is NULL"));
+    }
+
+    case TOKEN_NOT: {
+      // TODO: Convert to i1
+      return ctx.ir_builder->CreateNot(rhs->generateValue(ctx, payload), "not");
+    }
+
+    case TOKEN_MINUS: {
+      return ctx.ir_builder->CreateNeg(rhs->generateValue(ctx, payload), "neg");
+    }
+
+    case TOKEN_TILDA: {
+      return ctx.ir_builder->CreateNot(rhs->generateValue(ctx, payload), "not");
     }
 
     default:

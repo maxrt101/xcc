@@ -29,7 +29,7 @@ std::string Module::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 std::string Module::getName() const {
-  assertRaise(name->is(AST_EXPR_IDENTIFIER), Error(ERROR_MOD_NAME_NOT_IDENTIFIER, name->span, "Module name must be an identifier"));
+  assertRaiseFromNode(name->is(AST_EXPR_IDENTIFIER), Error(ERROR_MOD_NAME_NOT_IDENTIFIER, name->span, "Module name must be an identifier"), this);
 
   return name->as<Identifier>()->name();
 }

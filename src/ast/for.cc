@@ -67,7 +67,7 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
   auto i64_type = meta::Type::createI64()->getLLVMType(ctx);
 
   if (!cond_val->getType()->isIntegerTy(64)) {
-    cond_val = codegen::cast(ctx, cond_val, i64_type);
+    cond_val = codegen::cast(ctx, cond_val, i64_type, cond->span);
   }
 
   cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i64_type, 0), "for_cond");

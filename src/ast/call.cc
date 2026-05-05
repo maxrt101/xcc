@@ -75,7 +75,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
     }
 
     if (i < signature->getNumParams()) {
-      val = codegen::castIfNotSame(ctx, val, signature->getParamType(llvmParamIdx));
+      val = codegen::castIfNotSame(ctx, val, signature->getParamType(llvmParamIdx), args[i]->span);
     }
 
     arg_vals.push_back(val);
@@ -111,7 +111,7 @@ Call::CalleeInfo Call::getCalleeInfo(codegen::ModuleContext& ctx, PayloadList pa
   }
 
   if (!info.metaType || !info.metaType->isFunction()) {
-    Error(ERROR_EXPR_NOT_CALLABLE, callee->span, "Expression of type '{}' is not callable", typeToString(callee->type)).raiseFromNode(this);
+    Error(ERROR_EXPR_NOT_CALLABLE, callee->span, "{} of type is not callable", typeToHumanReadableString(callee->type)).raiseFromNode(this);
   }
 
   return info;
