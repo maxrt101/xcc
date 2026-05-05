@@ -18,12 +18,12 @@ public:
   bool                               isVariadic;
 
 public:
-  explicit Type(std::shared_ptr<Node> name, bool pointer);
-  Type(std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic);
+  explicit Type(SourceSpan span, std::shared_ptr<Node> name, bool pointer);
+  Type(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic);
   ~Type() override = default;
 
-  static std::shared_ptr<Type> create(std::shared_ptr<Node> name, bool pointer = false);
-  static std::shared_ptr<Type> createFunction(std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic = false);
+  static std::shared_ptr<Type> create(SourceSpan span, std::shared_ptr<Node> name, bool pointer = false);
+  static std::shared_ptr<Type> createFunction(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic = false);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

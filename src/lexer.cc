@@ -273,7 +273,7 @@ void Lexer::tokenizeString() {
   size_t start = consume();
   while (!check('"')) {
     if (isAtEnd()) {
-      throw LexerException(line, "Unexpected EOF");
+      Error(ERROR_UNEXPECTED_EOF, {fileId, start, current_index - start}, "").throwException();
     }
 
     if (check('\n')) {
@@ -283,7 +283,13 @@ void Lexer::tokenizeString() {
     consume();
   }
 
-  result.push_back({TOKEN_STRING, util::strescseq(text.substr(start, current_index - start), true)});
+  auto size = current_index - start;
+
+  result.push_back({
+    TOKEN_STRING,
+    util::strescseq(text.substr(start, size), true),
+    {fileId, current_index, size}
+  });
 
   // Skip closing quote
   consume();
@@ -293,10 +299,17 @@ void Lexer::tokenizeChar() {
   // Skip opening quote
   consume();
 
-  result.push_back({TOKEN_CHAR, util::strescseq(std::string() + current(), true)});
+  result.push_back({
+    TOKEN_CHAR,
+    util::strescseq(std::string() + current(), true),
+    {fileId, current_index-1, 3}
+  });
+
   consume();
 
-  assertThrow(check('\''), LexerException("Expected closing quote after char literal"));
+  if (!check('\'')) {
+    Error(ERROR_MISSING_CLOSING_QUOTE, {fileId, current_index, 1}, "Expected closing quote after char literal").throwException();
+  }
 
   // Skip closing quote
   consume();
@@ -307,13 +320,19 @@ void Lexer::tokenizeIdentifier() {
 
   while (isIdentifierChar(current())) {
     if (isAtEnd()) {
-      throw LexerException(line, "Unexpected EOF");
+      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}, "").throwException();
     }
 
     consume();
   }
 
-  result.push_back({TOKEN_IDENTIFIER, text.substr(begin, current_index - begin), line});
+  auto size = current_index - begin;
+
+  result.push_back({
+    TOKEN_IDENTIFIER,
+    text.substr(begin, size),
+    {fileId, begin, size}
+  });
 }
 
 void Lexer::tokenizeNumber() {
@@ -337,16 +356,22 @@ void Lexer::tokenizeNumber() {
          || current() == '.'
          || allow_base_16_chars && isBase16Char(current())) {
     if (isAtEnd()) {
-      throw LexerException(line, "Unexpected EOF");
+      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}, "").throwException();
     }
 
     consume();
   }
 
-  result.push_back({TOKEN_NUMBER, text.substr(begin, current_index - begin), line});
+  auto size = current_index - begin;
+
+  result.push_back({
+    TOKEN_NUMBER,
+    text.substr(begin, size),
+    {fileId, begin, size}
+  });
 }
 
-Lexer::Lexer(const std::string &text) : text(text) {}
+Lexer::Lexer(FileId fileId) : fileId(fileId), text(FileManager::get(fileId)->contents) {}
 
 std::vector<Token> Lexer::tokenize() {
   while (!isAtEnd()) {
@@ -361,8 +386,8 @@ std::vector<Token> Lexer::tokenize() {
     bool identifier = isalnumstr(s_token_type_value_map.at(token_type)) && isIdentifierChar(text[current_index + token_size]);
 
     if (token_type != TOKEN_EOF && !identifier) {
+      result.push_back({token_type, "", {fileId, current_index, token_size}});
       current_index += token_size;
-      result.push_back({token_type, "", line});
       continue;
     }
 

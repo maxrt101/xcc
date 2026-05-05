@@ -6,28 +6,30 @@
 using namespace xcc::ast;
 
 VarDecl::VarDecl(
+  SourceSpan                  span,
   std::shared_ptr<Identifier> name,
-  std::shared_ptr<Node> type,
-  std::shared_ptr<Node> value,
-  bool global
-) : Node(AST_VAR_DECL),
+  std::shared_ptr<Node>       type,
+  std::shared_ptr<Node>       value,
+  bool                        global
+) : Node(AST_VAR_DECL, span),
     name(std::move(name)),
     type(std::move(type)),
     value(std::move(value)),
     global(global) {}
 
 std::shared_ptr<VarDecl> VarDecl::create(
-    std::shared_ptr<Identifier> name,
-    std::shared_ptr<Node> type,
-    std::shared_ptr<Node> value,
-    bool global
+  SourceSpan                  span,
+  std::shared_ptr<Identifier> name,
+  std::shared_ptr<Node>       type,
+  std::shared_ptr<Node>       value,
+  bool                        global
 ) {
-  return std::make_shared<VarDecl>(std::move(name), std::move(type), std::move(value), global);
+  return std::make_shared<VarDecl>(span, std::move(name), std::move(type), std::move(value), global);
 }
 
 std::shared_ptr<Node> VarDecl::clone() {
-  return withAttrs(create(cast<Identifier>(
-    name->clone()),
+  return withAttrs(create(span,
+    cast<Identifier>(name->clone()),
     type ? type->clone() : nullptr,
     value ? value->clone() : nullptr,
     global
@@ -56,7 +58,7 @@ std::string VarDecl::toString(Node * grandparent, Node * parent, int indent, boo
 
 llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
-  assertThrow(type || value, CodegenException("Value and type is missing from variable declaration"));
+  assertRaise(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span, ""));
 
   auto meta_type = type ? type->generateType(ctx, {}) : meta::Type::inferFromNode(ctx, value);
 

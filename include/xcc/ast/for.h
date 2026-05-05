@@ -8,15 +8,15 @@ namespace xcc::ast {
 class For : public Node {
 public:
   std::shared_ptr<VarDecl> init;
-  std::shared_ptr<Node> cond;
-  std::shared_ptr<Node> step;
-  std::shared_ptr<Node> body;
+  std::shared_ptr<Node>    cond;
+  std::shared_ptr<Node>    step;
+  std::shared_ptr<Node>    body;
 
 public:
-  For(std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
+  For(SourceSpan span, std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
   ~For() override = default;
 
-  static std::shared_ptr<For> create(std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
+  static std::shared_ptr<For> create(SourceSpan span, std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

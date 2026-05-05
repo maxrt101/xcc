@@ -78,7 +78,7 @@ std::unique_ptr<JIT> JIT::create() {
   auto epc = llvm::orc::SelfExecutorProcessControl::Create();
 
   if (!epc) {
-    throw CodegenException(epc.takeError());
+    checkLLVMError(epc.takeError());
   }
 
   auto session = std::make_unique<llvm::orc::ExecutionSession>(std::move(*epc));
@@ -88,7 +88,7 @@ std::unique_ptr<JIT> JIT::create() {
   auto data_layout = jtmb.getDefaultDataLayoutForTarget();
 
   if (!data_layout) {
-    throw CodegenException(data_layout.takeError());
+    checkLLVMError(data_layout.takeError());
   }
 
   return std::make_unique<JIT>(std::move(session), std::move(jtmb), std::move(*data_layout));

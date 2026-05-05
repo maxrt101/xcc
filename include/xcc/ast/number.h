@@ -27,11 +27,11 @@ public:
   } value;
 
 public:
-  Number();
+  Number(SourceSpan span);
   ~Number() override = default;
 
-  static std::shared_ptr<Number> createInteger(int64_t value);
-  static std::shared_ptr<Number> createFloating(double value);
+  static std::shared_ptr<Number> createInteger(SourceSpan span, int64_t value);
+  static std::shared_ptr<Number> createFloating(SourceSpan span, double value);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

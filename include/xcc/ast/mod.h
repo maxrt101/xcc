@@ -11,10 +11,10 @@ public:
   std::shared_ptr<Block> body;
 
 public:
-  explicit Module(std::shared_ptr<Node> name, std::shared_ptr<Block> body = nullptr);
+  explicit Module(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Block> body = nullptr);
   ~Module() override = default;
 
-  static std::shared_ptr<Module> create(std::shared_ptr<Node> name, std::shared_ptr<Block> body = nullptr);
+  static std::shared_ptr<Module> create(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Block> body = nullptr);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

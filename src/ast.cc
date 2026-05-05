@@ -45,7 +45,7 @@ void subtree::replaceIdentifierWithNode(const std::shared_ptr<Node>& node, const
 void subtree::replaceIdentifier(const std::shared_ptr<Node>& node, const std::string& oldValue, const std::string& newValue) {
   node->visit([&](auto node) -> std::shared_ptr<Node> {
     if (node->is(AST_EXPR_IDENTIFIER) && node->template as<Identifier>()->name() == oldValue) {
-      return Identifier::create(newValue);
+      return Identifier::create(node->span, newValue);
     }
 
     return nullptr;

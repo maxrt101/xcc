@@ -4,15 +4,15 @@
 
 using namespace xcc::ast;
 
-Unary::Unary(Token operation, std::shared_ptr<Node> rhs)
-    : Node(AST_EXPR_UNARY), operation(std::move(operation)), rhs(std::move(rhs)) {}
+Unary::Unary(SourceSpan span, Token operation, std::shared_ptr<Node> rhs)
+    : Node(AST_EXPR_UNARY, span), operation(std::move(operation)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<Unary> Unary::create(Token operation, std::shared_ptr<Node> rhs) {
-  return std::make_shared<Unary>(std::move(operation), std::move(rhs));
+std::shared_ptr<Unary> Unary::create(SourceSpan span, Token operation, std::shared_ptr<Node> rhs) {
+  return std::make_shared<Unary>(span, std::move(operation), std::move(rhs));
 }
 
 std::shared_ptr<Node> Unary::clone() {
-  return withAttrs(create(operation, rhs->clone()));
+  return withAttrs(create(span, operation, rhs->clone()));
 }
 
 void Unary::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -26,7 +26,7 @@ std::string Unary::toString(Node * grandparent, Node * parent, int indent, bool 
 llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   switch (operation.type) {
     case TOKEN_STAR: {
-      return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx, {})->getLLVMType(ctx), generateValueWithoutLoad(ctx, {}), "dereferenced");
+      return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx, payload)->getLLVMType(ctx), generateValueWithoutLoad(ctx, {}), "dereferenced");
     }
 
     default:
@@ -35,38 +35,44 @@ llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payl
 }
 
 llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto rhs_type = throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
+  auto rhs_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
 
   switch (operation.type) {
     case TOKEN_AMP: {
-      assertThrow(rhs->is(ast::AST_EXPR_IDENTIFIER), CodegenException("Invalid RHS node for unary operator '&'"));
+      assertRaise(rhs->is(ast::AST_EXPR_IDENTIFIER), Error(ERROR_INVALID_UNARY_AMP_RHS, rhs->span, ""));
 
       auto identifier = rhs->as<ast::Identifier>();
 
-      return identifier->generateValueWithoutLoad(ctx, {});
+      return identifier->generateValueWithoutLoad(ctx, payload);
     }
 
     case TOKEN_STAR: {
       if (!rhs_type->isPointer()) {
-        throw CodegenException(operation.line, "Value is not a pointer (unary '*' operator)");
+        Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").throwException();
       }
-      return throwIfNull(rhs->generateValue(ctx, {}), CodegenException("RHS Value is NULL"));
+      return raiseIfNull(rhs->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Value is NULL"));
     }
 
     default:
       break;
   }
 
-  throw CodegenException(operation.line, "Unsupported unary expression operator/type or can't generate without load (op='" + operation.value + "' " + Token::typeToString(operation.type) + " type=" + std::to_string((int)rhs_type->getTag()) + ")");
+  Error(ERROR_UNKNOWN_UNARY_OP_OR_TYPE, operation.span, "op='{}'({}) type={}", operation.value, Token::typeToString(operation.type), std::to_string((int)rhs_type->getTag())).throwException();
 }
 
 std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   /* If dereferencing - should return TypeForValueWithoutLoad */
   return operation.type == TOKEN_STAR
       ? generateTypeForValueWithoutLoad(ctx, payload)
-      : throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"));
+      : raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
 }
 
 std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  return throwIfNull(rhs->generateType(ctx, {})->getPointedType(), CodegenException("RHS Type is NULL"));
+  auto rhs_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
+
+  if (!rhs_type->isPointer()) {
+    Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").throwException();
+  }
+
+  return rhs_type->getPointedType();
 }

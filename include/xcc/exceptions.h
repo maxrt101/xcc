@@ -3,72 +3,17 @@
 #include <exception>
 #include <string>
 
-#include <llvm/Support/Error.h>
-#include <llvm/Support/raw_ostream.h>
+#include "xcc/error.h"
 
 namespace xcc {
 
-/**
- * User by Lexer to signal an error
- */
-class LexerException : public std::exception {
+class CompilationException : public std::exception {
+  Error       error;
   std::string msg;
 
 public:
-  explicit LexerException(const std::string& msg) : msg("LexerException: " + msg) {}
-
-  LexerException(size_t line, const std::string& msg) {
-    this->msg = "LexerException at line " + std::to_string(line) + ": " + msg;
-  }
-
-  [[nodiscard]] const char * what() const noexcept override {
-    return msg.c_str();
-  }
-};
-
-/**
- * User by Parser to signal an error
- */
-class ParserException : public std::exception {
-  std::string msg;
-
-public:
-  explicit ParserException(const std::string& msg) : msg("ParserException: " + msg) {}
-
-  ParserException(size_t line, const std::string& msg) {
-    this->msg = "ParserException at line " + std::to_string(line) + ": " + msg;
-  }
-
-  [[nodiscard]] const char * what() const noexcept override {
-    return msg.c_str();
-  }
-};
-
-/**
- * User by Node::generate* to signal an error
- */
-class CodegenException : public std::exception {
-  std::string msg;
-
-public:
-  explicit CodegenException(const std::string& msg) : msg("CodegenException: " + msg) {}
-
-  CodegenException(size_t line, const std::string& msg) {
-    this->msg = "CodegenException at line " + std::to_string(line) + ": " + msg;
-  }
-
-  CodegenException(llvm::Error&& err) {
-    std::string str;
-    llvm::raw_string_ostream output(str);
-    output << err;
-    this->msg = "LLVM Error:" + str;
-  }
-
-  static void throwIfError(llvm::Error&& err) {
-    if (bool(err)) {
-      throw CodegenException(std::move(err));
-    }
-  }
+  explicit CompilationException(const Error& err)
+    : error(err), msg(err.toString()) {}
 
   [[nodiscard]] const char * what() const noexcept override {
     return msg.c_str();

@@ -12,10 +12,10 @@ public:
   std::vector<std::string> scope;
 
 public:
-  explicit Identifier(std::string value, std::vector<std::string> scope = {});
+  explicit Identifier(SourceSpan span, std::string value, std::vector<std::string> scope = {});
   ~Identifier() override = default;
 
-  static std::shared_ptr<Identifier> create(const std::string& value, std::vector<std::string> scope = {});
+  static std::shared_ptr<Identifier> create(SourceSpan span, const std::string& value, std::vector<std::string> scope = {});
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

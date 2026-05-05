@@ -116,12 +116,12 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     }
 
     default:
-      throw CodegenException("Unknown type");
+      throw std::runtime_error("Unknown type");
   }
 }
 
 llvm::FunctionType * Type::getLLVMFunctionType(codegen::ModuleContext& ctx) const {
-  assertThrow(isFunction(), CodegenException("Type is not a function"));
+  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
 
   std::vector<llvm::Type*> args;
 
@@ -276,7 +276,7 @@ size_t Type::getMemberIndex(const std::string& name) const {
     }
   }
 
-  throw CodegenException("Struct '" + toString() + "' has no member '" + name + "'");
+  Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").throwException();
 }
 
 std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
@@ -288,7 +288,7 @@ std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
     }
   }
 
-  throw CodegenException("Struct '" + toString() + "' has no member '" + name + "'");
+  Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").throwException();
 }
 
 std::shared_ptr<Type> Type::getReturnType() const {
@@ -357,22 +357,22 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
   }
 }
 
-std::shared_ptr<xcc::ast::Node> Type::toAst() const {
+std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
   switch (tag) {
-    case TypeTag::VOID:  return ast::Type::create(ast::Identifier::create("void"));
-    case TypeTag::U8:    return ast::Type::create(ast::Identifier::create("u8"));
-    case TypeTag::U16:   return ast::Type::create(ast::Identifier::create("u16"));
-    case TypeTag::U32:   return ast::Type::create(ast::Identifier::create("u32"));
-    case TypeTag::U64:   return ast::Type::create(ast::Identifier::create("u64"));
-    case TypeTag::I8:    return ast::Type::create(ast::Identifier::create("i8"));
-    case TypeTag::I16:   return ast::Type::create(ast::Identifier::create("i16"));
-    case TypeTag::I32:   return ast::Type::create(ast::Identifier::create("i32"));
-    case TypeTag::I64:   return ast::Type::create(ast::Identifier::create("i64"));
-    case TypeTag::F32:   return ast::Type::create(ast::Identifier::create("f32"));
-    case TypeTag::F64:   return ast::Type::create(ast::Identifier::create("f64"));
-    case TypeTag::ISIZE: return ast::Type::create(ast::Identifier::create("isize"));
-    case TypeTag::USIZE: return ast::Type::create(ast::Identifier::create("usize"));
-    case TypeTag::PTR:   return ast::Type::create(ptr.pointedType->toAst(), true);
+    case TypeTag::VOID:  return ast::Type::create(span, ast::Identifier::create(span, "void"));
+    case TypeTag::U8:    return ast::Type::create(span, ast::Identifier::create(span, "u8"));
+    case TypeTag::U16:   return ast::Type::create(span, ast::Identifier::create(span, "u16"));
+    case TypeTag::U32:   return ast::Type::create(span, ast::Identifier::create(span, "u32"));
+    case TypeTag::U64:   return ast::Type::create(span, ast::Identifier::create(span, "u64"));
+    case TypeTag::I8:    return ast::Type::create(span, ast::Identifier::create(span, "i8"));
+    case TypeTag::I16:   return ast::Type::create(span, ast::Identifier::create(span, "i16"));
+    case TypeTag::I32:   return ast::Type::create(span, ast::Identifier::create(span, "i32"));
+    case TypeTag::I64:   return ast::Type::create(span, ast::Identifier::create(span, "i64"));
+    case TypeTag::F32:   return ast::Type::create(span, ast::Identifier::create(span, "f32"));
+    case TypeTag::F64:   return ast::Type::create(span, ast::Identifier::create(span, "f64"));
+    case TypeTag::ISIZE: return ast::Type::create(span, ast::Identifier::create(span, "isize"));
+    case TypeTag::USIZE: return ast::Type::create(span, ast::Identifier::create(span, "usize"));
+    case TypeTag::PTR:   return ast::Type::create(span, ptr.pointedType->toAst(), true);
     case TypeTag::FUNCTION: {
       std::vector<std::shared_ptr<ast::Node>> args;
 
@@ -380,11 +380,11 @@ std::shared_ptr<xcc::ast::Node> Type::toAst() const {
         args.push_back(arg->toAst());
       }
 
-      return ast::Type::createFunction(fn.returnType->toAst(), args, fn.isVariadic);
+      return ast::Type::createFunction(span, fn.returnType->toAst(), args, fn.isVariadic);
     }
 
     case TypeTag::STRUCT: {
-      return ast::Type::create(ast::Identifier::create(_struct.name), false);
+      return ast::Type::create(span, ast::Identifier::create(span, _struct.name), false);
     }
 
     default:
@@ -422,7 +422,7 @@ std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std:
         return customTypes[prefixed_name];
       }
 
-      throw CodegenException("Unknown type '" + name + "'");
+      Error(ERROR_UNKNOWN_TYPE, {}, "Unknown type '" + name + "'").throwException();
     }
   }
 }

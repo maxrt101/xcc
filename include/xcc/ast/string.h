@@ -11,10 +11,10 @@ public:
   std::string value;
 
 public:
-  explicit String(std::string value);
+  explicit String(SourceSpan span, std::string value);
   ~String() override = default;
 
-  static std::shared_ptr<String> create(std::string value);
+  static std::shared_ptr<String> create(SourceSpan span, std::string value);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

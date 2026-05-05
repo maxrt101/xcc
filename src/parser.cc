@@ -1,6 +1,7 @@
 #include "xcc/parser.h"
 #include "xcc/util/fs.h"
 #include "xcc/util/log.h"
+#include "xcc/util/filemng.h"
 #include "xcc/exceptions.h"
 
 using namespace xcc;
@@ -9,9 +10,11 @@ static auto logger = xcc::util::log::Logger("PARSER");
 static std::unordered_map<std::string, Parser::IncludedModule> module_cache;
 
 std::shared_ptr<ast::MemberAccess> Parser::MemberAccessContext::from(const MemberAccessContext& a, const MemberAccessContext& b) {
+  auto span = a.node->span + b.node->span;
+
   return a.pointer || b.pointer
-      ? ast::MemberAccess::createByPointer(a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node))
-      : ast::MemberAccess::createByValue(a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node));
+      ? ast::MemberAccess::createByPointer(span, a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node))
+      : ast::MemberAccess::createByValue(span, a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node));
 }
 
 bool Parser::isAtEnd() const {
@@ -28,7 +31,7 @@ Token Parser::current() {
 
 Token Parser::previous() {
   if (current_idx == 0) {
-    throw ParserException("Tried to get previous token, while current is at index 0");
+    throw std::runtime_error("Tried to get previous token, while current is at index 0");
   }
 
   return tokens[current_idx-1];
@@ -36,7 +39,7 @@ Token Parser::previous() {
 
 Token Parser::next() {
   if (current_idx + 1 >= tokens.size()) {
-    throw ParserException("Tried to get next token, which doesn't exist");
+    throw std::runtime_error("Tried to get next token, which doesn't exist");
   }
 
   return tokens[current_idx+1];
@@ -61,14 +64,14 @@ bool Parser::checkNext(TokenType expected) {
 
 std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_msg) {
   if (checkAdvance(TOKEN_SELF)) {
-    return ast::Identifier::create("self");
+    return ast::Identifier::create(previous().span, "self");
   }
 
   if (!checkAdvance(TOKEN_IDENTIFIER)) {
-    throw ParserException(current().line, "Expected identifier " + ex_msg);
+    Error(ERROR_MISSING_IDENTIFIER, current().span, "Expected identifier " + ex_msg).throwException();
   }
 
-  return ast::Identifier::create(previous().value);
+  return ast::Identifier::create(previous().span, previous().value);
 }
 
 std::shared_ptr<ast::Identifier> Parser::parseIdentifierWithCurrentScope(const std::string& ex_msg) {
@@ -84,6 +87,7 @@ std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string
     return first;
   }
 
+  auto span = first->span;
   std::vector<std::string> nodes = {first->value};
 
   do {
@@ -92,24 +96,30 @@ std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string
     }
 
     nodes.push_back(parseIdentifier("for member access")->value);
+    span += previous().span;
   } while (checkAdvance(TOKEN_SCOPE));
 
   /* Very specific error, shouldn't happen */
-  assertThrow(!nodes.empty(), ParserException("Invalid member scope access state (nodes.size=0)"));
+  if (nodes.empty()) {
+    Error(ERROR_INVALID_MEMBER_ACCESS, current().span, "there are no access nodes").throwException();
+  }
 
   auto name = nodes.back();
 
   nodes.pop_back();
 
-  auto id = ast::Identifier::create(name, nodes);
+  auto id = ast::Identifier::create(span, name, nodes);
 
   return id;
 }
 
 std::shared_ptr<ast::Node> Parser::parseType() {
+  auto span = current().span;
+
   if (checkAdvance(TOKEN_FN)) {
+
     if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-      throw ParserException(current().line, "Expected '(' after 'fn' for type");
+      Error(ERROR_FN_TYPE_MISSING_OPENING_PAREN, current().span, "").throwException();
     }
 
     std::vector<std::shared_ptr<ast::Node>> args;
@@ -125,16 +135,16 @@ std::shared_ptr<ast::Node> Parser::parseType() {
     } while (checkAdvance(TOKEN_COMMA));
 
     if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-      throw ParserException(current().line, "Expected ')' after function type args");
+      Error(ERROR_FN_TYPE_MISSING_CLOSING_PAREN, current().span, "").throwException();
     }
 
     if (!checkAdvance(TOKEN_RIGHT_ARROW)) {
-      throw ParserException(current().line, "Expected '->' after function type args");
+      Error(ERROR_FN_TYPE_MISSING_ARROW, current().span, "").throwException();
     }
 
     std::shared_ptr<ast::Node> returnType = parseType();
 
-    return ast::Type::createFunction(returnType, args, isVariadic);
+    return ast::Type::createFunction(span + previous().span, returnType, args, isVariadic);
   }
 
   auto id = parseScopedIdentifier("for type name");
@@ -155,17 +165,21 @@ std::shared_ptr<ast::Node> Parser::parseType() {
   std::shared_ptr<ast::Type> type;
 
   while (checkAdvance(TOKEN_STAR)) {
-    type = type ? ast::Type::create(type, true) : ast::Type::create(ast::Node::cast(id), true);
+    type = type
+      ? ast::Type::create(span + previous().span, type, true)
+      : ast::Type::create(span + previous().span, ast::Node::cast(id), true);
   }
 
   if (!type) {
-    type = ast::Type::create(ast::Node::cast(id), false);
+    type = ast::Type::create(span, ast::Node::cast(id), false);
   }
 
   return type;
 }
 
 std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl() {
+  auto span = current().span;
+
   std::shared_ptr<ast::Identifier> name = parseIdentifier("for variable name");
   std::shared_ptr<ast::Node> type;
   std::shared_ptr<ast::Node> value;
@@ -178,12 +192,14 @@ std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl() {
     value = parseExpr();
   }
 
-  return ast::TypedIdentifier::create(name, type, value);
+  return ast::TypedIdentifier::create(span + previous().span, name, type, value);
 }
 
 std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   bool is_extern = false;
   bool is_variadic = false;
+
+  auto span = current().span;
 
   if (check(TOKEN_EXTERN)) {
     advance();
@@ -191,7 +207,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   }
 
   if (!checkAdvance(TOKEN_FN)) {
-    throw ParserException(current().line, "Expected 'fn'");
+    Error(ERROR_FN_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   auto name = parseIdentifierWithCurrentScope("for function name");
@@ -204,14 +220,16 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   std::shared_ptr<ast::Node> return_type;
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    throw ParserException(current().line, "Expected '(' after function name");
+    Error(ERROR_FN_MISSING_OPENING_PAREN, current().span, "").throwException();
   }
 
   if (isMethod && checkAdvance(TOKEN_SELF)) {
     args.push_back(ast::TypedIdentifier::create(
-    ast::Identifier::create("self"),
-      ast::Type::create(ast::Identifier::create(structStack.back(), module.stack), true)
-    ));
+      span + current().span,
+      ast::Identifier::create(previous().span, "self"),
+        ast::Type::create(previous().span, ast::Identifier::create(previous().span, structStack.back(), module.stack), true)
+      )
+    );
 
     checkAdvance(TOKEN_COMMA);
   }
@@ -228,20 +246,22 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   }
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    throw ParserException(current().line, "Expected ')' after function arguments");
+    Error(ERROR_FN_MISSING_CLOSING_PAREN, current().span, "").throwException();
   }
 
   if (checkAdvance(TOKEN_RIGHT_ARROW)) {
     return_type = parseType();
   } else {
-    return_type = ast::Type::create(ast::Identifier::create("void"), false);;
+    return_type = ast::Type::create(previous().span, ast::Identifier::create(previous().span, "void"), false);;
   }
 
-  auto fndecl = ast::FnDecl::create(name, return_type, args, is_extern, is_variadic);
+  auto fndecl = ast::FnDecl::create(span + previous().span, name, return_type, args, is_extern, is_variadic);
 
   if (!check(TOKEN_LEFT_BRACE)) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
-      throw ParserException(current().line, "Expected ';' after function declaration");
+      Error(ERROR_FN_MISSING_SEMICOLON, current().span, "")
+        .note(current().span, "Function signature must be followed either by a body or semicolon, if it's a forward-declaration")
+        .throwException();
     }
 
     // Workaround: erase scope, if it's an extern forward declaration
@@ -255,12 +275,14 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
 
   auto body = parseBlock();
 
-  return ast::FnDef::create(fndecl, body);
+  return ast::FnDef::create(span + previous().span, fndecl, body);
 }
 
 std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
-    throw ParserException(current().line, "Expected '{'");
+    Error(ERROR_BLOCK_MISSING_OPENING_BRACE, current().span, "").throwException();
   }
 
   std::vector<std::shared_ptr<ast::Node>> nodes;
@@ -276,31 +298,35 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
   } while (shouldContinue);
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
-    throw ParserException(current().line, "Expected '}'");
+    Error(ERROR_BLOCK_MISSING_CLOSING_BRACE, current().span, "").throwException();
   }
 
-  return ast::Block::create(nodes);
+  return ast::Block::create(span + previous().span, nodes);
 }
 
 std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_VAR)) {
-    throw ParserException(current().line, "Expected 'var'");
+    Error(ERROR_VAR_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   auto valdecl = parseValueDecl();
 
-  return ast::VarDecl::create(valdecl->name, valdecl->value_type, valdecl->value, global);
+  return ast::VarDecl::create(span + previous().span, valdecl->name, valdecl->value_type, valdecl->value, global);
 }
 
 std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& attrs) {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_STRUCT)) {
-    throw ParserException(current().line, "Expected 'struct'");
+    Error(ERROR_STRUCT_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   auto name = parseIdentifierWithCurrentScope("for struct name");
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
-    throw ParserException(current().line, "Expected '{' after 'struct'");
+    Error(ERROR_STRUCT_MISSING_OPENING_BRACE, current().span, "").throwException();
   }
 
   std::vector<std::shared_ptr<ast::TypedIdentifier>> fields;
@@ -328,25 +354,27 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
   structStack.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
-    throw ParserException(current().line, "Expected '}' after struct definition");
+    Error(ERROR_STRUCT_MISSING_CLOSING_BRACE, current().span, "").throwException();
   }
 
-  return ast::Struct::create(name, fields, methods);
+  return ast::Struct::create(span + previous().span, name, fields, methods);
 }
 
 std::shared_ptr<ast::Node> Parser::parseIf() {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_IF)) {
-    throw ParserException(current().line, "Expected 'if'");
+    Error(ERROR_IF_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    throw ParserException(current().line, "Expected '(' after 'if'");
+    Error(ERROR_IF_MISSING_OPENING_PAREN, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> cond = parseExpr();
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    throw ParserException(current().line, "Expected ')' after 'if' condition");
+    Error(ERROR_IF_MISSING_CLOSING_PAREN, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> then_body = parseStmt();
@@ -356,64 +384,70 @@ std::shared_ptr<ast::Node> Parser::parseIf() {
     else_body = parseStmt();
   }
 
-  return ast::If::create(cond, then_body, else_body);
+  return ast::If::create(span + previous().span, cond, then_body, else_body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseFor() {
-    if (!checkAdvance(TOKEN_FOR)) {
-    throw ParserException(current().line, "Expected 'for'");
+  auto span = current().span;
+
+  if (!checkAdvance(TOKEN_FOR)) {
+    Error(ERROR_FOR_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    throw ParserException(current().line, "Expected '(' after 'for'");
+    Error(ERROR_FOR_MISSING_OPENING_PAREN, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> init = parseVar(false);
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
-    throw ParserException(current().line, "Expected ';' after 'init' part of 'for'");
+    Error(ERROR_FOR_MISSING_INIT_SEMICOLON, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> cond = parseExpr();
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
-    throw ParserException(current().line, "Expected ';' after 'cond' part of 'for'");
+    Error(ERROR_FOR_MISSING_COND_SEMICOLON, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> step = parseExpr();
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    throw ParserException(current().line, "Expected ')' after 'step' part of 'for'");
+    Error(ERROR_FOR_MISSING_CLOSING_PAREN, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> body = parseStmt();
 
-  return ast::For::create(ast::Node::cast<ast::VarDecl>(init), cond, step, body);
+  return ast::For::create(span + previous().span, ast::Node::cast<ast::VarDecl>(init), cond, step, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseWhile() {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_WHILE)) {
-    throw ParserException(current().line, "Expected 'while'");
+    Error(ERROR_WHILE_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    throw ParserException(current().line, "Expected '(' after 'while'");
+    Error(ERROR_WHILE_MISSING_OPENING_PAREN, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> cond = parseExpr();
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    throw ParserException(current().line, "Expected ')' after 'while' condition");
+    Error(ERROR_WHILE_MISSING_CLOSING_PAREN, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> body = parseStmt();
 
-  return ast::While::create(cond, body);
+  return ast::While::create(span + previous().span, cond, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseReturn() {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_RETURN)) {
-    throw ParserException(current().line, "Expected 'return'");
+    Error(ERROR_RETURN_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   std::shared_ptr<ast::Node> expr;
@@ -422,14 +456,16 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
     expr = parseExpr();
   }
 
-  return ast::Return::create(expr);
+  return ast::Return::create(span + previous().span, expr);
 }
 
 std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attrs) {
   bool scoped = false;
 
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_USE)) {
-    throw ParserException(current().line, "Expected 'use'");
+    Error(ERROR_USE_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   if (checkAdvance(TOKEN_MOD)) {
@@ -439,15 +475,15 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
   auto name = parseIdentifier("for module name");
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
-    throw ParserException(current().line, "Expected ';' after 'use' statement");
+    Error(ERROR_USE_MISSING_SEMICOLON, current().span, "").throwException();
   }
 
   auto path_attr = std::find_if(attrs.begin(), attrs.end(), [](auto& a) { return a.name == "path"; });
   std::string path;
 
   if (path_attr != attrs.end()) {
-    assertThrow(path_attr->args.size() == 1, ParserException("'path' attribute expects 1 argument"));
-    assertThrow(path_attr->args[0]->is(ast::AST_EXPR_STRING), ParserException("'path' attribute expect a string argument"));
+    assertRaise(path_attr->args.size() == 1, Error(ERROR_PATH_ATTR_ARG_MISMATCH, current().span, ""));
+    assertRaise(path_attr->args[0]->is(ast::AST_EXPR_STRING), Error(ERROR_PATH_ATTR_ARG_BAD_TYPE, current().span, ""));
 
     path = path_attr->args[0]->as<ast::String>()->value;
   }
@@ -457,23 +493,25 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
   // Happens, if module was already included
   if (!res.body) return ast::Empty::create();
 
-  auto mod = ast::Module::create(name, res.body);
+  auto mod = ast::Module::create(span + previous().span, name, res.body);
 
-  mod->addAttribute({"__xcc_tag_used_from", { ast::String::create(res.path) }});
+  mod->addAttribute({"__xcc_tag_used_from", { ast::String::create(span, res.path) }});
 
   return mod;
 }
 
 std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attrs) {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_MOD)) {
-    throw ParserException(current().line, "Expected 'mod'");
+    Error(ERROR_MOD_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   auto name = parseIdentifier("for module name");
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
-      throw ParserException(current().line, "Expected ';' after file-scoped module declaration");
+      Error(ERROR_MOD_MISSING_SEMICOLON, current().span, "").throwException();
     }
 
     if (isModule) {
@@ -486,10 +524,10 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
     // }
 
     module.stack.push_back(name->name());
-    return ast::Module::create(name, ast::Block::create({}));
+    return ast::Module::create(span + previous().span, name, ast::Block::create({}, {}));
   }
 
-  auto body = ast::Block::create({});
+  auto body = ast::Block::create(span, {});
 
   module.stack.push_back(name->name());
 
@@ -500,45 +538,51 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
   module.stack.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
-    throw ParserException(current().line, "Expected '}' after mod body");
+    Error(ERROR_MOD_MISSING_CLOSING_BRACE, current().span, "").throwException();
   }
 
-  return ast::Module::create(name, body);
+  body->span = span + previous().span;
+
+  return ast::Module::create(span + previous().span, name, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::AttributeList& attrs) {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_TYPE)) {
-    throw ParserException(current().line, "Expected 'type'");
+    Error(ERROR_TYPE_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   auto name = parseIdentifierWithCurrentScope("for type alias name");
 
   if (!checkAdvance(TOKEN_EQUALS)) {
-    throw ParserException(current().line, "Expected '=' after type name");
+    Error(ERROR_TYPE_MISSING_EQUALS, current().span, "").throwException();
   }
 
   auto type = parseType();
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
-    throw ParserException(current().line, "Expected ';' after type declaration (alias)");
+    Error(ERROR_TYPE_MISSING_SEMICOLON, current().span, "").throwException();
   }
 
   if (isModule) {
     module.typeAliases.push_back(name->value);
   }
 
-  return ast::TypeDecl::create(name, type);
+  return ast::TypeDecl::create(span + previous().span, name, type);
 }
 
 std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& attrs) {
+  auto span = current().span;
+
   if (!checkAdvance(TOKEN_MACRO)) {
-    throw ParserException(current().line, "Expected 'macro'");
+    Error(ERROR_MACRO_MISSING_KEYWORD, current().span, "").throwException();
   }
 
   auto id = parseIdentifierWithCurrentScope("for macro name");
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    throw ParserException(current().line, "Expected '(' after macro name");
+    Error(ERROR_MACRO_MISSING_OPENING_PAREN, current().span, "").throwException();
   }
 
   std::vector<std::shared_ptr<ast::Identifier>> args;
@@ -554,12 +598,12 @@ std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& at
   }
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    throw ParserException(current().line, "Expected ')' after macro arguments (macro definition)");
+    Error(ERROR_MACRO_MISSING_CLOSING_PAREN, current().span, "").throwException();
   }
 
   auto body = parseBlock(true);
 
-  return ast::Macro::create(id, args, body);
+  return ast::Macro::create(span + previous().span, id, args, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseStmt(bool parseTopLevel) {
@@ -570,8 +614,14 @@ std::shared_ptr<ast::Node> Parser::parseStmt(bool parseTopLevel) {
     case TOKEN_WHILE:       return parseWhile();
     case TOKEN_RETURN:      return parseReturn();
     case TOKEN_EXTERN:
-    case TOKEN_FN:          return parseTopLevel ? parseFunction(false) : throw CodegenException("Unexpected 'fn' in current context");
-    case TOKEN_STRUCT:      return parseTopLevel ? parseStruct({})      : throw CodegenException("Unexpected 'struct' in current context");
+    case TOKEN_FN: {
+      assertRaise(parseTopLevel, Error(ERROR_INVALID_TOKEN_FOR_CONTEXT, current().span, "Unexpected 'fn' in current context"));
+      return parseFunction(false);
+    }
+    case TOKEN_STRUCT: {
+      assertRaise(parseTopLevel, Error(ERROR_INVALID_TOKEN_FOR_CONTEXT, current().span, "Unexpected 'struct' in current context"));
+      return parseStruct({});
+    }
     default:                return parseExpr();
   }
 }
@@ -592,9 +642,9 @@ std::shared_ptr<ast::Node> Parser::parseAssignment() {
     Token op = previous();
     auto rhs = parseLogicAndBitOps();
     if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT, ast::AST_EXPR_MEMBER_ACCESS)) {
-      expr = ast::Assign::create(op, expr, rhs);
+      expr = ast::Assign::create(expr->span + rhs->span, op, expr, rhs);
     } else {
-      throw ParserException("Invalid LHS for assignment (" + ast::Node::typeToString(expr->type) + ")");
+      Error(ERROR_INVALID_LHS_FOR_ASSIGNMENT, expr->span, "{}", ast::Node::typeToString(expr->type)).throwException();
     }
   }
 
@@ -607,7 +657,7 @@ std::shared_ptr<ast::Node> Parser::parseLogicAndBitOps() {
   while (checkAdvanceAnyOf(TOKEN_AND, TOKEN_OR, TOKEN_AMP, TOKEN_VERTICAL_LINE)) {
     Token op = previous();
     auto rhs = parseEquality();
-    expr = ast::Binary::create(op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
   }
 
   return expr;
@@ -619,7 +669,7 @@ std::shared_ptr<ast::Node> Parser::parseEquality() {
   while (checkAdvanceAnyOf(TOKEN_EQUALS_EQUALS, TOKEN_NOT_EQUALS)) {
     Token op = previous();
     auto rhs = parseComparison();
-    expr = ast::Binary::create(op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
   }
 
   return expr;
@@ -632,7 +682,7 @@ std::shared_ptr<ast::Node> Parser::parseComparison() {
                                TOKEN_LESS, TOKEN_LESS_EQUALS)) {
     Token op = previous();
     auto rhs = parseTerm();
-    expr = ast::Binary::create(op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
   }
 
   return expr;
@@ -644,7 +694,7 @@ std::shared_ptr<ast::Node> Parser::parseTerm() {
   while (checkAdvanceAnyOf(TOKEN_MINUS, TOKEN_PLUS)) {
     Token op = previous();
     auto rhs = parseFactor();
-    expr = ast::Binary::create(op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
   }
 
   return expr;
@@ -657,7 +707,7 @@ std::shared_ptr<ast::Node> Parser::parseFactor() {
   while (checkAdvanceAnyOf(TOKEN_SLASH, TOKEN_STAR)) {
     Token op = previous();
     auto rhs = parseCast();
-    expr = ast::Binary::create(op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
   }
 
   return expr;
@@ -667,7 +717,8 @@ std::shared_ptr<ast::Node> Parser::parseCast() {
   auto expr = parseUnary();
 
   if (checkAdvance(TOKEN_AS)) {
-    return ast::Cast::create(expr, parseType());
+    auto type = parseType();
+    return ast::Cast::create(expr->span + type->span, expr, type);
   }
 
   return expr;
@@ -677,7 +728,8 @@ std::shared_ptr<ast::Node> Parser::parseUnary() {
   if (checkAdvanceAnyOf(TOKEN_NOT, TOKEN_MINUS,
                         TOKEN_AMP, TOKEN_STAR)) {
     Token op = previous();
-    return ast::Unary::create(op, parseUnary());
+    auto rhs = parseUnary();
+    return ast::Unary::create(op.span + rhs->span, op, rhs);
   }
 
   return parseSubscript();
@@ -688,8 +740,8 @@ std::shared_ptr<ast::Node> Parser::parseSubscript() {
 
   if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
     auto rhs = parseExpr();
-    assertThrow(checkAdvance(TOKEN_RIGHT_SQUARE_BRACE), ParserException("Missing closing ']' after '[' in subscript operator"));
-    return ast::Subscript::create(lhs, rhs);
+    assertRaise(checkAdvance(TOKEN_RIGHT_SQUARE_BRACE), Error(ERROR_SUBSCRIPT_MISSING_CLOSING_BRACE, rhs->span.pointPastLast(), ""));
+    return ast::Subscript::create(lhs->span + rhs->span, lhs, rhs);
   }
 
   return lhs;
@@ -697,14 +749,14 @@ std::shared_ptr<ast::Node> Parser::parseSubscript() {
 
 std::shared_ptr<ast::Node> Parser::parseNumber() {
   if (previous().value.find('.') != std::string::npos) {
-    return ast::Number::createFloating(std::stod(previous().value));
+    return ast::Number::createFloating(previous().span, std::stod(previous().value));
   }
 
   std::string value = previous().value;
 
   auto res = util::determineBase(value);
 
-  return ast::Number::createInteger(std::stol(res.value, nullptr, res.base));
+  return ast::Number::createInteger(previous().span, std::stol(res.value, nullptr, res.base));
 }
 
 std::shared_ptr<ast::Node> Parser::parseRvalue() {
@@ -713,31 +765,33 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
   }
 
   if (checkAdvance(TOKEN_STRING)) {
-    return ast::String::create(previous().value);
+    return ast::String::create(previous().span, previous().value);
   }
 
   if (checkAdvance(TOKEN_CHAR)) {
-    return ast::Number::createInteger(previous().value[0]);
+    return ast::Number::createInteger(previous().span, previous().value[0]);
   }
 
   if (checkAdvance(TOKEN_DOLLAR_SIGN)) {
+    auto span = previous().span;
+
     if (!checkAdvance(TOKEN_IDENTIFIER)) {
-      throw ParserException(current().line, "Expected identifier after '$'");
+      Error(ERROR_DOLLAR_MISSING_IDENTIFIER, previous().span.pointPastLast(), "").throwException();
     }
 
     char * value = getenv(previous().value.c_str());
 
     if (!value) {
-      throw ParserException(current().line, "No such env variable '" + previous().value + "'");
+      Error(ERROR_NO_ENV_VARIABLE, current().span, "{}", previous().value).throwException();
     }
 
-    return ast::String::create(value);
+    return ast::String::create(span + previous().span, value);
   }
 
   if (checkAdvance(TOKEN_LEFT_PAREN)) {
     auto expr = parseExpr();
     if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-      throw ParserException(current().line, "Expected ')' after expression");
+      Error(ERROR_EXPR_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").throwException();
     }
     return expr;
   }
@@ -746,8 +800,10 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
+  auto span = current().span;
+
   if (!check(TOKEN_IDENTIFIER) && !check(TOKEN_SELF)) {
-    throw ParserException(current().line, "Unexpected token '" + current().value + "'(" + Token::typeToString(current().type) + "), expected identifier or self");
+    Error(ERROR_LVALUE_UNEXPECTED_TOKEN, current().span, "'{}' ({})", current().value, Token::typeToString(current().type)).throwException();
   }
 
   /* Parse Member Access */
@@ -763,7 +819,7 @@ std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
     } while (checkAdvance(TOKEN_DOT) || checkAdvance(TOKEN_RIGHT_ARROW));
 
     /* Very specific error, shouldn't happen */
-    assertThrow(!nodes.empty(), ParserException("Invalid member access state (nodes.size=0)"));
+    assertRaise(!nodes.empty(), Error(ERROR_INVALID_MEMBER_ACCESS, span + previous().span, ""));
 
     /* If do-while loop finished without triggering ParserException("Expected identifier ...")
      * it is guaranteed that at least 2 elements will be present in nodes */
@@ -799,14 +855,13 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   bool isMacro = false;
 
   if (checkAdvance(TOKEN_NOT)) {
-    assertThrow(callee->is(ast::AST_EXPR_IDENTIFIER),
-      ParserException("macro callee can only be an identifier"));
+    assertRaise(callee->is(ast::AST_EXPR_IDENTIFIER),
+      Error(ERROR_MACRO_CALLEE_IS_NOT_ID, callee->span, ""));
     isMacro = true;
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    throw ParserException(current().line,
-      std::format("Expected '(' after {} name (call)", isMacro ? "macro" : "function"));
+    Error(isMacro ? ERROR_MACRO_CALL_MISSING_OPENING_PAREN : ERROR_FN_CALL_MISSING_OPENING_PAREN, current().span, "").throwException();
   }
 
   if (!check(TOKEN_RIGHT_PAREN)) {
@@ -822,20 +877,19 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   }
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    throw ParserException(current().line,
-      std::format("Expected ')' after {} arguments (call)", isMacro ? "macro" : "function"));
+    Error(isMacro ? ERROR_MACRO_CALL_MISSING_CLOSING_PAREN : ERROR_FN_CALL_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").throwException();
   }
 
   if (isMacro) {
-    return ast::MacroCall::create(ast::Node::cast<ast::Identifier>(callee), args);
+    return ast::MacroCall::create(callee->span + previous().span, ast::Node::cast<ast::Identifier>(callee), args);
   }
 
-  return ast::Call::create(callee, args);
+  return ast::Call::create(callee->span + previous().span, callee, args);
 }
 
 ast::Node::AttributeList Parser::parseAttributeList() {
   if (!checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
-    throw ParserException(current().line, "Expected '[' at the beginning of attribute list");
+    Error(ERROR_ATTR_MISSING_OPENING_BRACKET, current().span, "").throwException();
   }
 
   ast::Node::AttributeList attrs;
@@ -844,6 +898,8 @@ ast::Node::AttributeList Parser::parseAttributeList() {
     if (isAtEnd() || check(TOKEN_RIGHT_SQUARE_BRACE)) {
       break;
     }
+
+    auto span = current().span;
 
     auto name = parseIdentifier("for attribute name");
 
@@ -859,15 +915,15 @@ ast::Node::AttributeList Parser::parseAttributeList() {
       } while (checkAdvance(TOKEN_COMMA));
 
       if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-        throw ParserException(current().line, "Expected ')' after attribute");
+        Error(ERROR_ATTR_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").throwException();
       }
     }
 
-    attrs.push_back({name->name(), args});
+    attrs.push_back({name->name(), args, span + previous().span});
   } while (checkAdvance(TOKEN_COMMA));
 
   if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
-    throw ParserException(current().line, "Expected ']' after attribute list");
+    Error(ERROR_ATTR_MISSING_CLOSING_BRACKET, current().span, "").throwException();
   }
 
   return attrs;
@@ -894,13 +950,13 @@ Parser::IncludedModule Parser::includeModuleFromPath(const std::string& name, co
   module.included.emplace(name);
 
   result.path = path;
-  auto src = fs::readFile(result.path);
+  auto file = FileManager::load(result.path);
 
   logger.info("Found module '{}' at {}", name, result.path);
 
-  auto lexer  = Lexer(src);
+  auto lexer  = Lexer(file);
   auto tokens = lexer.tokenize();
-  auto parser = Parser(tokens, true);
+  auto parser = Parser(file, tokens, true);
 
   if (scoped) {
     parser.module.stack = module.stack;
@@ -945,7 +1001,7 @@ std::string Parser::resolveModulePath(const std::string& name) {
 }
 
 std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_ptr<ast::Block>& body) {
-  auto result = ast::Block::create({});
+  auto result = ast::Block::create({}, {});
 
   for (auto & node : body->body) {
     if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL, ast::AST_MACRO)) {
@@ -985,7 +1041,7 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
   if (check(TOKEN_VAR)) {
     auto var = parseVar(true);
     if (!checkAdvance(TOKEN_SEMICOLON)) {
-      throw ParserException(current().line, "Expected ';' variable declaration (global scope)");
+      Error(ERROR_VARDECL_MISSING_SEMICOLON, previous().span.pointPastLast(), "").throwException();
     }
     return var;
   }
@@ -1020,17 +1076,17 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
     if (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN)) {
       return parseCall(id);
     }
-  } catch (ParserException&) {
+  } catch (CompilationException&) {
     // Ignore, there is a better worded exception at the end of this function
   }
 
-  throw ParserException(current().line, "Unexpected token at top-level scope: '" + current().value + "' (" + Token::typeToString(current().type) + ")");
+  Error(ERROR_TOP_LEVEL_UNEXPECTED_TOKEN, current().span, "'{}' ({})", current().value, Token::typeToString(current().type)).throwException();
 }
 
-Parser::Parser(const std::vector<Token>& tokens, bool isModule) : tokens(tokens), current_idx(0), isModule(isModule) {}
+Parser::Parser(FileId fileId, const std::vector<Token>& tokens, bool isModule) : fileId(fileId), tokens(tokens), current_idx(0), isModule(isModule) {}
 
 std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
-  auto block = ast::Block::create({});
+  auto block = ast::Block::create({}, {});
 
   while (!isAtEnd()) {
     block->body.push_back(parseOneTopLevelNode(isRepl, {}));

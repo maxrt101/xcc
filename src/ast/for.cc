@@ -4,15 +4,16 @@
 
 using namespace xcc::ast;
 
-For::For(std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body)
-  : Node(AST_FOR), init(std::move(init)), cond(std::move(cond)), step(std::move(step)), body(std::move(body)) {}
+For::For(SourceSpan span, std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body)
+  : Node(AST_FOR, span), init(std::move(init)), cond(std::move(cond)), step(std::move(step)), body(std::move(body)) {}
 
-std::shared_ptr<For> For::create(std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body) {
-  return std::make_shared<For>(std::move(init), std::move(cond), std::move(step), std::move(body));
+std::shared_ptr<For> For::create(SourceSpan span, std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body) {
+  return std::make_shared<For>(span, std::move(init), std::move(cond), std::move(step), std::move(body));
 }
 
 std::shared_ptr<Node> For::clone() {
   return withAttrs(create(
+    span,
     cast<VarDecl>(init->clone()),
     cond->clone(),
     step->clone(),

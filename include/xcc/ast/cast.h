@@ -11,10 +11,10 @@ public:
   std::shared_ptr<Node> type;
 
 public:
-  Cast(std::shared_ptr<Node> expr, std::shared_ptr<Node> type);
+  Cast(SourceSpan span, std::shared_ptr<Node> expr, std::shared_ptr<Node> type);
   ~Cast() override = default;
 
-  static std::shared_ptr<Cast> create(std::shared_ptr<Node> expr, std::shared_ptr<Node> type);
+  static std::shared_ptr<Cast> create(SourceSpan span, std::shared_ptr<Node> expr, std::shared_ptr<Node> type);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

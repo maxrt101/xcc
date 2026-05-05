@@ -1,5 +1,7 @@
 #pragma once
 
+#include "xcc/error.h"
+
 #include <string>
 #include <functional>
 
@@ -42,7 +44,7 @@ enum NodeType {
 
   AST_BLOCK,                  // { expr; ... }
   AST_VAR_DECL,               // var name: type [= value]
-  AST_FUNCTION_DECL,          // fn name([args])[: type];
+  AST_FUNCTION_DECL,          // fn name([id: type, ...])[: type];
   AST_FUNCTION_DEF,           // function-decl { body }
   AST_TYPE_DECL,              // type id = type_expr
   AST_STRUCT,                 // struct name { field: type [= init], ... }
@@ -110,6 +112,7 @@ public:
   struct Attribute {
     std::string                        name;
     std::vector<std::shared_ptr<Node>> args;
+    SourceSpan                         span;
 
     /**
      * Validates `args`. Checks count & NodeTypes. Throws an exception on failure
@@ -134,9 +137,10 @@ public:
 public:
   NodeType      type;
   AttributeList attributes;
+  SourceSpan    span;
 
 public:
-  explicit Node(NodeType type);
+  explicit Node(NodeType type, SourceSpan span);
   virtual ~Node() = default;
 
   /**

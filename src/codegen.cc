@@ -40,7 +40,7 @@ void GlobalContext::addModule(std::unique_ptr<ModuleContext>& module) {
 void GlobalContext::flushModulesToJIT() {
   for (auto& mod : pendingModules) {
     auto tsm = llvm::orc::ThreadSafeModule(std::move(mod->llvm.module), tsc);
-    CodegenException::throwIfError(jit->addModule(std::move(tsm)));
+    checkLLVMError(jit->addModule(std::move(tsm)));
   }
 
   pendingModules.clear();
@@ -93,7 +93,7 @@ llvm::GlobalVariable * GlobalContext::getGlobal(ModuleContext& ctx, const std::s
 
 std::shared_ptr<meta::Type> GlobalContext::getGlobalType(const std::string& name) {
   if (!hasGlobal(name)) {
-    throw CodegenException("Unknown global variable '" + name + "'");
+    Error(ERROR_UNKNOWN_GLOBAL_VARIABLE, {}, "'{}'", name).throwException();
   }
   return globals[name];
 }
@@ -138,12 +138,12 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   if (expr->is(ast::AST_BLOCK)) {
     auto& last = expr->as<ast::Block>()->body.back();
     if (!last->is(ast::AST_RETURN)) {
-      last = ast::Return::create(last);
+      last = ast::Return::create(last->span, last);
     }
     body = ast::Node::cast<ast::Block>(expr);
   } else {
-    body = ast::Block::create({
-      expr->is(ast::AST_RETURN) ? expr : ast::Return::create(expr)
+    body = ast::Block::create(expr->span, {
+      expr->is(ast::AST_RETURN) ? expr : ast::Return::create(expr->span, expr)
     });
   }
 
@@ -154,13 +154,12 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
     type = meta::Type::createI32();
   }
 
-  auto fndecl = ast::FnDecl::create(
-      ast::Identifier::create(ANONYMOUS_EXPR_FN_NAME),
-      ast::Type::create(ast::Identifier::create(type->toString())) // TODO: Fix
+  auto fndecl = ast::FnDecl::create(SourceSpan::builtin(),
+      ast::Identifier::create(SourceSpan::builtin(), ANONYMOUS_EXPR_FN_NAME),
+      ast::Type::create(SourceSpan::builtin(), ast::Identifier::create(SourceSpan::builtin(), type->toString())) // TODO: Fix
   );
 
-  auto fndef = ast::FnDef::create(fndecl, body);
-
+  auto fndef = ast::FnDef::create(SourceSpan::builtin(), fndecl, body);
 
 #if USE_PRINT_LLVM_IR
   auto fn = fndef->generateFunction(*globalModule, {});
@@ -181,14 +180,14 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 void GlobalContext::runFunction(const std::string& name) {
   auto fn = getMetaFunction(name);
 
-  assertThrow(fn.get(), CodegenException(std::format("Can't find meta-function '{}'", name)));
+  assertRaise(fn.get(), Error(ERROR_UNKNOWN_FUNCTION, {}, "'{}'", name));
 
   auto type = getMetaFunction(name)->returnType;
 
   auto rt = jit->getMainJitDylib().createResourceTracker();
   auto tsm = llvm::orc::ThreadSafeModule(std::move(globalModule->llvm.module), tsc);
 
-  CodegenException::throwIfError(jit->addModule(std::move(tsm), rt));
+  checkLLVMError(jit->addModule(std::move(tsm), rt));
 
 #if USE_DUMP_JIT
   jit->dump();
@@ -196,7 +195,7 @@ void GlobalContext::runFunction(const std::string& name) {
 
   auto symbol = jit->lookup(name);
 
-  assertThrow(bool(symbol), CodegenException(std::format("Can't find symbol '{}'", name)));
+  assertRaise(bool(symbol), Error(ERROR_UNKNOWN_SYMBOL, {}, "'{}'", name));
 
   auto result = util::call(type, symbol.get());
 
@@ -219,7 +218,7 @@ void GlobalContext::runFunction(const std::string& name) {
   }
 #endif
 
-  CodegenException::throwIfError(rt->remove());
+  checkLLVMError(rt->remove());
 }
 
 ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, util::Target * target) : name(name), globalContext(global) {
@@ -285,7 +284,7 @@ std::shared_ptr<meta::Type> ModuleContext::getLocalType(const std::string& name)
 
 llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type) {
   if (!val || !target_type) {
-    throw CodegenException("codegen::cast received nullptr");
+    throw std::runtime_error("codegen::cast received nullptr");
   }
 
   // TODO: "Can't perform cast" can mean that invalid action is performed on a variable (e.g. struct s {...}; var x: s; x += 1;)
@@ -351,5 +350,6 @@ llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Ty
     );
   }
 
-  throw CodegenException("Can't perform cast");
+  // TODO: Pass span & convert val, type to string
+  Error(ERROR_INVALID_CAST, {}, "").throwException();
 }

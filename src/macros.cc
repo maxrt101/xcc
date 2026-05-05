@@ -7,40 +7,47 @@
   (__n->tag == Number::FLOATING ? __n->value.floating : __n->value.integer)
 
 #define __ARITHMETIC_UNARY_OP(__name, __ctx, __call, __op)                                                            \
-  assertThrow(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
-      CodegenException("Expected number as argument to " __name));                                                    \
+  assertRaise(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[0]->span, "Expected number as argument to " __name));    \
   auto a = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->template as<Number>();                              \
-  assertThrow(a->tag == Number::INTEGER, CodegenException("Expected integer as argument to " __name));                \
-  return Number::createInteger(__op a->value.integer);
+  assertRaise(a->tag == Number::INTEGER,                                                                              \
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[0]->span, "Expected integer as argument to " __name));   \
+  return Number::createInteger(__call->span, __op a->value.integer);
 
 #define __ARITHMETIC_BINARY_OP(__name, __ctx, __call, __op)                                                           \
-  assertThrow(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
-      CodegenException("Expected number for first argument to " __name));                                             \
-  assertThrow(isOrIsLastInBlock(__call->args[1], AST_EXPR_NUMBER),                                                    \
-      CodegenException("Expected number for second argument to " __name));                                            \
+  assertRaise(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[0]->span,                                                \
+          "Expected number for first argument to " __name));                                                          \
+  assertRaise(isOrIsLastInBlock(__call->args[1], AST_EXPR_NUMBER),                                                    \
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[1]->span,                                                \
+          "Expected number for second argument to " __name));                                                         \
   auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->template as<Number>();                             \
   auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_NUMBER)->template as<Number>();                             \
   bool is_float = a1->tag == Number::FLOATING || a2->tag == Number::FLOATING;                                         \
   double result = __GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2);                                                           \
-  return is_float ? Number::createFloating(result) : Number::createInteger(result);
+  return is_float ? Number::createFloating(__call->span, result) : Number::createInteger(__call->span, result);
 
 #define __LOGIC_BINARY_OP_STR(__name, __ctx, __call, __op)                                                            \
-  assertThrow(isOrIsLastInBlock(__call->args[0], AST_EXPR_STRING),                                                    \
-      CodegenException("Expected number for first argument to " __name));                                             \
-  assertThrow(isOrIsLastInBlock(__call->args[1], AST_EXPR_STRING),                                                    \
-      CodegenException("Expected number for second argument to " __name));                                            \
+  assertRaise(isOrIsLastInBlock(__call->args[0], AST_EXPR_STRING),                                                    \
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[0]->span,                                                \
+          "Expected number for first argument to " __name));                                                          \
+  assertRaise(isOrIsLastInBlock(__call->args[1], AST_EXPR_STRING),                                                    \
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[1]->span,                                                \
+          "Expected number for second argument to " __name));                                                         \
   auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_STRING)->template as<String>();                             \
   auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_STRING)->template as<String>();                             \
-  return Number::createInteger(a1->value __op a2->value ? 1 : 0);
+  return Number::createInteger(__call->span, a1->value __op a2->value ? 1 : 0);
 
 #define __LOGIC_BINARY_OP_NUM(__name, __ctx, __call, __op)                                                            \
-  assertThrow(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
-      CodegenException("Expected number for first argument to " __name));                                             \
-  assertThrow(isOrIsLastInBlock(__call->args[1], AST_EXPR_NUMBER),                                                    \
-      CodegenException("Expected number for second argument to " __name));                                            \
+  assertRaise(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[0]->span,                                                \
+          "Expected number for first argument to " __name));                                                          \
+  assertRaise(isOrIsLastInBlock(__call->args[1], AST_EXPR_NUMBER),                                                    \
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[1]->span,                                                \
+          "Expected number for second argument to " __name));                                                         \
   auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->template as<Number>();                             \
   auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_NUMBER)->template as<Number>();                             \
-  return Number::createInteger(__GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2) ? 1 : 0);
+  return Number::createInteger(__call->span, __GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2) ? 1 : 0);
 
 #define __LOGIC_BINARY_OP(__name, __ctx, __call, __op)                                                                \
   if (isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER)                                                             \
@@ -50,7 +57,8 @@
           && isOrIsLastInBlock(__call->args[1], AST_EXPR_STRING)) {                                                   \
     __LOGIC_BINARY_OP_STR(__name, __ctx, __call, __op);                                                               \
   } else {                                                                                                            \
-    throw CodegenException(__name " expects either 2 strings or 2 numbers");                                          \
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->span, __name " expects either 2 strings or 2 numbers")          \
+        .throwException();                                                                                            \
   }
 
 using namespace xcc;
@@ -64,7 +72,7 @@ static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::
   // Try to generate type using standard method
   try {
     type = node->generateType(mod, {});
-  } catch (CodegenException&) {
+  } catch (CompilationException&) {
     // If failed - other ways to generate type require the node to be an identifier
     if (!node->is(AST_EXPR_IDENTIFIER)) {
       throw;
@@ -79,7 +87,7 @@ static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::
     // If it's a constant or custom type disguised as Identifier, try to get it
     try {
       type = meta::Type::fromTypeName(ctx.global, id);
-    } catch (CodegenException&) {
+    } catch (CompilationException&) {
       // ignore
     }
   }
@@ -99,12 +107,12 @@ static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::
     type = ctx.args[id]->generateType(mod, {});
   }
 
-  assertThrow(bool(type), CodegenException("Cannot evaluate expression's type"));
+  assertRaise(bool(type), Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, node->span, "Cannot evaluate expression's type"));
 
   return type;
 }
 
-std::string getStr(std::shared_ptr<Node> node) {
+static std::string getStr(std::shared_ptr<Node> node) {
   if (node->is(AST_EXPR_IDENTIFIER)) {
     return node->as<Identifier>()->name();
   }
@@ -127,14 +135,14 @@ static std::shared_ptr<Macro> createNativeMacro(std::string name, std::vector<st
   std::vector<std::shared_ptr<Identifier>> id_args;
 
   for (auto& arg : args) {
-    id_args.push_back(Identifier::create(arg));
+    id_args.push_back(Identifier::create(SourceSpan::builtin(), arg));
   }
 
-  return Macro::createNative(Identifier::create(name), id_args, fn);
+  return Macro::createNative(Identifier::create(SourceSpan::builtin(), name), id_args, fn);
 }
 
 static std::shared_ptr<Node> xcc_macro_cat(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  return Identifier::create(getStr(call->args[0]) + getStr(call->args[1]));
+  return Identifier::create(call->span, getStr(call->args[0]) + getStr(call->args[1]));
 }
 
 static std::shared_ptr<Node> xcc_macro_sizeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
@@ -145,7 +153,7 @@ static std::shared_ptr<Node> xcc_macro_sizeof(Macro::NativeContext& ctx, std::sh
   auto dl   = mod->llvm.module->getDataLayout();
   auto size = dl.getTypeAllocSize(type->getLLVMType(*mod));
 
-  return Number::createInteger(size);
+  return Number::createInteger(call->span, size);
 }
 
 static std::shared_ptr<Node> xcc_macro_typeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
@@ -153,7 +161,7 @@ static std::shared_ptr<Node> xcc_macro_typeof(Macro::NativeContext& ctx, std::sh
 
   std::shared_ptr<meta::Type> type = evalType(ctx, *mod, call->args[0]);
 
-  return type->toAst();
+  return type->toAst(call->span);
 }
 
 static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
@@ -162,53 +170,62 @@ static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::s
   std::shared_ptr<meta::Type> type1 = evalType(ctx, *mod, call->args[0]);
   std::shared_ptr<meta::Type> type2 = evalType(ctx, *mod, call->args[1]);
 
-  return Number::createInteger(*type1 == *type2 ? 1 : 0);
+  return Number::createInteger(call->span, *type1 == *type2 ? 1 : 0);
 }
 
 static std::shared_ptr<Node> xcc_macro_str(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  return String::create(call->args[0]->toString(nullptr, call.get(), 0, false));
+  return String::create(call->span, call->args[0]->toString(nullptr, call.get(), 0, false));
 }
 
 static std::shared_ptr<Node> xcc_macro_strf(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  return String::create(call->args[0]->toString(nullptr, call.get(), 0, true));
+  return String::create(call->span, call->args[0]->toString(nullptr, call.get(), 0, true));
 }
 
 static std::shared_ptr<Node> xcc_macro_int(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  assertThrow(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING), CodegenException("int! expects a string as an argument"));
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "int! expects a string as an argument"));
+
   auto s = getOrGetLastInBlock(call->args[0], AST_EXPR_STRING)->as<String>();
 
   if (s->value.find('.') != std::string::npos) {
-    return Number::createFloating(std::stod(s->value));
+    return Number::createFloating(call->span, std::stod(s->value));
   }
 
   auto res = util::determineBase(s->value);
 
-  return Number::createInteger(std::stol(res.value, nullptr, res.base));
+  return Number::createInteger(call->span, std::stol(res.value, nullptr, res.base));
 }
 
 static std::shared_ptr<Node> xcc_macro_cond(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  assertThrow(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER), CodegenException("cond! expects a number as first argument"));
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER),
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "cond! expects a number as first argument"));
 
   auto cond = getOrGetLastInBlock(call->args[0], AST_EXPR_NUMBER)->as<Number>();
-  assertThrow(cond->tag == Number::INTEGER, CodegenException("Expected integer as first argument to cond!"));
+
+  assertRaise(cond->tag == Number::INTEGER,
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "Expected integer as first argument to cond!"));
 
   return (cond->value.integer ? call->args[1] : call->args[2])->clone();
 }
 
 static std::shared_ptr<Node> xcc_macro_repeat(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  assertThrow(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER),     CodegenException("repeat! expects a number as first argument"));
-  assertThrow(isOrIsLastInBlock(call->args[1], AST_EXPR_IDENTIFIER), CodegenException("repeat! expects a variable name as second argument"));
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER),
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "repeat! expects a number as first argument"));
+  assertRaise(isOrIsLastInBlock(call->args[1], AST_EXPR_IDENTIFIER),
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "repeat! expects a variable name as second argument"));
 
   auto n = getOrGetLastInBlock(call->args[0], AST_EXPR_NUMBER)->as<Number>();
-  assertThrow(n->tag == Number::INTEGER, CodegenException("Expected integer as first argument to repeat!"));
+
+  assertRaise(n->tag == Number::INTEGER,
+      Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "Expected integer as first argument to repeat!"));
 
   auto var = getOrGetLastInBlock(call->args[1], AST_EXPR_IDENTIFIER)->as<Identifier>()->name();
 
-  auto block = Block::create({});
+  auto block = Block::create(call->span, {});
 
   for (size_t i = 0; i < n->value.integer; ++i) {
     block->body.push_back(call->args[2]->clone());
-    subtree::replaceIdentifierWithNode(block->body.back(), var, Number::createInteger(i));
+    subtree::replaceIdentifierWithNode(block->body.back(), var, Number::createInteger(call->span, i));
   }
 
   return block;

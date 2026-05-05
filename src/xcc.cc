@@ -137,8 +137,8 @@ static void processMacros(
       auto name  = call->name->name();
       auto macro = globalContext->getMacro(name);
 
-      assertThrow(macro != nullptr, CodegenException("No macro named " + name));
-      assertThrow(macro->args.size() == call->args.size(), CodegenException("Argument count mismatch for macro call " + name));
+      assertRaise(macro != nullptr, Error(ERROR_UNKNOWN_MACRO, call->name->span, "'{}'", name));
+      assertRaise(macro->args.size() == call->args.size(), Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->span, "'{}'", name));
 
       if (macro->native) {
         return macro->fn(ctx, call);
@@ -189,7 +189,7 @@ static llvm::Function * compileFunction(std::unique_ptr<codegen::GlobalContext>&
     return fn;
   }
 
-  throw CodegenException(std::format("compileFunction expects AST_FUNCTION_DECL or AST_FUNCTION_DEF, got {}", ast::Node::typeToString(node->type)));
+  throw std::runtime_error(std::format("compileFunction expects AST_FUNCTION_DECL or AST_FUNCTION_DEF, got {}", ast::Node::typeToString(node->type)));
 }
 
 /**
@@ -263,25 +263,29 @@ void xcc::cleanup() {
 
 CompilationResult xcc::compile(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
-  const std::string&                       src,
+  FileId                                   file,
   bool                                     isRepl,
   const std::vector<std::string>&          includePaths
 ) {
-  auto lexer  = Lexer(src);
+  auto lexer  = Lexer(file);
   auto tokens = lexer.tokenize();
 
-#if USE_PRINT_TOKENS
+// #if USE_PRINT_TOKENS
+  auto f = FileManager::get(file);
   logger.info("TOKENS:");
   for (auto& token : tokens) {
     std::string value = token.value;
     if (token.is(TokenType::TOKEN_STRING)) {
       value = util::strescseq(value, false);
     }
-    logger.print("{:<20} '{}'\n", Token::typeToString(token.type), value);
+    logger.print("{:<20} '{}' {}:{}:{} '{}'\n",
+      Token::typeToString(token.type), value,
+      token.span.fileId, token.span.offset, token.span.length,
+      f->contents.substr(token.span.offset, token.span.length));
   }
-#endif
+// #endif
 
-  auto parser = Parser(tokens);
+  auto parser = Parser(file, tokens);
 
   for (auto& path : includePaths) {
     parser.addModuleSearchPath(path);
@@ -313,7 +317,7 @@ CompilationResult xcc::compile(
 
 void xcc::compile_to_object(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
-  const std::string&                       src,
+  FileId                                   file,
   const std::string&                       filename,
   const std::vector<std::string>&          includePaths
 ) {
@@ -333,7 +337,7 @@ void xcc::compile_to_object(
     throw std::runtime_error("TargetMachine can't emit an object file");
   }
 
-  compile(globalContext, src, false, includePaths);
+  compile(globalContext, file, false, includePaths);
 
   globalContext->mergeModules();
 
@@ -343,17 +347,17 @@ void xcc::compile_to_object(
 
 void xcc::run(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
-  const std::string&                       src,
+  FileId                                   file,
   bool                                     isRepl,
   const std::vector<std::string>&          includePaths
 ) {
-  auto result = compile(globalContext, src, isRepl, includePaths);
+  auto result = compile(globalContext, file, isRepl, includePaths);
 
   globalContext->flushModulesToJIT();
 
   if (isRepl) {
     if (!result.nodes.expr.empty()) {
-      globalContext->runExpr(ast::Block::create(result.nodes.expr));
+      globalContext->runExpr(ast::Block::create(SourceSpan::builtin(), result.nodes.expr));
     }
   } else {
     globalContext->runFunction("main");

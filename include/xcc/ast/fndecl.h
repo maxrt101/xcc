@@ -19,21 +19,23 @@ public:
 
 public:
   FnDecl(
-      std::shared_ptr<Identifier> name,
-      std::shared_ptr<Node> return_type,
-      std::vector<std::shared_ptr<TypedIdentifier>> args = {},
-      bool isExtern = false,
-      bool isVariadic = false
+      SourceSpan                                    span,
+      std::shared_ptr<Identifier>                   name,
+      std::shared_ptr<Node>                         return_type,
+      std::vector<std::shared_ptr<TypedIdentifier>> args       = {},
+      bool                                          isExtern   = false,
+      bool                                          isVariadic = false
   );
 
   ~FnDecl() override = default;
 
   static std::shared_ptr<FnDecl> create(
-      std::shared_ptr<Identifier> name,
-      std::shared_ptr<Node> return_type,
-      std::vector<std::shared_ptr<TypedIdentifier>> args = {},
-      bool isExtern = false,
-      bool isVariadic = false
+      SourceSpan                                    span,
+      std::shared_ptr<Identifier>                   name,
+      std::shared_ptr<Node>                         return_type,
+      std::vector<std::shared_ptr<TypedIdentifier>> args       = {},
+      bool                                          isExtern   = false,
+      bool                                          isVariadic = false
   );
 
   std::shared_ptr<Node> clone() override;

@@ -5,19 +5,19 @@
 using namespace xcc::ast;
 using namespace xcc;
 
-MemberAccess::MemberAccess(MemberAccessKind kind, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs)
-  : Node(AST_EXPR_MEMBER_ACCESS), kind(kind), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+MemberAccess::MemberAccess(SourceSpan span, MemberAccessKind kind, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs)
+  : Node(AST_EXPR_MEMBER_ACCESS, span), kind(kind), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<MemberAccess> MemberAccess::createByValue(std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs) {
-  return std::make_shared<MemberAccess>(MEMBER_ACCESS_VALUE, std::move(lhs), std::move(rhs));
+std::shared_ptr<MemberAccess> MemberAccess::createByValue(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs) {
+  return std::make_shared<MemberAccess>(span, MEMBER_ACCESS_VALUE, std::move(lhs), std::move(rhs));
 }
 
-std::shared_ptr<MemberAccess> MemberAccess::createByPointer(std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs) {
-  return std::make_shared<MemberAccess>(MEMBER_ACCESS_POINTER, std::move(lhs), std::move(rhs));
+std::shared_ptr<MemberAccess> MemberAccess::createByPointer(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs) {
+  return std::make_shared<MemberAccess>(span, MEMBER_ACCESS_POINTER, std::move(lhs), std::move(rhs));
 }
 
 std::shared_ptr<Node> MemberAccess::clone() {
-  return withAttrs(std::make_shared<MemberAccess>(kind, lhs->clone(), cast<Identifier>(rhs->clone())));
+  return withAttrs(std::make_shared<MemberAccess>(span, kind, lhs->clone(), cast<Identifier>(rhs->clone())));
 }
 
 void MemberAccess::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -36,11 +36,11 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 
   if (kind == MEMBER_ACCESS_POINTER) {
-    assertThrow(type->isPointer(), CodegenException("Can't use '->' on a non-pointer type"));
+    assertRaise(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, ""));
     type = type->getPointedType();
   }
 
-  assertThrow(type->hasMember(rhs->name()), CodegenException("Type '" + type->toString() + "' doesn't have member '" + rhs->name() + "'"));
+  assertRaise(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()));
 
   llvm::Value * value_to_load;
 
@@ -57,11 +57,11 @@ std::shared_ptr<xcc::meta::Type> MemberAccess::generateTypeForValueWithoutLoad(c
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 
   if (kind == MEMBER_ACCESS_POINTER) {
-    assertThrow(type->isPointer(), CodegenException("Can't use '->' on a non-pointer type"));
+    assertRaise(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, ""));
     type = type->getPointedType();
   }
 
-  assertThrow(type->hasMember(rhs->name()), CodegenException("Type '" + type->toString() + "' doesn't have member '" + rhs->name() + "'"));
+  assertRaise(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()));
 
   return type->getMemberType(rhs->name());
 }

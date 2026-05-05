@@ -35,6 +35,7 @@ public:
 
 public:
   Macro(
+    SourceSpan                               span,
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     std::shared_ptr<Block>                   body
@@ -49,6 +50,7 @@ public:
   ~Macro() override = default;
 
   static std::shared_ptr<Macro> create(
+    SourceSpan                               span,
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     std::shared_ptr<Block>                   body

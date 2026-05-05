@@ -12,14 +12,14 @@ namespace xcc::ast {
 class TypedIdentifier : public Node {
 public:
   std::shared_ptr<Identifier> name;
-  std::shared_ptr<Node> value_type;
-  std::shared_ptr<Node> value;
+  std::shared_ptr<Node>       value_type;
+  std::shared_ptr<Node>       value;
 
 public:
-  TypedIdentifier(std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value = nullptr);
+  TypedIdentifier(SourceSpan span, std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value = nullptr);
   ~TypedIdentifier() override = default;
 
-  static std::shared_ptr<TypedIdentifier> create(std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value = nullptr);
+  static std::shared_ptr<TypedIdentifier> create(SourceSpan span, std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value = nullptr);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

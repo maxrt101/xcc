@@ -183,7 +183,7 @@ public:
   /**
    * Generate AST Type Node from meta type
    */
-  std::shared_ptr<ast::Node> toAst() const;
+  std::shared_ptr<ast::Node> toAst(SourceSpan span = SourceSpan::builtin()) const;
 
   static std::shared_ptr<Type> create(TypeTag tag);
   static std::shared_ptr<Type> fromTypeName(codegen::GlobalContext& ctx, const std::string& name);

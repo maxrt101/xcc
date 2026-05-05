@@ -5,24 +5,26 @@ using namespace xcc;
 using namespace xcc::ast;
 
 Struct::Struct(
-    std::shared_ptr<Identifier> name,
+    SourceSpan                                    span,
+    std::shared_ptr<Identifier>                   name,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
-    std::vector<std::shared_ptr<Node>> methods
-) : Node(AST_STRUCT),
+    std::vector<std::shared_ptr<Node>>            methods
+) : Node(AST_STRUCT, span),
     name(std::move(name)),
     fields(std::move(fields)),
     methods(std::move(methods)) {}
 
 std::shared_ptr<Struct> Struct::create(
-    std::shared_ptr<Identifier> name,
+    SourceSpan                                    span,
+    std::shared_ptr<Identifier>                   name,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
-    std::vector<std::shared_ptr<Node>> methods
+    std::vector<std::shared_ptr<Node>>            methods
 ) {
-  return std::make_shared<Struct>(std::move(name), std::move(fields), std::move(methods));
+  return std::make_shared<Struct>(span, std::move(name), std::move(fields), std::move(methods));
 }
 
 std::shared_ptr<Node> Struct::clone() {
-  return withAttrs(create(cast<Identifier>(name->clone()), cloneVector(fields), cloneVector(methods)));
+  return withAttrs(create(span, cast<Identifier>(name->clone()), cloneVector(fields), cloneVector(methods)));
 }
 
 void Struct::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {

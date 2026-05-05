@@ -3,6 +3,9 @@
 #include <vector>
 #include <string>
 
+#include "xcc/error.h"
+#include "xcc/util/filemng.h"
+
 namespace xcc {
 
 /**
@@ -89,10 +92,9 @@ enum TokenType {
  * Token - smallest atomic part of source
  */
 struct Token {
-  TokenType type;     /** Token type */
-  std::string value;  /** Token value (for identifier/string/number/char) */
-  size_t line;        /** Line is source code */
-  // TODO: add `size_t offset; // Offset into line`
+  TokenType   type;  /** Token type */
+  std::string value; /** Token value (for identifier/string/number/char) */
+  SourceSpan  span;
 
   /**
    * Returns true if token is of type `expected`
@@ -113,21 +115,14 @@ struct Token {
    * Clones token (creates a new one) changing original type
    */
   [[nodiscard]] Token clone(TokenType type) const {
-    return {type, this->value, this->line};
+    return {type, this->value, span};
   }
 
   /**
    * Clones token (creates a new one) changing original value
    */
   [[nodiscard]] Token clone(const std::string& value) const {
-    return {this->type, value, this->line};
-  }
-
-  /**
-   * Clones token (creates a new one) changing original line
-   */
-  [[nodiscard]] Token clone(size_t line) const {
-    return {this->type, this->value, line};
+    return {this->type, value, span};
   }
 
   /**
@@ -147,6 +142,7 @@ struct Token {
  * User PrefixTree for a compact and efficient token lookup
  */
 class Lexer {
+  FileId             fileId;
   const std::string& text;    /** Source code reference */
   size_t current_index = 0;   /** Index into `text` */
   size_t line = 1;            /** Line counter */
@@ -207,7 +203,7 @@ private:
   void tokenizeNumber();
 
 public:
-  explicit Lexer(const std::string& text);
+  explicit Lexer(FileId fileId);
 
   /**
    * Performs tokenization

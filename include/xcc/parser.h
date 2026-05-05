@@ -37,6 +37,7 @@ public:
   };
 
 private:
+  FileId                    fileId;
   const std::vector<Token>& tokens;       /** Token stream */
   size_t                    current_idx;  /** Index into `tokens` */
   std::vector<std::string>  structStack;  /** Stack of currently parsing struct definitions */
@@ -285,7 +286,7 @@ private:
   std::shared_ptr<ast::Node> parseOneTopLevelNode(bool isRepl, const ast::Node::AttributeList& attrs);
 
 public:
-  explicit Parser(const std::vector<Token>& tokens, bool isModule = false);
+  explicit Parser(FileId fileId, const std::vector<Token>& tokens, bool isModule = false);
 
   /**
    * Performs parsing

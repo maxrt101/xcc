@@ -12,25 +12,27 @@ namespace xcc::ast {
 class VarDecl : public Node {
 public:
   std::shared_ptr<Identifier> name;
-  std::shared_ptr<Node> type;
-  std::shared_ptr<Node> value;
-  bool global;
+  std::shared_ptr<Node>       type;
+  std::shared_ptr<Node>       value;
+  bool                        global;
 
 public:
   VarDecl(
+      SourceSpan                  span,
       std::shared_ptr<Identifier> name,
-      std::shared_ptr<Node> type,
-      std::shared_ptr<Node> value = nullptr,
-      bool global = false
+      std::shared_ptr<Node>       type,
+      std::shared_ptr<Node>       value  = nullptr,
+      bool                        global = false
   );
 
   ~VarDecl() override = default;
 
   static std::shared_ptr<VarDecl> create(
+      SourceSpan                  span,
       std::shared_ptr<Identifier> name,
-      std::shared_ptr<Node> type,
-      std::shared_ptr<Node> value = nullptr,
-      bool global = false
+      std::shared_ptr<Node>       type,
+      std::shared_ptr<Node>       value  = nullptr,
+      bool                        global = false
   );
 
   std::shared_ptr<Node> clone() override;

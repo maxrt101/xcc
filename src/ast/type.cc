@@ -6,26 +6,26 @@
 
 using namespace xcc::ast;
 
-Type::Type(std::shared_ptr<Node> name, bool pointer)
-  : Node(AST_EXPR_TYPE), name(std::move(name)), pointer(pointer), function(false) {}
+Type::Type(SourceSpan span, std::shared_ptr<Node> name, bool pointer)
+  : Node(AST_EXPR_TYPE, span), name(std::move(name)), pointer(pointer), function(false) {}
 
-Type::Type(std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic)
-  : Node(AST_EXPR_TYPE), function(true), isVariadic(isVariadic), returnType(returnType), args(args) {}
+Type::Type(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic)
+  : Node(AST_EXPR_TYPE, span), function(true), isVariadic(isVariadic), returnType(returnType), args(args) {}
 
-std::shared_ptr<Type> Type::create(std::shared_ptr<Node> name, bool pointer) {
-  return std::make_shared<Type>(std::move(name), pointer);
+std::shared_ptr<Type> Type::create(SourceSpan span, std::shared_ptr<Node> name, bool pointer) {
+  return std::make_shared<Type>(span, std::move(name), pointer);
 }
 
-std::shared_ptr<Type> Type::createFunction(std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic) {
-  return std::make_shared<Type>(std::move(returnType), std::move(args), isVariadic);
+std::shared_ptr<Type> Type::createFunction(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic) {
+  return std::make_shared<Type>(span, std::move(returnType), std::move(args), isVariadic);
 }
 
 std::shared_ptr<Node> Type::clone() {
   if (function) {
-    return withAttrs(createFunction(cast<Type>(returnType->clone()), cloneVector(args), isVariadic));
+    return withAttrs(createFunction(span, cast<Type>(returnType->clone()), cloneVector(args), isVariadic));
   }
 
-  return withAttrs(create(name->clone(), pointer));
+  return withAttrs(create(span, name->clone(), pointer));
 }
 
 void Type::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -85,5 +85,5 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
     return pointer ? meta::Type::createPointer(baseType) : baseType;
   }
 
-  throw CodegenException("Unexpected type node '" + Node::typeToString(name->type) + "' (" + std::to_string(name->type) +")");
+  throw Error(ERROR_INTERNAL_UNEXPECTED_NODE, name->span, "Unexpected type node '" + Node::typeToString(name->type) + "' (" + std::to_string(name->type) +")");
 }

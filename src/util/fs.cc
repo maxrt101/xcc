@@ -1,6 +1,7 @@
 #include "xcc/util/fs.h"
 #include "xcc/util/log.h"
 #include "xcc/util/string.h"
+#include "xcc/error.h"
 
 #include <iostream>
 #include <fstream>
@@ -15,7 +16,7 @@ std::string xcc::fs::readFile(const std::string& filename) {
 
   if (!fs.is_open()) {
     logger.fatal("Failed to open file '{}'", filename);
-    throw std::runtime_error("Failed to open the file");
+    Error(ERROR_MISSING_FILE, {}, filename).throwException();
   }
 
   std::stringstream ss;

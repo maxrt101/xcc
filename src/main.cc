@@ -7,6 +7,7 @@
 #include "xcc/util/string.h"
 #include "xcc/util/env.h"
 #include "xcc/util/fs.h"
+#include "xcc/util/filemng.h"
 
 #include <llvm/TargetParser/Host.h>
 #include <llvm/MC/MCSubtargetInfo.h>
@@ -84,7 +85,7 @@ static int list_targets(xcc::args::Arguments& args) {
   size_t width = 0;
 
   for (const llvm::Target& t : llvm::TargetRegistry::targets()) {
-    targets.push_back({t.getName(), t.getShortDescription()});
+    targets.emplace_back(t.getName(), t.getShortDescription());
     width = std::max(width, strlen(t.getName()));
   }
 
@@ -121,12 +122,12 @@ static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, x
   }
 
   auto filename = args.files[0];
-  auto src = xcc::fs::readFile(filename);
-  auto out = args.output.empty() ? filename + ".o" : args.output;
+  auto file = xcc::FileManager::load(filename);
+  auto out = args.output.empty() ? xcc::fs::path::getFileName(filename) + ".o" : args.output;
 
   logger.info("Compiling '{}' into '{}'", filename, out);
 
-  xcc::compile_to_object(globalContext, src, out, getModPaths(filename, args));
+  xcc::compile_to_object(globalContext, file, out, getModPaths(filename, args));
 
   return 0;
 }
@@ -135,15 +136,15 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
   std::vector<std::string> files_to_link;
 
   for (auto & filename : args.files) {
-    auto file = xcc::fs::readFile(filename);
+    auto file = xcc::FileManager::load(filename);
 
-    auto magic = llvm::identify_magic(file);
+    auto magic = llvm::identify_magic(xcc::FileManager::get(file)->contents);
 
     if (magic.is_object()) {
       logger.info("Found object file '{}'", xcc::fs::path::getFileName(filename));
       files_to_link.push_back(filename);
     } else {
-      auto out = filename + ".o";
+      auto out = xcc::fs::path::getFileName(filename) + ".o";
 
       logger.info("Compiling '{}' into '{}'", xcc::fs::path::getFileName(filename), xcc::fs::path::getFileName(out));
 
@@ -183,7 +184,7 @@ static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::
   for (auto& filename : args.files) {
     logger.info("Running file '{}'", xcc::fs::path::getFileName(filename));
 
-    xcc::compile(globalContext, xcc::fs::readFile(filename), false, args.mod_paths);
+    xcc::compile(globalContext, xcc::FileManager::load(filename), false, args.mod_paths);
   }
 
   globalContext->flushModulesToJIT();
@@ -237,7 +238,8 @@ static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
       continue;
     }
 
-    xcc::run(globalContext, line, true);
+    throw std::runtime_error("REPL is broken for now");
+    // xcc::run(globalContext, 0, true);
   }
 
   return 0;
@@ -293,7 +295,8 @@ int main(int argc, char ** argv) {
     return xcc_main(argc, argv);
 #if USE_CATCH_EXCEPTIONS
   } catch (std::exception& e) {
-    logger.error("{}\n", e.what());
+    logger.print("{}\n", e.what());
+    return 1;
   }
 #endif
 }

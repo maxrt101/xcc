@@ -9,14 +9,14 @@ namespace xcc::ast {
 
 class Unary : public Node {
 public:
-  Token operation;
+  Token                 operation;
   std::shared_ptr<Node> rhs;
 
 public:
-  Unary(Token operation, std::shared_ptr<Node> rhs);
+  Unary(SourceSpan span, Token operation, std::shared_ptr<Node> rhs);
   ~Unary() override = default;
 
-  static std::shared_ptr<Unary> create(Token operation, std::shared_ptr<Node> rhs);
+  static std::shared_ptr<Unary> create(SourceSpan span, Token operation, std::shared_ptr<Node> rhs);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

@@ -5,15 +5,15 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-Identifier::Identifier(std::string value, std::vector<std::string> scope)
-  : Node(AST_EXPR_IDENTIFIER), value(std::move(value)), scope(std::move(scope)) {}
+Identifier::Identifier(SourceSpan span, std::string value, std::vector<std::string> scope)
+  : Node(AST_EXPR_IDENTIFIER, span), value(std::move(value)), scope(std::move(scope)) {}
 
-std::shared_ptr<Identifier> Identifier::create(const std::string& value, std::vector<std::string> scope) {
-  return std::make_shared<Identifier>(value, scope);
+std::shared_ptr<Identifier> Identifier::create(SourceSpan span, const std::string& value, std::vector<std::string> scope) {
+  return std::make_shared<Identifier>(span, value, scope);
 }
 
 std::shared_ptr<Node> Identifier::clone() {
-  return withAttrs(create(value, scope));
+  return withAttrs(create(span, value, scope));
 }
 
 void Identifier::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
@@ -59,7 +59,7 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
     return fn;
   }
 
-  throw CodegenException("Undeclared value referenced: '" + name() + "'");
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).throwException();
 }
 
 llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -75,7 +75,7 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, 
     return fn;
   }
 
-  throw CodegenException("Undeclared value referenced: '" + name() + "'");
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).throwException();
 }
 
 std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -83,7 +83,7 @@ std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx
 }
 
 std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
- if (ctx.hasLocal(name())) {
+  if (ctx.hasLocal(name())) {
     return ctx.getLocalType(name());
   }
 
@@ -95,5 +95,5 @@ std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(cod
     return meta_fn->decl->generateType(ctx, payload);
   }
 
-  throw CodegenException("Undeclared value referenced: '" + name() + "'");
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).throwException();
 }

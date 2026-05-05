@@ -17,16 +17,16 @@ public:
   };
 
 public:
-  MemberAccessKind kind;
-  std::shared_ptr<Node> lhs;
+  MemberAccessKind            kind;
+  std::shared_ptr<Node>       lhs;
   std::shared_ptr<Identifier> rhs;
 
 public:
-  MemberAccess(MemberAccessKind kind, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
+  MemberAccess(SourceSpan span, MemberAccessKind kind, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
   ~MemberAccess() override = default;
 
-  static std::shared_ptr<MemberAccess> createByValue(std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
-  static std::shared_ptr<MemberAccess> createByPointer(std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
+  static std::shared_ptr<MemberAccess> createByValue(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
+  static std::shared_ptr<MemberAccess> createByPointer(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

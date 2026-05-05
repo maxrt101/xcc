@@ -5,14 +5,15 @@
 
 using namespace xcc::ast;
 
-Module::Module(std::shared_ptr<Node> name, std::shared_ptr<Block> body) : Node(AST_MOD), name(std::move(name)), body(std::move(body)) {}
+Module::Module(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Block> body)
+  : Node(AST_MOD, span), name(std::move(name)), body(std::move(body)) {}
 
-std::shared_ptr<Module> Module::create(std::shared_ptr<Node> name, std::shared_ptr<Block> body) {
-  return std::make_shared<Module>(std::move(name), std::move(body));
+std::shared_ptr<Module> Module::create(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Block> body) {
+  return std::make_shared<Module>(span, std::move(name), std::move(body));
 }
 
 std::shared_ptr<Node> Module::clone() {
-  return withAttrs(create(name->clone(), body ? cast<Block>(body->clone()) : nullptr));
+  return withAttrs(create(span, name->clone(), body ? cast<Block>(body->clone()) : nullptr));
 }
 
 void Module::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -28,7 +29,7 @@ std::string Module::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 std::string Module::getName() const {
-  assertThrow(name->is(AST_EXPR_IDENTIFIER), CodegenException("Module name must be an identifier"));
+  assertRaise(name->is(AST_EXPR_IDENTIFIER), Error(ERROR_MOD_NAME_NOT_IDENTIFIER, name->span, "Module name must be an identifier"));
 
   return name->as<Identifier>()->name();
 }

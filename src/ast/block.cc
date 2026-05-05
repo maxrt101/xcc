@@ -3,15 +3,15 @@
 
 using namespace xcc::ast;
 
-Block::Block(std::vector<std::shared_ptr<Node>> body)
-  : Node(AST_BLOCK), body(std::move(body)) {}
+Block::Block(SourceSpan span, std::vector<std::shared_ptr<Node>> body)
+  : Node(AST_BLOCK, span), body(std::move(body)) {}
 
-std::shared_ptr<Block> Block::create(std::vector<std::shared_ptr<Node>> body) {
-  return std::make_shared<Block>(std::move(body));
+std::shared_ptr<Block> Block::create(SourceSpan span, std::vector<std::shared_ptr<Node>> body) {
+  return std::make_shared<Block>(span, std::move(body));
 }
 
 std::shared_ptr<Node> Block::clone() {
-  return withAttrs(create(cloneVector(body)));
+  return withAttrs(create(span, cloneVector(body)));
 }
 
 void Block::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {

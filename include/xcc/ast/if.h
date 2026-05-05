@@ -12,10 +12,10 @@ public:
   std::shared_ptr<Node> else_branch;
 
 public:
-  If(std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch = nullptr);
+  If(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch = nullptr);
   ~If() override = default;
 
-  static std::shared_ptr<If> create(std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch = nullptr);
+  static std::shared_ptr<If> create(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch = nullptr);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

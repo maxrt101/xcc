@@ -9,13 +9,13 @@ namespace xcc::ast {
 class FnDef : public Node {
 public:
   std::shared_ptr<FnDecl> decl;
-  std::shared_ptr<Block> body;
+  std::shared_ptr<Block>  body;
 
 public:
-  FnDef(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
+  FnDef(SourceSpan span, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
   ~FnDef() override = default;
 
-  static std::shared_ptr<FnDef> create(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
+  static std::shared_ptr<FnDef> create(SourceSpan span, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

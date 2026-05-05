@@ -12,6 +12,7 @@ public:
 
 public:
   MacroCall(
+    SourceSpan                         span,
     std::shared_ptr<Identifier>        name,
     std::vector<std::shared_ptr<Node>> args
   );
@@ -19,6 +20,7 @@ public:
   ~MacroCall() override = default;
 
   static std::shared_ptr<MacroCall> create(
+    SourceSpan                         span,
     std::shared_ptr<Identifier>        name,
     std::vector<std::shared_ptr<Node>> args
   );

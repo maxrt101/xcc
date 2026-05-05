@@ -12,10 +12,10 @@ public:
   std::shared_ptr<Node> lhs, rhs;
 
 public:
-  Subscript(std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
+  Subscript(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
   ~Subscript() override = default;
 
-  static std::shared_ptr<Subscript> create(std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
+  static std::shared_ptr<Subscript> create(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

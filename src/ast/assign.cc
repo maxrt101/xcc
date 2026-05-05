@@ -18,15 +18,15 @@ static std::unordered_map<TokenType, TokenType> s_equal_to_op = {
   {TOKEN_LOGICAL_OR_EQUALS,   TOKEN_OR},
 };
 
-Assign::Assign(Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
-  : Node(AST_EXPR_ASSIGN), kind(std::move(kind)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+Assign::Assign(SourceSpan span, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
+  : Node(AST_EXPR_ASSIGN, span), kind(std::move(kind)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<Assign> Assign::create(Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
-  return std::make_shared<Assign>(std::move(kind), std::move(lhs), std::move(rhs));
+std::shared_ptr<Assign> Assign::create(SourceSpan span, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
+  return std::make_shared<Assign>(span, std::move(kind), std::move(lhs), std::move(rhs));
 }
 
 std::shared_ptr<Node> Assign::clone() {
-  return withAttrs(create(kind, lhs->clone(), rhs->clone()));
+  return withAttrs(create(span, kind, lhs->clone(), rhs->clone()));
 }
 
 void Assign::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -47,14 +47,14 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   if (kind.type == TOKEN_EQUALS) {
     value = rhs->generateValue(ctx, {});
   } else if (s_equal_to_op.find(kind.type) != s_equal_to_op.end()) {
-    value = Binary::create(kind.clone(s_equal_to_op[kind.type]), lhs, rhs)->generateValue(ctx, payload);
+    value = Binary::create(span, kind.clone(s_equal_to_op[kind.type]), lhs, rhs)->generateValue(ctx, payload);
   } else {
-    throw CodegenException("Invalid operation for assignment (" + Token::typeToString(kind.type) + ")");
+    Error(ERROR_INVALID_ASSIGNMENT_OP, kind.span, "{}", Token::typeToString(kind.type)).throwException();
   }
 
   value = codegen::castIfNotSame(
     ctx,
-    throwIfNull(value, CodegenException("assignment value generated NULL")),
+    throwIfNull(value, std::runtime_error("assignment value generated NULL")),
     lhs->generateTypeForValueWithoutLoad(ctx, {})->getLLVMType(ctx)
   );
 
@@ -72,7 +72,7 @@ std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ct
       return ctx.getLocalType(name->name());
     }
 
-    throw CodegenException("Unknown variable '" + name->name() + "'");
+    Error(ERROR_UNKNOWN_VARIABLE, name->span, "'{}'", name->name()).throwException();
   }
 
   return lhs->generateTypeForValueWithoutLoad(ctx, {});

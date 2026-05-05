@@ -6,6 +6,7 @@
 #include "xcc/parser.h"
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
+#include "xcc/util/filemng.h"
 #include "xcc/util/llvm.h"
 #include "xcc/util/log.h"
 
@@ -53,14 +54,14 @@ void cleanup();
  * 'Driver' function - will tokenize, parse, lower AST & compile the source code
  *
  * @param globalContext Global context
- * @param src           String containing source code
+ * @param file          ID of loaded file
  * @param isRepl        True if run in REPL mode
  * @param includePaths  List of search paths for modules
  * @return List of compiled function and/or top-level expressions (if in REPL mode)
  */
 CompilationResult compile(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
-  const std::string&                       src,
+  FileId                                   file,
   bool                                     isRepl = false,
   const std::vector<std::string>&          includePaths = {}
 );
@@ -70,13 +71,13 @@ CompilationResult compile(
  * into an object file
  *
  * @param globalContext Global context
- * @param src           String containing source code
+ * @param file          ID of loaded file
  * @param filename      Name of output object file
  * @param includePaths  List of search paths for modules
 */
 void compile_to_object(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
-  const std::string&                       src,
+  FileId                                   file,
   const std::string&                       filename,
   const std::vector<std::string>&          includePaths = {}
 );
@@ -86,13 +87,13 @@ void compile_to_object(
  * mode - top-level expression
  *
  * @param globalContext Global context
- * @param src           String containing source code
+ * @param file          ID of loaded file
  * @param isRepl        True if run in REPL mode
  * @param includePaths  List of search paths for modules
  */
 void run(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
-  const std::string&                       src,
+  FileId                                   file,
   bool                                     isRepl = false,
   const std::vector<std::string>&          includePaths = {}
 );

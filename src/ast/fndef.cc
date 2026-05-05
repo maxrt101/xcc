@@ -9,15 +9,16 @@ using namespace xcc::ast;
 
 static auto logger = xcc::util::log::Logger("FNDEF", util::log::Flag::SPLIT_ON_NEWLINE);
 
-FnDef::FnDef(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body)
-  : Node(AST_FUNCTION_DEF), decl(std::move(decl)), body(std::move(body)) {}
+FnDef::FnDef(SourceSpan span, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body)
+  : Node(AST_FUNCTION_DEF, span), decl(std::move(decl)), body(std::move(body)) {}
 
-std::shared_ptr<FnDef> FnDef::create(std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body) {
-  return std::make_shared<FnDef>(std::move(decl), std::move(body));
+std::shared_ptr<FnDef> FnDef::create(SourceSpan span, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body) {
+  return std::make_shared<FnDef>(span, std::move(decl), std::move(body));
 }
 
 std::shared_ptr<Node> FnDef::clone() {
   return withAttrs(create(
+    span,
     cast<FnDecl>(decl->clone()),
     cast<Block>(body->clone())
   ));
@@ -43,7 +44,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
   auto fn = ctx.getFunction(decl->name->name());
 
   if (!fn) {
-    throw CodegenException("Error generating Function object for '" + decl->name->name() + "'");
+    Error(ERROR_INTERNAL_FAILURE, decl->span, "Error generating Function object for '{}'", decl->name->name()).throwException();
   }
 
   auto basic_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", fn);
@@ -93,7 +94,9 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     logger.debug("Function {} IR:", meta_fn->name);
     logger.print("{}", fn_collector.string());
 #endif
-    throw CodegenException("Function '" + decl->name->name() + "' didn't pass validation\n" + collector.string());
+    Error(ERROR_LLVM_ERROR, decl->span, "Function '{}' didn't pass validation", decl->name->name())
+      .note({}, "{}", std::string(collector.string()))
+      .throwException();
   }
 
   return fn;

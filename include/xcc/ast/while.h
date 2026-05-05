@@ -10,10 +10,10 @@ public:
   std::shared_ptr<Node> body;
 
 public:
-  While(std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
+  While(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
   ~While() override = default;
 
-  static std::shared_ptr<While> create(std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
+  static std::shared_ptr<While> create(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

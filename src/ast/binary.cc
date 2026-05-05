@@ -35,15 +35,15 @@ static const binop::List s_binops = {
   XCC_BINOP(TOKEN_VERTICAL_LINE,  NONE,               CreateOr,          "ortmp",       ()                ),
 };
 
-Binary::Binary(Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
-  : Node(AST_EXPR_BINARY), operation(std::move(operation)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+Binary::Binary(SourceSpan span, Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
+  : Node(AST_EXPR_BINARY, span), operation(std::move(operation)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<Binary> Binary::create(Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
-  return std::make_shared<Binary>(std::move(operation), std::move(lhs), std::move(rhs));
+std::shared_ptr<Binary> Binary::create(SourceSpan span, Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
+  return std::make_shared<Binary>(span, std::move(operation), std::move(lhs), std::move(rhs));
 }
 
 std::shared_ptr<Node> Binary::clone() {
-  return withAttrs(create(operation, lhs->clone(), rhs->clone()));
+  return withAttrs(create(span, operation, lhs->clone(), rhs->clone()));
 }
 
 void Binary::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -61,8 +61,8 @@ std::string Binary::toString(Node * grandparent, Node * parent, int indent, bool
 
 llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto common_type = meta::Type::alignTypes(
-    throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS Type is NULL")),
-    throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS Type is NULL"))
+    raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL")),
+    raiseIfNull(rhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"))
   );
 
   // Pointer comparisons are actually converted to integer
@@ -72,18 +72,18 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
   auto lhs_val = castIfNotSame(
     ctx,
-    throwIfNull(
+    raiseIfNull(
       lhs->generateValue(ctx, {}),
-      CodegenException("LHS Value is NULL")
+      Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL")
     ),
     common_type->getLLVMType(ctx)
   );
 
   auto rhs_val = castIfNotSame(
     ctx,
-    throwIfNull(
+    raiseIfNull(
       rhs->generateValue(ctx, {}),
-      CodegenException("RHS Value is NULL")
+      Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Value is NULL")
     ),
     common_type->getLLVMType(ctx)
   );
@@ -92,12 +92,12 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     return binop->handler(ctx, lhs_val, rhs_val, binop->twine);
   }
 
-  throw CodegenException(operation.line, "Unsupported binary expression operator or type (op=" + operation.toString() + " type=" + common_type->toString() + ")");
+  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op={} type={}", operation.toString(), common_type->toString()).throwException();
 }
 
 std::shared_ptr<meta::Type> Binary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto lhs_type = throwIfNull(lhs->generateType(ctx, {}), CodegenException("LHS type is NULL"));
-  auto rhs_type = throwIfNull(rhs->generateType(ctx, {}), CodegenException("RHS type is NULL"));
+  auto lhs_type = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS type is NULL"));
+  auto rhs_type = raiseIfNull(rhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS type is NULL"));
 
   return meta::Type::alignTypes(lhs_type, rhs_type);
 }

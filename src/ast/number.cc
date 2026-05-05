@@ -12,17 +12,17 @@ std::shared_ptr<Node::Payload> Number::Payload::create(int bits) {
   );
 }
 
-Number::Number() : Node(AST_EXPR_NUMBER) {}
+Number::Number(SourceSpan span) : Node(AST_EXPR_NUMBER, span) {}
 
-std::shared_ptr<Number> Number::createInteger(int64_t value) {
-  auto number = std::make_shared<Number>();
+std::shared_ptr<Number> Number::createInteger(SourceSpan span, int64_t value) {
+  auto number = std::make_shared<Number>(span);
   number->tag = INTEGER;
   number->value.integer = value;
   return number;
 }
 
-std::shared_ptr<Number> Number::createFloating(double value) {
-  auto number = std::make_shared<Number>();
+std::shared_ptr<Number> Number::createFloating(SourceSpan span, double value) {
+  auto number = std::make_shared<Number>(span);
   number->tag = FLOATING;
   number->value.floating = value;
   return number;
@@ -30,14 +30,14 @@ std::shared_ptr<Number> Number::createFloating(double value) {
 
 std::shared_ptr<Node> Number::clone() {
   if (tag == INTEGER) {
-    return withAttrs(createInteger(value.integer));
+    return withAttrs(createInteger(span, value.integer));
   }
 
   if (tag == FLOATING) {
-    return withAttrs(createFloating(value.floating));
+    return withAttrs(createFloating(span, value.floating));
   }
 
-  throw CodegenException("Invalid number literal");
+  Error(ERROR_INVALID_NUMBER_LITERAL, span, "").throwException();
 }
 
 void Number::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
@@ -70,7 +70,7 @@ llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, Payl
     return llvm::ConstantInt::get(llvm::IntegerType::get(*ctx.llvm.ctx, bits), value.integer);
   }
 
-  throw CodegenException("Invalid number literal");
+  Error(ERROR_INVALID_NUMBER_LITERAL, span, "").throwException();
 }
 
 std::shared_ptr<xcc::meta::Type> Number::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -90,5 +90,5 @@ std::shared_ptr<xcc::meta::Type> Number::generateTypeForValueWithoutLoad(codegen
     return xcc::meta::Type::createSigned(bits);
   }
 
-  throw CodegenException("Invalid number literal");
+  Error(ERROR_INVALID_NUMBER_LITERAL, span, "").throwException();
 }

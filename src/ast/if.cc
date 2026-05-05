@@ -6,15 +6,15 @@
 
 using namespace xcc::ast;
 
-If::If(std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch)
-  : Node(AST_IF), condition(std::move(condition)), then_branch(std::move(then_branch)), else_branch(std::move(else_branch)) {}
+If::If(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch)
+  : Node(AST_IF, span), condition(std::move(condition)), then_branch(std::move(then_branch)), else_branch(std::move(else_branch)) {}
 
-std::shared_ptr<If> If::create(std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch) {
-  return std::make_shared<If>(std::move(condition), std::move(then_branch), std::move(else_branch));
+std::shared_ptr<If> If::create(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch) {
+  return std::make_shared<If>(span, std::move(condition), std::move(then_branch), std::move(else_branch));
 }
 
 std::shared_ptr<Node> If::clone() {
-  return withAttrs(create(condition->clone(), then_branch->clone(), else_branch ? else_branch->clone() : nullptr));
+  return withAttrs(create(span, condition->clone(), then_branch->clone(), else_branch ? else_branch->clone() : nullptr));
 }
 
 void If::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -37,16 +37,16 @@ std::string If::toString(Node * grandparent, Node * parent, int indent, bool new
 }
 
 llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto cond_val = throwIfNull(condition->generateValue(ctx, {}), CodegenException("Error generating condition of 'if' statement (condition generated NULL)"));
+  auto cond_val = raiseIfNull(condition->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, condition->span, "Error generating condition of 'if' statement (condition generated NULL)"));
 
-  auto then_type = throwIfNull(then_branch->generateType(ctx, {}), CodegenException("if then branch generated NULL type"));
+  auto then_type = raiseIfNull(then_branch->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "if then branch generated NULL type"));
   auto else_type = meta::Type::createVoid();
 
   auto common_type = then_type;
 
   // If else_branch exists, use its type - otherwise use then_branch type
   if (else_branch) {
-    else_type = throwIfNull(else_branch->generateType(ctx, {}), CodegenException("if else branch generated NULL type"));
+    else_type = raiseIfNull(else_branch->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span,"if else branch generated NULL type"));
     common_type = meta::Type::alignTypes(then_type, else_type);
   }
 
@@ -68,7 +68,7 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
 
   // If then branch
   ctx.ir_builder->SetInsertPoint(then_block);
-  auto then_val = throwIfNull(then_branch->generateValue(ctx, {}), CodegenException("Error generating 'then' block of 'if' statement (then branch generated NULL)"));
+  auto then_val = raiseIfNull(then_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "Error generating 'then' block of 'if' statement (then branch generated NULL)"));
 
   then_val = codegen::castIfNotSame(ctx, then_val, common_type->getLLVMType(ctx));
 
@@ -81,7 +81,7 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
   // If else branch
   fn->insert(fn->end(), else_block);
   ctx.ir_builder->SetInsertPoint(else_block);
-  auto else_val = else_branch ? throwIfNull(else_branch->generateValue(ctx, {}), CodegenException("Error generating 'then' block of 'if' statement (else branch generated NULL)")) : nullptr;
+  auto else_val = else_branch ? raiseIfNull(else_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "Error generating 'then' block of 'if' statement (else branch generated NULL)")) : nullptr;
 
   if (else_val) {
     else_val = codegen::castIfNotSame(ctx, else_val, common_type->getLLVMType(ctx));
@@ -127,11 +127,11 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
 }
 
 std::shared_ptr<xcc::meta::Type> If::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto then_type = throwIfNull(then_branch->generateType(ctx, {}), CodegenException("if then branch generated NULL type"));
+  auto then_type = raiseIfNull(then_branch->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span,  "if then branch generated NULL type"));
   auto else_type = meta::Type::createVoid();
 
   if (else_branch) {
-    else_type = throwIfNull(else_branch->generateType(ctx, {}), CodegenException("if else branch generated NULL type"));
+    else_type = raiseIfNull(else_branch->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "if else branch generated NULL type"));
   }
 
   return meta::Type::alignTypes(then_type, else_type);

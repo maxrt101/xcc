@@ -11,23 +11,25 @@ namespace xcc::ast {
 
 class Struct : public Node, public std::enable_shared_from_this<Struct> {
 public:
-  std::shared_ptr<Identifier> name;
+  std::shared_ptr<Identifier>                   name;
   std::vector<std::shared_ptr<TypedIdentifier>> fields;
-  std::vector<std::shared_ptr<Node>> methods;
+  std::vector<std::shared_ptr<Node>>            methods;
 
 public:
   explicit Struct(
-      std::shared_ptr<Identifier> name,
+      SourceSpan                                    span,
+      std::shared_ptr<Identifier>                   name,
       std::vector<std::shared_ptr<TypedIdentifier>> fields = {},
-      std::vector<std::shared_ptr<Node>> methods = {}
+      std::vector<std::shared_ptr<Node>>            methods = {}
   );
 
   ~Struct() override = default;
 
   static std::shared_ptr<Struct> create(
-      std::shared_ptr<Identifier> name,
+      SourceSpan                                    span,
+      std::shared_ptr<Identifier>                   name,
       std::vector<std::shared_ptr<TypedIdentifier>> fields = {},
-      std::vector<std::shared_ptr<Node>> methods = {}
+      std::vector<std::shared_ptr<Node>>            methods = {}
   );
 
   std::shared_ptr<Node> clone() override;

@@ -9,12 +9,13 @@ using namespace xcc::ast;
 static auto logger = xcc::util::log::Logger("FNDECL");
 
 FnDecl::FnDecl(
-    std::shared_ptr<Identifier> name,
-    std::shared_ptr<Node> return_type,
-    std::vector<std::shared_ptr<TypedIdentifier>> args,
-    bool isExtern,
-    bool isVariadic
-) : Node(AST_FUNCTION_DECL),
+  SourceSpan                                    span,
+  std::shared_ptr<Identifier>                   name,
+  std::shared_ptr<Node>                         return_type,
+  std::vector<std::shared_ptr<TypedIdentifier>> args,
+  bool                                          isExtern,
+  bool                                          isVariadic
+) : Node(AST_FUNCTION_DECL, span),
     name(std::move(name)),
     return_type(std::move(return_type)),
     args(std::move(args)),
@@ -22,17 +23,19 @@ FnDecl::FnDecl(
     isVariadic(isVariadic) {}
 
 std::shared_ptr<FnDecl> FnDecl::create(
-    std::shared_ptr<Identifier> name,
-    std::shared_ptr<Node> return_type,
-    std::vector<std::shared_ptr<TypedIdentifier>> args,
-    bool isExtern,
-    bool isVariadic
+  SourceSpan                                    span,
+  std::shared_ptr<Identifier>                   name,
+  std::shared_ptr<Node>                         return_type,
+  std::vector<std::shared_ptr<TypedIdentifier>> args,
+  bool                                          isExtern,
+  bool                                          isVariadic
 ) {
-  return std::make_shared<FnDecl>(std::move(name), std::move(return_type), std::move(args), isExtern, isVariadic);
+  return std::make_shared<FnDecl>(span, std::move(name), std::move(return_type), std::move(args), isExtern, isVariadic);
 }
 
 std::shared_ptr<Node> FnDecl::clone() {
   return withAttrs(create(
+    span,
     cast<Identifier>(name->clone()),
     return_type->clone(),
     cloneVector(args),
@@ -100,7 +103,7 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
     if (arg->is(AST_EXPR_TYPED_IDENTIFIER)) {
       arg_meta_types[arg->name->name()] = arg->generateType(ctx, {});
     } else {
-      throw CodegenException("Unexpected node discovered in '" + fn_name + "' functions argument ('" + Node::typeToString(arg->type) + "')");
+      Error(ERROR_INTERNAL_UNEXPECTED_NODE, arg->span, "Unexpected node '{}' in function '{}' argument declaration", typeToString(arg->type), fn_name).throwException();
     }
   }
 

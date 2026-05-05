@@ -5,15 +5,15 @@
 
 using namespace xcc::ast;
 
-Call::Call(std::shared_ptr<Node> callee, std::vector<std::shared_ptr<Node>> args)
-    : Node(AST_EXPR_CALL), callee(std::move(callee)), args(std::move(args)) {}
+Call::Call(SourceSpan span, std::shared_ptr<Node> callee, std::vector<std::shared_ptr<Node>> args)
+    : Node(AST_EXPR_CALL, span), callee(std::move(callee)), args(std::move(args)) {}
 
-std::shared_ptr<Call> Call::create(std::shared_ptr<Node> name, std::vector<std::shared_ptr<Node>> args) {
-  return std::make_shared<Call>(std::move(name), std::move(args));
+std::shared_ptr<Call> Call::create(SourceSpan span, std::shared_ptr<Node> name, std::vector<std::shared_ptr<Node>> args) {
+  return std::make_shared<Call>(span, std::move(name), std::move(args));
 }
 
 std::shared_ptr<Node> Call::clone() {
-  return withAttrs(create(callee->clone(), cloneVector(args)));
+  return withAttrs(create(span, callee->clone(), cloneVector(args)));
 }
 
 void Call::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -56,9 +56,9 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
   bool isVariadic = info.metaType->isVariadic();
 
   if (!isVariadic && expectedArgs != providedArgs) {
-    throw CodegenException(std::format(
+    Error(ERROR_FN_CALL_ARG_COUNT_MISMATCH, span,
         "Argument mismatch (function: '{}', expected: {}, got: {})",
-        info.fnName, expectedArgs, providedArgs));
+        info.fnName, expectedArgs, providedArgs).throwException();
   }
 
   for (size_t i = 0; i < args.size(); ++i) {
@@ -71,7 +71,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
       : args[i]->generateValue(ctx, {});
 
     if (!val) {
-      throw CodegenException("Failed to generate function call arguments");
+      Error(ERROR_INTERNAL_FAILURE, args[i]->span, "Failed to generate function call argument #{}", i).throwException();
     }
 
     if (i < signature->getNumParams()) {
@@ -111,7 +111,7 @@ Call::CalleeInfo Call::getCalleeInfo(codegen::ModuleContext& ctx, PayloadList pa
   }
 
   if (!info.metaType || !info.metaType->isFunction()) {
-    throw CodegenException("Expression is not callable");
+    Error(ERROR_EXPR_NOT_CALLABLE, callee->span, "Expression of type '{}' is not callable", typeToString(callee->type)).throwException();
   }
 
   return info;
@@ -145,7 +145,7 @@ void Call::getCalleeInfoForMethodCall(codegen::ModuleContext& ctx, PayloadList p
   auto * directFn = ctx.getFunction(info.fnName);
 
   if (!directFn) {
-    throw CodegenException("Unknown method: " + info.fnName);
+    Error(ERROR_UNKNOWN_METHOD, callee->span, "'{}'", info.fnName).throwException();
   }
 
   auto meta_fn   = ctx.globalContext.getMetaFunction(info.fnName);

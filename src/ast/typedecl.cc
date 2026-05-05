@@ -5,15 +5,15 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-TypeDecl::TypeDecl(std::shared_ptr<Node> name, std::shared_ptr<Node> value)
-  : Node(AST_TYPE_DECL), name(std::move(name)), value(std::move(value)) {}
+TypeDecl::TypeDecl(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> value)
+  : Node(AST_TYPE_DECL, span), name(std::move(name)), value(std::move(value)) {}
 
-std::shared_ptr<TypeDecl> TypeDecl::create(std::shared_ptr<Node> name, std::shared_ptr<Node> value) {
-  return std::make_shared<TypeDecl>(std::move(name), std::move(value));
+std::shared_ptr<TypeDecl> TypeDecl::create(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> value) {
+  return std::make_shared<TypeDecl>(span, std::move(name), std::move(value));
 }
 
 std::shared_ptr<Node> TypeDecl::clone() {
-  return withAttrs(create(name->clone(), value->clone()));
+  return withAttrs(create(span, name->clone(), value->clone()));
 }
 
 void TypeDecl::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -29,8 +29,8 @@ std::string TypeDecl::toString(Node * grandparent, Node * parent, int indent, bo
 }
 
 std::shared_ptr<meta::Type> TypeDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  assertThrow(name->is(AST_EXPR_IDENTIFIER), CodegenException("Type alias (declaration) name must be an identifier"));
-  assertThrow(value->is(AST_EXPR_TYPE), CodegenException("Type alias (declaration) value must be a type expr"));
+  assertRaise(name->is(AST_EXPR_IDENTIFIER), Error(ERROR_TYPE_ALIAS_NAME_NOT_IDENTIFIER, name->span, ""));
+  assertRaise(value->is(AST_EXPR_TYPE), Error(ERROR_TYPE_ALIAS_VALUE_NOT_TYPE, value->span, ""));
 
   auto alias = name->as<Identifier>()->name();
 

@@ -38,17 +38,17 @@ static const std::unordered_map<NodeType, std::string> s_type_map {
 Node::Payload::Payload(NodeType type) : type(type) {}
 
 void Node::Attribute::validateArgsStrict(const std::vector<NodeType>& arg_types) {
-  assertThrow(args.size() == arg_types.size(),
-    CodegenException(std::format("Attribute '{}' expected {} args, got {}", name, args.size(), arg_types.size())));
+  assertRaise(args.size() == arg_types.size(),
+    Error(ERROR_ATTR_ARG_COUNT_MISMATCH, span, "Attribute '{}' expected {} args, got {}", name, args.size(), arg_types.size()));
 
   for (size_t i = 0; i < arg_types.size(); ++i) {
-    assertThrow(args[i]->is(arg_types[i]),
-      CodegenException(std::format("Attribute '{}' expected {} as {} argument, got {}",
-        name, typeToString(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToString(args[i]->type))));
+    assertRaise(args[i]->is(arg_types[i]),
+      Error(ERROR_ATTR_ARG_TYPE_MISMATCH, span, "Attribute '{}' expected {} as {} argument, got {}",
+        name, typeToString(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToString(args[i]->type)));
   }
 }
 
-Node::Node(NodeType type) : type(type) {}
+Node::Node(NodeType type, SourceSpan span) : type(type), span(span) {}
 
 bool Node::isAnyOf(std::vector<NodeType> expected) const {
   for (auto& typ : expected) {
@@ -185,7 +185,7 @@ std::string Node::attributesToString(int indent, bool newline) {
   return res;
 }
 
-Empty::Empty() : Node(AST_EMPTY) {}
+Empty::Empty() : Node(AST_EMPTY, {}) {}
 
 std::shared_ptr<Empty> Empty::create() {
   return std::make_shared<Empty>();
