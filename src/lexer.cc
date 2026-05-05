@@ -273,7 +273,7 @@ void Lexer::tokenizeString() {
   size_t start = consume();
   while (!check('"')) {
     if (isAtEnd()) {
-      Error(ERROR_UNEXPECTED_EOF, {fileId, start, current_index - start}, "").throwException();
+      Error(ERROR_UNEXPECTED_EOF, {fileId, start, current_index - start}, "").raise();
     }
 
     if (check('\n')) {
@@ -308,7 +308,7 @@ void Lexer::tokenizeChar() {
   consume();
 
   if (!check('\'')) {
-    Error(ERROR_MISSING_CLOSING_QUOTE, {fileId, current_index, 1}, "Expected closing quote after char literal").throwException();
+    Error(ERROR_MISSING_CLOSING_QUOTE, {fileId, current_index, 1}, "Expected closing quote after char literal").raise();
   }
 
   // Skip closing quote
@@ -320,7 +320,7 @@ void Lexer::tokenizeIdentifier() {
 
   while (isIdentifierChar(current())) {
     if (isAtEnd()) {
-      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}, "").throwException();
+      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}, "").raise();
     }
 
     consume();
@@ -356,7 +356,7 @@ void Lexer::tokenizeNumber() {
          || current() == '.'
          || allow_base_16_chars && isBase16Char(current())) {
     if (isAtEnd()) {
-      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}, "").throwException();
+      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}, "").raise();
     }
 
     consume();

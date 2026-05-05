@@ -58,7 +58,7 @@
     __LOGIC_BINARY_OP_STR(__name, __ctx, __call, __op);                                                               \
   } else {                                                                                                            \
     Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->span, __name " expects either 2 strings or 2 numbers")          \
-        .throwException();                                                                                            \
+        .raise();                                                                                            \
   }
 
 using namespace xcc;
@@ -255,7 +255,7 @@ static std::vector builtin_macros = {
   createNativeMacro("gt",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "gt!",  ctx, call, >);  }),
   createNativeMacro("ge",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "ge!",  ctx, call, >=); }),
   createNativeMacro("and", {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "and!", ctx, call, &&); }),
-  createNativeMacro("or", {"a", "b"},  [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "or!",  ctx, call, ||); }),
+  createNativeMacro("or",  {"a", "b"}, [](auto& ctx, auto& call) { __LOGIC_BINARY_OP_NUM( "or!",  ctx, call, ||); }),
   createNativeMacro("not", {"expr"},   [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "not!", ctx, call, !);  }),
 };
 

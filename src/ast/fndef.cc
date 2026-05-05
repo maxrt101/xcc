@@ -44,7 +44,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
   auto fn = ctx.getFunction(decl->name->name());
 
   if (!fn) {
-    Error(ERROR_INTERNAL_FAILURE, decl->span, "Error generating Function object for '{}'", decl->name->name()).throwException();
+    Error(ERROR_INTERNAL_FAILURE, decl->span, "Error generating Function object for '{}'", decl->name->name()).raise();
   }
 
   auto basic_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", fn);
@@ -96,7 +96,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 #endif
     Error(ERROR_LLVM_ERROR, decl->span, "Function '{}' didn't pass validation", decl->name->name())
       .note({}, "{}", std::string(collector.string()))
-      .throwException();
+      .raise();
   }
 
   return fn;

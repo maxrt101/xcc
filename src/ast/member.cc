@@ -42,7 +42,7 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
   }
 
   if (!type->isStruct()) {
-    Error(ERROR_INVALID_TYPE, span, "Type '{}' is not a struct", type->toString()).throwException();
+    Error(ERROR_INVALID_TYPE, span, "Type '{}' is not a struct", type->toString()).raise();
   }
 
   assertRaise(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()));

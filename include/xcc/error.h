@@ -168,20 +168,20 @@ struct Error {
 
   [[nodiscard]] std::string toString() const;
 
-  [[noreturn]] void throwException() const;
+  [[noreturn]] void raise() const;
 };
 
 template <typename E>
 void assertRaise(bool expr, const E& err) {
   if (!expr) {
-    err.throwException();
+    err.raise();
   }
 }
 
 template <typename T, typename E>
 T raiseIfNull(T expr, const E& err) {
   if (!expr) {
-    err.throwException();
+    err.raise();
   }
 
   return expr;
@@ -193,7 +193,7 @@ static void checkLLVMError(llvm::Error&& err) {
     llvm::raw_string_ostream output(str);
     output << err;
 
-    Error(ERROR_LLVM_ERROR, {}, str).throwException();
+    Error(ERROR_LLVM_ERROR, {}, str).raise();
   }
 }
 

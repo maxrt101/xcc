@@ -54,7 +54,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_TYPE_MISSING_SEMICOLON,           "Missing ';' at the end of type declaration"),
   DESC(ERROR_MACRO_MISSING_KEYWORD,            "Missing 'macro' at the beginning of macro declaration"),
   DESC(ERROR_MACRO_MISSING_OPENING_PAREN,      "Missing '(' after 'macro' at the macro declaration"),
-  DESC(ERROR_MACRO_MISSING_OPENING_PAREN,      "Missing ')' after macro arguments at the macro declaration"),
+  DESC(ERROR_MACRO_MISSING_CLOSING_PAREN,      "Missing ')' after macro arguments at the macro declaration"),
   DESC(ERROR_INVALID_LHS_FOR_ASSIGNMENT,       "Invalid LHS for assignment (non-lvalue)"),
   DESC(ERROR_SUBSCRIPT_MISSING_CLOSING_BRACE,  "Missing closing ']' after '[' in subscript operator"),
   DESC(ERROR_DOLLAR_MISSING_IDENTIFIER,        "Expected identifier after '$'"),
@@ -218,6 +218,6 @@ std::string Error::toString() const {
   return result;
 }
 
-void Error::throwException() const {
+void Error::raise() const {
   throw CompilationException(*this);
 }

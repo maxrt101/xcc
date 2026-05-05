@@ -276,7 +276,7 @@ size_t Type::getMemberIndex(const std::string& name) const {
     }
   }
 
-  Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").throwException();
+  Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").raise();
 }
 
 std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
@@ -288,7 +288,7 @@ std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
     }
   }
 
-  Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").throwException();
+  Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").raise();
 }
 
 std::shared_ptr<Type> Type::getReturnType() const {
@@ -422,7 +422,7 @@ std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std:
         return customTypes[prefixed_name];
       }
 
-      Error(ERROR_UNKNOWN_TYPE, {}, "Unknown type '" + name + "'").throwException();
+      Error(ERROR_UNKNOWN_TYPE, {}, "Unknown type '" + name + "'").raise();
     }
   }
 }

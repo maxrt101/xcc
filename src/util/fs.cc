@@ -16,7 +16,7 @@ std::string xcc::fs::readFile(const std::string& filename) {
 
   if (!fs.is_open()) {
     logger.fatal("Failed to open file '{}'", filename);
-    Error(ERROR_MISSING_FILE, {}, filename).throwException();
+    Error(ERROR_MISSING_FILE, {}, filename).raise();
   }
 
   std::stringstream ss;

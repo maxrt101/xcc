@@ -8,6 +8,7 @@
 namespace xcc {
 
 class CompilationException : public std::exception {
+public:
   Error       error;
   std::string msg;
 

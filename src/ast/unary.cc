@@ -48,7 +48,7 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
 
     case TOKEN_STAR: {
       if (!rhs_type->isPointer()) {
-        Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").throwException();
+        Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").raise();
       }
       return raiseIfNull(rhs->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Value is NULL"));
     }
@@ -57,7 +57,7 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
       break;
   }
 
-  Error(ERROR_UNKNOWN_UNARY_OP_OR_TYPE, operation.span, "op='{}'({}) type={}", operation.value, Token::typeToString(operation.type), std::to_string((int)rhs_type->getTag())).throwException();
+  Error(ERROR_UNKNOWN_UNARY_OP_OR_TYPE, operation.span, "op='{}'({}) type={}", operation.value, Token::typeToString(operation.type), std::to_string((int)rhs_type->getTag())).raise();
 }
 
 std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -71,7 +71,7 @@ std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen:
   auto rhs_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
 
   if (!rhs_type->isPointer()) {
-    Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").throwException();
+    Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").raise();
   }
 
   return rhs_type->getPointedType();

@@ -93,7 +93,7 @@ llvm::GlobalVariable * GlobalContext::getGlobal(ModuleContext& ctx, const std::s
 
 std::shared_ptr<meta::Type> GlobalContext::getGlobalType(const std::string& name) {
   if (!hasGlobal(name)) {
-    Error(ERROR_UNKNOWN_GLOBAL_VARIABLE, {}, "'{}'", name).throwException();
+    Error(ERROR_UNKNOWN_GLOBAL_VARIABLE, {}, "'{}'", name).raise();
   }
   return globals[name];
 }
@@ -351,5 +351,5 @@ llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Ty
   }
 
   // TODO: Pass span & convert val, type to string
-  Error(ERROR_INVALID_CAST, {}, "").throwException();
+  Error(ERROR_INVALID_CAST, {}, "").raise();
 }

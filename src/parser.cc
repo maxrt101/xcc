@@ -68,7 +68,7 @@ std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_m
   }
 
   if (!checkAdvance(TOKEN_IDENTIFIER)) {
-    Error(ERROR_MISSING_IDENTIFIER, current().span, "Expected identifier " + ex_msg).throwException();
+    Error(ERROR_MISSING_IDENTIFIER, current().span, "Expected identifier " + ex_msg).raise();
   }
 
   return ast::Identifier::create(previous().span, previous().value);
@@ -101,7 +101,7 @@ std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string
 
   /* Very specific error, shouldn't happen */
   if (nodes.empty()) {
-    Error(ERROR_INVALID_MEMBER_ACCESS, current().span, "there are no access nodes").throwException();
+    Error(ERROR_INVALID_MEMBER_ACCESS, current().span, "there are no access nodes").raise();
   }
 
   auto name = nodes.back();
@@ -119,7 +119,7 @@ std::shared_ptr<ast::Node> Parser::parseType() {
   if (checkAdvance(TOKEN_FN)) {
 
     if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-      Error(ERROR_FN_TYPE_MISSING_OPENING_PAREN, current().span, "").throwException();
+      Error(ERROR_FN_TYPE_MISSING_OPENING_PAREN, current().span, "").raise();
     }
 
     std::vector<std::shared_ptr<ast::Node>> args;
@@ -135,11 +135,11 @@ std::shared_ptr<ast::Node> Parser::parseType() {
     } while (checkAdvance(TOKEN_COMMA));
 
     if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-      Error(ERROR_FN_TYPE_MISSING_CLOSING_PAREN, current().span, "").throwException();
+      Error(ERROR_FN_TYPE_MISSING_CLOSING_PAREN, current().span, "").raise();
     }
 
     if (!checkAdvance(TOKEN_RIGHT_ARROW)) {
-      Error(ERROR_FN_TYPE_MISSING_ARROW, current().span, "").throwException();
+      Error(ERROR_FN_TYPE_MISSING_ARROW, current().span, "").raise();
     }
 
     std::shared_ptr<ast::Node> returnType = parseType();
@@ -207,7 +207,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   }
 
   if (!checkAdvance(TOKEN_FN)) {
-    Error(ERROR_FN_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_FN_MISSING_KEYWORD, current().span, "").raise();
   }
 
   auto name = parseIdentifierWithCurrentScope("for function name");
@@ -220,7 +220,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   std::shared_ptr<ast::Node> return_type;
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    Error(ERROR_FN_MISSING_OPENING_PAREN, current().span, "").throwException();
+    Error(ERROR_FN_MISSING_OPENING_PAREN, current().span, "").raise();
   }
 
   if (isMethod && checkAdvance(TOKEN_SELF)) {
@@ -246,7 +246,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   }
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    Error(ERROR_FN_MISSING_CLOSING_PAREN, current().span, "").throwException();
+    Error(ERROR_FN_MISSING_CLOSING_PAREN, current().span, "").raise();
   }
 
   if (checkAdvance(TOKEN_RIGHT_ARROW)) {
@@ -261,7 +261,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
       Error(ERROR_FN_MISSING_SEMICOLON, previous().span, "")
         .note({}, "Function signature must be followed either by a body, or semicolon - if it's a forward-declaration")
-        .throwException();
+        .raise();
     }
 
     // Workaround: erase scope, if it's an extern forward declaration
@@ -282,7 +282,7 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
-    Error(ERROR_BLOCK_MISSING_OPENING_BRACE, current().span, "").throwException();
+    Error(ERROR_BLOCK_MISSING_OPENING_BRACE, current().span, "").raise();
   }
 
   std::vector<std::shared_ptr<ast::Node>> nodes;
@@ -298,7 +298,7 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
   } while (shouldContinue);
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
-    Error(ERROR_BLOCK_MISSING_CLOSING_BRACE, current().span, "").throwException();
+    Error(ERROR_BLOCK_MISSING_CLOSING_BRACE, current().span, "").raise();
   }
 
   return ast::Block::create(span + previous().span, nodes);
@@ -308,7 +308,7 @@ std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_VAR)) {
-    Error(ERROR_VAR_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_VAR_MISSING_KEYWORD, current().span, "").raise();
   }
 
   auto valdecl = parseValueDecl();
@@ -320,13 +320,13 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_STRUCT)) {
-    Error(ERROR_STRUCT_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_STRUCT_MISSING_KEYWORD, current().span, "").raise();
   }
 
   auto name = parseIdentifierWithCurrentScope("for struct name");
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
-    Error(ERROR_STRUCT_MISSING_OPENING_BRACE, current().span, "").throwException();
+    Error(ERROR_STRUCT_MISSING_OPENING_BRACE, current().span, "").raise();
   }
 
   std::vector<std::shared_ptr<ast::TypedIdentifier>> fields;
@@ -354,7 +354,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
   structStack.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
-    Error(ERROR_STRUCT_MISSING_CLOSING_BRACE, current().span, "").throwException();
+    Error(ERROR_STRUCT_MISSING_CLOSING_BRACE, current().span, "").raise();
   }
 
   return ast::Struct::create(span + previous().span, name, fields, methods);
@@ -364,17 +364,17 @@ std::shared_ptr<ast::Node> Parser::parseIf() {
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_IF)) {
-    Error(ERROR_IF_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_IF_MISSING_KEYWORD, current().span, "").raise();
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    Error(ERROR_IF_MISSING_OPENING_PAREN, current().span, "").throwException();
+    Error(ERROR_IF_MISSING_OPENING_PAREN, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> cond = parseExpr();
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    Error(ERROR_IF_MISSING_CLOSING_PAREN, current().span, "").throwException();
+    Error(ERROR_IF_MISSING_CLOSING_PAREN, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> then_body = parseStmt();
@@ -391,29 +391,29 @@ std::shared_ptr<ast::Node> Parser::parseFor() {
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_FOR)) {
-    Error(ERROR_FOR_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_FOR_MISSING_KEYWORD, current().span, "").raise();
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    Error(ERROR_FOR_MISSING_OPENING_PAREN, current().span, "").throwException();
+    Error(ERROR_FOR_MISSING_OPENING_PAREN, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> init = parseVar(false);
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
-    Error(ERROR_FOR_MISSING_INIT_SEMICOLON, current().span, "").throwException();
+    Error(ERROR_FOR_MISSING_INIT_SEMICOLON, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> cond = parseExpr();
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
-    Error(ERROR_FOR_MISSING_COND_SEMICOLON, current().span, "").throwException();
+    Error(ERROR_FOR_MISSING_COND_SEMICOLON, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> step = parseExpr();
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    Error(ERROR_FOR_MISSING_CLOSING_PAREN, current().span, "").throwException();
+    Error(ERROR_FOR_MISSING_CLOSING_PAREN, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> body = parseStmt();
@@ -425,17 +425,17 @@ std::shared_ptr<ast::Node> Parser::parseWhile() {
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_WHILE)) {
-    Error(ERROR_WHILE_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_WHILE_MISSING_KEYWORD, current().span, "").raise();
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    Error(ERROR_WHILE_MISSING_OPENING_PAREN, current().span, "").throwException();
+    Error(ERROR_WHILE_MISSING_OPENING_PAREN, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> cond = parseExpr();
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    Error(ERROR_WHILE_MISSING_CLOSING_PAREN, current().span, "").throwException();
+    Error(ERROR_WHILE_MISSING_CLOSING_PAREN, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> body = parseStmt();
@@ -447,7 +447,7 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_RETURN)) {
-    Error(ERROR_RETURN_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_RETURN_MISSING_KEYWORD, current().span, "").raise();
   }
 
   std::shared_ptr<ast::Node> expr;
@@ -465,7 +465,7 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_USE)) {
-    Error(ERROR_USE_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_USE_MISSING_KEYWORD, current().span, "").raise();
   }
 
   if (checkAdvance(TOKEN_MOD)) {
@@ -475,7 +475,7 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
   auto name = parseIdentifier("for module name");
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
-    Error(ERROR_USE_MISSING_SEMICOLON, current().span, "").throwException();
+    Error(ERROR_USE_MISSING_SEMICOLON, current().span, "").raise();
   }
 
   auto path_attr = std::find_if(attrs.begin(), attrs.end(), [](auto& a) { return a.name == "path"; });
@@ -504,14 +504,14 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_MOD)) {
-    Error(ERROR_MOD_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_MOD_MISSING_KEYWORD, current().span, "").raise();
   }
 
   auto name = parseIdentifier("for module name");
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
-      Error(ERROR_MOD_MISSING_SEMICOLON, current().span, "").throwException();
+      Error(ERROR_MOD_MISSING_SEMICOLON, current().span, "").raise();
     }
 
     if (isModule) {
@@ -538,7 +538,7 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
   module.stack.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
-    Error(ERROR_MOD_MISSING_CLOSING_BRACE, current().span, "").throwException();
+    Error(ERROR_MOD_MISSING_CLOSING_BRACE, current().span, "").raise();
   }
 
   body->span = span + previous().span;
@@ -550,19 +550,19 @@ std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::Attribu
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_TYPE)) {
-    Error(ERROR_TYPE_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_TYPE_MISSING_KEYWORD, current().span, "").raise();
   }
 
   auto name = parseIdentifierWithCurrentScope("for type alias name");
 
   if (!checkAdvance(TOKEN_EQUALS)) {
-    Error(ERROR_TYPE_MISSING_EQUALS, current().span, "").throwException();
+    Error(ERROR_TYPE_MISSING_EQUALS, current().span, "").raise();
   }
 
   auto type = parseType();
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
-    Error(ERROR_TYPE_MISSING_SEMICOLON, current().span, "").throwException();
+    Error(ERROR_TYPE_MISSING_SEMICOLON, current().span, "").raise();
   }
 
   if (isModule) {
@@ -576,13 +576,13 @@ std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& at
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_MACRO)) {
-    Error(ERROR_MACRO_MISSING_KEYWORD, current().span, "").throwException();
+    Error(ERROR_MACRO_MISSING_KEYWORD, current().span, "").raise();
   }
 
   auto id = parseIdentifierWithCurrentScope("for macro name");
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    Error(ERROR_MACRO_MISSING_OPENING_PAREN, current().span, "").throwException();
+    Error(ERROR_MACRO_MISSING_OPENING_PAREN, current().span, "").raise();
   }
 
   std::vector<std::shared_ptr<ast::Identifier>> args;
@@ -598,7 +598,7 @@ std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& at
   }
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    Error(ERROR_MACRO_MISSING_CLOSING_PAREN, current().span, "").throwException();
+    Error(ERROR_MACRO_MISSING_CLOSING_PAREN, current().span, "").raise();
   }
 
   auto body = parseBlock(true);
@@ -644,7 +644,7 @@ std::shared_ptr<ast::Node> Parser::parseAssignment() {
     if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT, ast::AST_EXPR_MEMBER_ACCESS)) {
       expr = ast::Assign::create(expr->span + rhs->span, op, expr, rhs);
     } else {
-      Error(ERROR_INVALID_LHS_FOR_ASSIGNMENT, expr->span, "{}", ast::Node::typeToString(expr->type)).throwException();
+      Error(ERROR_INVALID_LHS_FOR_ASSIGNMENT, expr->span, "{}", ast::Node::typeToString(expr->type)).raise();
     }
   }
 
@@ -776,13 +776,13 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
     auto span = previous().span;
 
     if (!checkAdvance(TOKEN_IDENTIFIER)) {
-      Error(ERROR_DOLLAR_MISSING_IDENTIFIER, previous().span.pointPastLast(), "").throwException();
+      Error(ERROR_DOLLAR_MISSING_IDENTIFIER, previous().span.pointPastLast(), "").raise();
     }
 
     char * value = getenv(previous().value.c_str());
 
     if (!value) {
-      Error(ERROR_NO_ENV_VARIABLE, current().span, "{}", previous().value).throwException();
+      Error(ERROR_NO_ENV_VARIABLE, current().span, "{}", previous().value).raise();
     }
 
     return ast::String::create(span + previous().span, value);
@@ -791,7 +791,7 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
   if (checkAdvance(TOKEN_LEFT_PAREN)) {
     auto expr = parseExpr();
     if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-      Error(ERROR_EXPR_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").throwException();
+      Error(ERROR_EXPR_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").raise();
     }
     return expr;
   }
@@ -803,7 +803,7 @@ std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
   auto span = current().span;
 
   if (!check(TOKEN_IDENTIFIER) && !check(TOKEN_SELF)) {
-    Error(ERROR_LVALUE_UNEXPECTED_TOKEN, current().span, "'{}' ({})", current().value, Token::typeToString(current().type)).throwException();
+    Error(ERROR_LVALUE_UNEXPECTED_TOKEN, current().span, "'{}' ({})", current().value, Token::typeToString(current().type)).raise();
   }
 
   /* Parse Member Access */
@@ -861,7 +861,7 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
-    Error(isMacro ? ERROR_MACRO_CALL_MISSING_OPENING_PAREN : ERROR_FN_CALL_MISSING_OPENING_PAREN, current().span, "").throwException();
+    Error(isMacro ? ERROR_MACRO_CALL_MISSING_OPENING_PAREN : ERROR_FN_CALL_MISSING_OPENING_PAREN, current().span, "").raise();
   }
 
   if (!check(TOKEN_RIGHT_PAREN)) {
@@ -877,7 +877,7 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   }
 
   if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-    Error(isMacro ? ERROR_MACRO_CALL_MISSING_CLOSING_PAREN : ERROR_FN_CALL_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").throwException();
+    Error(isMacro ? ERROR_MACRO_CALL_MISSING_CLOSING_PAREN : ERROR_FN_CALL_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").raise();
   }
 
   if (isMacro) {
@@ -889,7 +889,7 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
 
 ast::Node::AttributeList Parser::parseAttributeList() {
   if (!checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
-    Error(ERROR_ATTR_MISSING_OPENING_BRACKET, current().span, "").throwException();
+    Error(ERROR_ATTR_MISSING_OPENING_BRACKET, current().span, "").raise();
   }
 
   ast::Node::AttributeList attrs;
@@ -915,7 +915,7 @@ ast::Node::AttributeList Parser::parseAttributeList() {
       } while (checkAdvance(TOKEN_COMMA));
 
       if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
-        Error(ERROR_ATTR_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").throwException();
+        Error(ERROR_ATTR_MISSING_CLOSING_PAREN, previous().span.pointPastLast(), "").raise();
       }
     }
 
@@ -923,7 +923,7 @@ ast::Node::AttributeList Parser::parseAttributeList() {
   } while (checkAdvance(TOKEN_COMMA));
 
   if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
-    Error(ERROR_ATTR_MISSING_CLOSING_BRACKET, previous().span.pointPastLast(), "").throwException();
+    Error(ERROR_ATTR_MISSING_CLOSING_BRACKET, previous().span.pointPastLast(), "").raise();
   }
 
   return attrs;
@@ -1041,7 +1041,7 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
   if (check(TOKEN_VAR)) {
     auto var = parseVar(true);
     if (!checkAdvance(TOKEN_SEMICOLON)) {
-      Error(ERROR_VARDECL_MISSING_SEMICOLON, previous().span.pointPastLast(), "").throwException();
+      Error(ERROR_VARDECL_MISSING_SEMICOLON, previous().span.pointPastLast(), "").raise();
     }
     return var;
   }
@@ -1080,7 +1080,7 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
     // Ignore, there is a better worded exception at the end of this function
   }
 
-  Error(ERROR_TOP_LEVEL_UNEXPECTED_TOKEN, current().span, "'{}' ({})", current().value, Token::typeToString(current().type)).throwException();
+  Error(ERROR_TOP_LEVEL_UNEXPECTED_TOKEN, current().span, "'{}' ({})", current().value, Token::typeToString(current().type)).raise();
 }
 
 Parser::Parser(FileId fileId, const std::vector<Token>& tokens, bool isModule) : fileId(fileId), tokens(tokens), current_idx(0), isModule(isModule) {}

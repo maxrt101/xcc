@@ -199,6 +199,10 @@ public:
    */
   template <typename... Args>
   void print(const std::format_string<Args...> fmt, Args&&... args) {
+    if (!isEnabled()) {
+      return;
+    }
+
     auto string = std::format(fmt, std::forward<Args>(args)...);
 
     std::vector<std::string> msg_parts;
@@ -224,6 +228,10 @@ public:
    */
   template <typename... Args>
   void println(const std::format_string<Args...> fmt, Args&&... args) {
+    if (!isEnabled()) {
+      return;
+    }
+
     auto string = std::format(fmt, std::forward<Args>(args)...);
 
     for (auto & out : outputs) {

@@ -59,7 +59,7 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
     return fn;
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).throwException();
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).raise();
 }
 
 llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -75,7 +75,7 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, 
     return fn;
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).throwException();
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).raise();
 }
 
 std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -95,5 +95,5 @@ std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(cod
     return meta_fn->decl->generateType(ctx, payload);
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).throwException();
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).raise();
 }
