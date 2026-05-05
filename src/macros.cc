@@ -67,11 +67,9 @@ using namespace xcc::ast;
 static auto logger = util::log::Logger("MACROS");
 
 static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::ModuleContext& mod, std::shared_ptr<Node> node) {
-  std::shared_ptr<meta::Type> type;
-
   // Try to generate type using standard method
   try {
-    type = node->generateType(mod, {});
+    return node->generateType(mod, {});
   } catch (CompilationException&) {
     // If failed - other ways to generate type require the node to be an identifier
     if (!node->is(AST_EXPR_IDENTIFIER)) {
@@ -83,33 +81,28 @@ static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::
 
   auto id = node->as<Identifier>()->name();
 
-  if (!type) {
-    // If it's a constant or custom type disguised as Identifier, try to get it
-    try {
-      type = meta::Type::fromTypeName(ctx.global, id);
-    } catch (CompilationException&) {
-      // ignore
-    }
+  try {
+    return meta::Type::fromTypeName(ctx.global, id, node->span);
+  } catch (CompilationException& e) {
+    // ignore
   }
 
   // Try to look up a variable in traversed by macro resolver vardecls
-  if (!type && ctx.vardecls.contains(id)) {
-    type = ctx.vardecls[id]->generateType(mod, {});
+  if (ctx.vardecls.contains(id)) {
+    return ctx.vardecls[id]->generateType(mod, {});
   }
 
   // Try to look up a variable in traversed by macro resolver fndecls
-  if (!type && ctx.fndecls.contains(id)) {
-    type = ctx.fndecls[id]->generateType(mod, {});
+  if (ctx.fndecls.contains(id)) {
+    return ctx.fndecls[id]->generateType(mod, {});
   }
 
   // Try to look up a arg in traversed by macro resolver fndecl
-  if (!type && ctx.args.contains(id)) {
-    type = ctx.args[id]->generateType(mod, {});
+  if (ctx.args.contains(id)) {
+    return ctx.args[id]->generateType(mod, {});
   }
 
-  assertRaise(bool(type), Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, node->span, "Cannot evaluate expression's type"));
-
-  return type;
+   Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, node->span, "Cannot evaluate expression's type").raise();
 }
 
 static std::string getStr(std::shared_ptr<Node> node) {
