@@ -35,7 +35,7 @@ void Assign::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Assign::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("{} = {}",
+  return attributesToString(0, false) + std::format("{} = {}",
     lhs->toString(parent, this, indent, false),
     rhs->toString(parent, this, indent, false)
   );

@@ -43,7 +43,7 @@ std::shared_ptr<Node> Number::clone() {
 void Number::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string Number::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return tag == INTEGER ? std::format("{}", value.integer) : std::format("{}", value.floating);
+  return attributesToString(0, false) + (tag == INTEGER ? std::format("{}", value.integer) : std::format("{}", value.floating));
 }
 
 llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {

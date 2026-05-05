@@ -40,7 +40,7 @@ void Struct::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Struct::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = std::format("struct {} {{",
+  std::string res =attributesToString(indent, newline) +  std::format("struct {} {{",
     name->toString(parent, this, indent, false)
   );
 

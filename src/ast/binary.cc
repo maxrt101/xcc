@@ -52,7 +52,7 @@ void Binary::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Binary::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("{} {} {}",
+  return attributesToString(0, false) + std::format("{} {} {}",
     lhs->toString(parent, this, indent, false),
     operation.toString(),
     rhs->toString(parent, this, indent, false)

@@ -35,7 +35,7 @@ void MacroCall::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string MacroCall::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = std::format("{}!(", name->toString(parent, this, indent, false));
+  std::string res = attributesToString(0, false) + std::format("{}!(", name->toString(parent, this, indent, false));
 
   for (size_t i = 0; i < args.size(); ++i) {
     res += args[i]->toString(parent, this, indent, false);

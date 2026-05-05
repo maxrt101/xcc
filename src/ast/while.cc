@@ -21,7 +21,7 @@ void While::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string While::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("while ({}) {}",
+  return attributesToString(indent, newline) + std::format("while ({}) {}",
     condition->toString(parent, this, indent, false),
     body->toString(parent, this, indent, newline)
   );

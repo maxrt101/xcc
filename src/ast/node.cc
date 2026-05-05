@@ -179,7 +179,9 @@ std::string Node::attributesToString(int indent, bool newline) {
   res += "]";
 
   if (newline) {
-    res += "\n";
+    res += "\n" + getIndent(indent);
+  } else {
+    res += " ";
   }
 
   return res;

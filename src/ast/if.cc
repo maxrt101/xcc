@@ -24,7 +24,7 @@ void If::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string If::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = std::format("if ({}) {}",
+  std::string res = attributesToString(indent, newline) +  std::format("if ({}) {}",
     condition->toString(parent, this, indent, newline),
     then_branch->toString(parent, this, indent, newline)
   );

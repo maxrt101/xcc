@@ -21,7 +21,7 @@ void Subscript::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Subscript::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("{}[{}]",
+  return attributesToString(0, false) + std::format("{}[{}]",
     lhs->toString(parent, this, indent, false),
     rhs->toString(parent, this, indent, false)
   );

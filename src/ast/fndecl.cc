@@ -53,7 +53,7 @@ void FnDecl::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string FnDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = std::format("{}fn {}(",
+  std::string res = attributesToString(indent, newline) + std::format("{}fn {}(",
     isExtern ? "extern " : "",
     name->toString(parent, this, indent, false)
   );

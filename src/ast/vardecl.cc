@@ -43,7 +43,7 @@ void VarDecl::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string VarDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = "var " + name->toString(parent, this, indent, false);
+  std::string res = attributesToString(indent, newline) + "var " + name->toString(parent, this, indent, false);
 
   if (type) {
     res += ": " + type->toString(parent, this, indent, false);

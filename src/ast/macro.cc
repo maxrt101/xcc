@@ -54,7 +54,7 @@ void Macro::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Macro::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = std::format("macro {}(", name->toString(parent, this, indent, newline));
+  std::string res = attributesToString(indent, newline) + std::format("macro {}(", name->toString(parent, this, indent, newline));
 
   for (size_t i = 0; i < args.size(); ++i) {
     res += args[i]->toString(parent, this, indent, false);

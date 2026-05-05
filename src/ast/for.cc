@@ -29,7 +29,7 @@ void For::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string For::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("for ({}; {}; {}) {}",
+  return attributesToString(indent, newline) + std::format("for ({}; {}; {}) {}",
     init->toString(parent, this, indent, newline),
     cond->toString(parent, this, indent, newline),
     step->toString(parent, this, indent, newline),

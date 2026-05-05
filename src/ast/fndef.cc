@@ -30,7 +30,7 @@ void FnDef::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string FnDef::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("{} {}",
+  return attributesToString(indent, newline) + std::format("{} {}",
     decl->toString(parent, this, indent, newline),
     body->toString(parent, this, indent, newline)
   );

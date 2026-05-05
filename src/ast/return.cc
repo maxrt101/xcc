@@ -19,7 +19,7 @@ void Return::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Return::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("return {}", value->toString(parent, this, indent, false));
+  return attributesToString(indent, newline) + std::format("return {}", value->toString(parent, this, indent, false));
 }
 
 llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {

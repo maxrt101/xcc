@@ -25,7 +25,7 @@ void TypedIdentifier::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree
 }
 
 std::string TypedIdentifier::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = name->toString(parent, this, indent, false);
+  std::string res = attributesToString(0, false) + name->toString(parent, this, indent, false);
 
   if (value_type) {
     res += ": " + value_type->toString(parent, this, indent, false);

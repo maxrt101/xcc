@@ -20,7 +20,7 @@ void Cast::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Cast::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("{} as {}",
+  return attributesToString(0, false) + std::format("{} as {}",
     expr->toString(parent, this, indent, false),
     type->toString(parent, this, indent, false)
   );

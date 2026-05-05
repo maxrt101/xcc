@@ -20,7 +20,7 @@ void Unary::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Unary::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return operation.toString() + rhs->toString(parent, this, indent, false);
+  return attributesToString(0, false) + operation.toString() + rhs->toString(parent, this, indent, false);
 }
 
 llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {

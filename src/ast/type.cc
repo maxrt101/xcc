@@ -41,7 +41,7 @@ void Type::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Type::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res;
+  std::string res = attributesToString(0, false);
 
   if (function) {
     res = "fn (";

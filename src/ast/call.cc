@@ -25,7 +25,7 @@ void Call::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Call::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = callee->toString(parent, this, indent, newline) + "(";
+  std::string res = attributesToString(0, false) + callee->toString(parent, this, indent, newline) + "(";
 
   for (size_t i = 0; i < args.size(); ++i) {
     res += args[i]->toString(parent, this, indent, false);

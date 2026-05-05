@@ -22,7 +22,7 @@ void Module::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Module::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("module {} {}",
+  return attributesToString(indent, newline) + std::format("module {} {}",
     name->toString(parent, this, indent, false),
     body->toString(parent, this, indent, newline)
   );

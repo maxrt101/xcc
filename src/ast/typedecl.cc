@@ -22,7 +22,7 @@ void TypeDecl::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string TypeDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("type {} = {}",
+  return attributesToString(indent, newline) + std::format("type {} = {}",
     name->toString(parent, this, indent, false),
     value->toString(parent, this, indent, false)
   );

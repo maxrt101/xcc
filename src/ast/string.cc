@@ -17,7 +17,7 @@ std::shared_ptr<Node> String::clone() {
 void String::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string String::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("\"{}\"", util::strescseq(value, false));
+  return attributesToString(0, false) + std::format("\"{}\"", util::strescseq(value, false));
 }
 
 llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {

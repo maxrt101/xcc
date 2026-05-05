@@ -21,18 +21,13 @@ void Block::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Block::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = "{";
+  std::string res = attributesToString(indent, newline) +  "{";
 
   if (newline) {
     res += "\n";
   }
 
   for (auto& node : body) {
-    if (!node->attributes.empty()) {
-      res += newline ? getIndent(indent + 1) : " ";
-      res += node->attributesToString(indent, newline);
-    }
-
     res += newline ? getIndent(indent + 1) : " ";
     res += node->toString(parent, this, indent + 1, newline);
 
