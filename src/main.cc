@@ -53,23 +53,24 @@ static std::vector<std::string> getModPaths(const std::string& filepath, xcc::ar
 }
 
 static int help() {
-  logger.println("XCC Compiler v{}", xcc::getVersion());
-  logger.println("Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-l LIB] [-L PATH] [-I PATH] [-t TARGET] [-m MACHINE] [-o OUT_FILE] IN_FILE...");
-  logger.println("Arguments:");
-  logger.println("  -h, --help              - Print this message");
-  logger.println("  -v, --version           - Print version");
-  logger.println("  -c, --compile           - Compile into object file");
-  logger.println("  -r, --run               - Run file using JIT");
-  logger.println("  -l, --lib LIB           - Link LIB");
-  logger.println("  -L, --lib-path LIB_PATH - Add library search path");
-  logger.println("  -I, --mod-path MOD_PATH - Add module search path");
-  logger.println("  -t, --target TARGET     - Specify target triple (use 'list' to see all)");
-  logger.println("  -m, --machine MACHINE   - Specify target machine (cpu) (use 'list' to see all)");
-  logger.println("  -o, --output OUT_FILE   - Set output file name");
-  logger.println("  IN_FILE...              - Input (source/object) files");
-  logger.println("Environment:");
-  logger.println("  XCC_LD                  - Path to linker executable");
-  logger.println("  XCC_LDFLAGS             - Flags to pass directly to linker");
+  fprintf(stderr, "XCC Compiler v%s\n", xcc::getVersion().c_str());
+  fprintf(stderr, "Usage: xcc [-h] [-v] [--verbose] [-c] [-r] [-l LIB] [-L PATH] [-I PATH] [-t TARGET] [-m MACHINE] [-o OUT_FILE] IN_FILE...\n");
+  fprintf(stderr, "Arguments:\n");
+  fprintf(stderr, "  -h, --help              - Print this message\n");
+  fprintf(stderr, "  -v, --version           - Print version\n");
+  fprintf(stderr, "  -c, --compile           - Compile into object file\n");
+  fprintf(stderr, "  -r, --run               - Run file using JIT\n");
+  fprintf(stderr, "  -l, --lib LIB           - Link LIB\n");
+  fprintf(stderr, "  -L, --lib-path LIB_PATH - Add library search path\n");
+  fprintf(stderr, "  -I, --mod-path MOD_PATH - Add module search path\n");
+  fprintf(stderr, "  -t, --target TARGET     - Specify target triple (use 'list' to see all)\n");
+  fprintf(stderr, "  -m, --machine MACHINE   - Specify target machine (cpu) (use 'list' to see all)\n");
+  fprintf(stderr, "  -o, --output OUT_FILE   - Set output file name\n");
+  fprintf(stderr, "  --log LOG_MODULE_NAME   - Enable logger for module ('*' to enable for all)\n");
+  fprintf(stderr, "  IN_FILE...              - Input (source/object) files\n");
+  fprintf(stderr, "Environment:\n");
+  fprintf(stderr, "  XCC_LD                  - Path to linker executable\n");
+  fprintf(stderr, "  XCC_LDFLAGS             - Flags to pass directly to linker\n");
   return 0;
 }
 
@@ -248,6 +249,14 @@ static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
 static int xcc_main(int argc, char ** argv) {
   auto args = xcc::args::parse(argc, argv);
 
+  if (std::find(args.loggers.begin(), args.loggers.end(), "*") != args.loggers.end()) {
+    args.loggers = xcc::util::log::getModuleNames();
+  }
+
+  for (auto& mod : args.loggers) {
+    xcc::util::log::enableModule(mod, true);
+  }
+
   if (args.help) {
     return help();
   }
@@ -295,7 +304,7 @@ int main(int argc, char ** argv) {
     return xcc_main(argc, argv);
 #if USE_CATCH_EXCEPTIONS
   } catch (std::exception& e) {
-    logger.print("{}\n", e.what());
+    fprintf(stderr, "%s\n", e.what());
     return 1;
   }
 #endif

@@ -345,6 +345,11 @@ void registerModule(Logger * logger);
 void enableModule(const std::string& name, bool enable);
 
 /**
+ * Returns all registered module names
+ */
+std::vector<std::string> getModuleNames();
+
+/**
  * Cleans up all registered loggers
  */
 void cleanup();

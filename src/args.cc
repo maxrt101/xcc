@@ -47,6 +47,9 @@ xcc::args::Arguments xcc::args::parse(int argc, char ** argv) {
     } else if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) {
       CHECK_ARG(i, argc, "output");
       args.output = argv[++i];
+    } else if (!strcmp(argv[i], "--log")) {
+      CHECK_ARG(i, argc, "output");
+      args.loggers.push_back(argv[++i]);
     } else {
       args.files.push_back(argv[i]);
     }

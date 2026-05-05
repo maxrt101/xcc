@@ -52,7 +52,7 @@ std::shared_ptr<log::outputs::OutputFile> log::outputs::OutputFile::get(std::str
 }
 
 log::Logger::Logger(std::string name, uint32_t flags, const std::initializer_list<std::shared_ptr<outputs::OutputBase>>& outputs)
-  : level(Level::NONE), name(std::move(name)), enabled(true), flags((uint32_t) flags)
+  : level(Level::NONE), name(std::move(name)), enabled(false), flags((uint32_t) flags)
 {
   for (auto out = outputs.begin(); out != outputs.end(); out++) {
     this->outputs.push_back(*out);
@@ -152,6 +152,21 @@ void log::enableModule(const std::string& name, bool enable) {
   }
 
   (*loggers)[name]->setEnable(enable);
+}
+
+std::vector<std::string> log::getModuleNames() {
+  assertThrow(
+      loggers,
+      std::runtime_error("getModuleNames is called before global logger init")
+  );
+
+  std::vector<std::string> res;
+
+  for (auto& [name, _] : *loggers) {
+    res.push_back(name);
+  }
+
+  return res;
 }
 
 void log::cleanup() {

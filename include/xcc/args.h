@@ -21,6 +21,7 @@ struct Arguments {
   std::vector<std::string> libs;
   std::vector<std::string> lib_paths;
   std::vector<std::string> mod_paths;
+  std::vector<std::string> loggers;
 
   Arguments();
 };
