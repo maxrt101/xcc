@@ -259,8 +259,8 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
 
   if (!check(TOKEN_LEFT_BRACE)) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
-      Error(ERROR_FN_MISSING_SEMICOLON, current().span, "")
-        .note(current().span, "Function signature must be followed either by a body or semicolon, if it's a forward-declaration")
+      Error(ERROR_FN_MISSING_SEMICOLON, previous().span, "")
+        .note({}, "Function signature must be followed either by a body, or semicolon - if it's a forward-declaration")
         .throwException();
     }
 
@@ -907,7 +907,7 @@ ast::Node::AttributeList Parser::parseAttributeList() {
 
     if (checkAdvance(TOKEN_LEFT_PAREN)) {
       do {
-        if (isAtEnd() || check(TOKEN_RIGHT_PAREN)) {
+        if (isAtEnd() || check(TOKEN_RIGHT_PAREN) || check(TOKEN_RIGHT_SQUARE_BRACE)) {
           break;
         }
 
@@ -923,7 +923,7 @@ ast::Node::AttributeList Parser::parseAttributeList() {
   } while (checkAdvance(TOKEN_COMMA));
 
   if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
-    Error(ERROR_ATTR_MISSING_CLOSING_BRACKET, current().span, "").throwException();
+    Error(ERROR_ATTR_MISSING_CLOSING_BRACKET, previous().span.pointPastLast(), "").throwException();
   }
 
   return attrs;
