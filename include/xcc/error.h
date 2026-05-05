@@ -115,6 +115,8 @@ enum ErrorId {
   ERROR_UNIMPLEMENTED                    = 95,
   ERROR_UNKNOWN_TYPE                     = 96,
   ERROR_MISSING_TYPE                     = 97,
+  ERROR_UNEXPECTED_CHAR                  = 98,
+  ERROR_NOT_A_TYPE                       = 99,
 
   ERROR_MAX,
 };
@@ -176,13 +178,20 @@ struct Error {
   [[nodiscard]] std::string toString() const;
 
   [[noreturn]] void raise() const;
-  [[noreturn]] void raiseFromNode(ast::Node * node) const;
+  [[noreturn]] void raiseFromNode(const ast::Node * node) const;
 };
 
 template <typename E>
 void assertRaise(bool expr, const E& err) {
   if (!expr) {
     err.raise();
+  }
+}
+
+template <typename E>
+void assertRaiseFromNode(bool expr, const E& err, const ast::Node * node) {
+  if (!expr) {
+    err.raiseFromNode(node);
   }
 }
 

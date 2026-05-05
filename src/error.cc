@@ -110,16 +110,18 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_UNIMPLEMENTED,                    "Unimplemented functionality"),
   DESC(ERROR_UNKNOWN_TYPE,                     "Unknown type"),
   DESC(ERROR_MISSING_TYPE,                     "Missing type"),
+  DESC(ERROR_UNEXPECTED_CHAR,                  "Unexpected character"),
+  DESC(ERROR_NOT_A_TYPE,                       "Expected a type"),
 };
 
-static std::string generateHighlight(size_t line_ofs, size_t len) {
+static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
   std::string res = ANSI_COLOR_FG_RED;
 
   for (size_t i = 0; i < line_ofs; ++i) {
     res += " ";
   }
 
-  for (size_t i = 0; i < len; ++i) {
+  for (size_t i = 0; i < std::min(line_size, len); ++i) {
     res += "~";
   }
 
@@ -203,7 +205,7 @@ std::string SourceSpan::toString() const {
     ANSI_COLOR_FG_YELLOW "      |"  ANSI_TEXT_RESET " {}\n",
     file->path, line, line_ofs, line,
     file->contents.substr(info.offset, info.length),
-    generateHighlight(line_ofs, length)
+    generateHighlight(line_ofs, info.length, length)
   );
 }
 
@@ -226,7 +228,7 @@ void Error::raise() const {
   throw CompilationException(*this);
 }
 
-void Error::raiseFromNode(ast::Node * node) const {
+void Error::raiseFromNode(const ast::Node * node) const {
   auto err = *this;
 
   if (node && node->hasAttribute("__xcc_macro_expanded_from")) {
