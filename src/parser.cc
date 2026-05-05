@@ -117,7 +117,6 @@ std::shared_ptr<ast::Node> Parser::parseType() {
   auto span = current().span;
 
   if (checkAdvance(TOKEN_FN)) {
-
     if (!checkAdvance(TOKEN_LEFT_PAREN)) {
       Error(ERROR_FN_TYPE_MISSING_OPENING_PAREN, current().span, "").raise();
     }
@@ -644,7 +643,7 @@ std::shared_ptr<ast::Node> Parser::parseAssignment() {
     if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT, ast::AST_EXPR_MEMBER_ACCESS)) {
       expr = ast::Assign::create(expr->span + rhs->span, op, expr, rhs);
     } else {
-      Error(ERROR_INVALID_LHS_FOR_ASSIGNMENT, expr->span, "{}", ast::Node::typeToString(expr->type)).raise();
+      Error(ERROR_INVALID_LHS_FOR_ASSIGNMENT, expr->span, "{} is not valid for LHS in assignment", ast::Node::typeToHumanReadableString(expr->type)).raise();
     }
   }
 
@@ -725,7 +724,7 @@ std::shared_ptr<ast::Node> Parser::parseCast() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseUnary() {
-  if (checkAdvanceAnyOf(TOKEN_NOT, TOKEN_MINUS,
+  if (checkAdvanceAnyOf(TOKEN_NOT, TOKEN_MINUS, TOKEN_TILDA,
                         TOKEN_AMP, TOKEN_STAR)) {
     Token op = previous();
     auto rhs = parseUnary();
@@ -782,7 +781,7 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
     char * value = getenv(previous().value.c_str());
 
     if (!value) {
-      Error(ERROR_NO_ENV_VARIABLE, current().span, "{}", previous().value).raise();
+      Error(ERROR_NO_ENV_VARIABLE, previous().span, "'{}'", previous().value).raise();
     }
 
     return ast::String::create(span + previous().span, value);
