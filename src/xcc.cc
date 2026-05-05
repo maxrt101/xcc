@@ -109,8 +109,10 @@ static void markExpandedMacro(std::shared_ptr<ast::Node> body, ast::Node::Attrib
   body->span = span;
 
   body->visit([&attr, &span](auto node) -> std::shared_ptr<ast::Node> {
-    node->addAttribute(attr);
-    node->span = span;
+    if (!node->hasAttribute(attr.name)) {
+      node->addAttribute(attr);
+      node->span = span;
+    }
 
     return nullptr;
   }, {});
@@ -119,16 +121,14 @@ static void markExpandedMacro(std::shared_ptr<ast::Node> body, ast::Node::Attrib
 /**
  * Find and expand all ast::MacroCall nodes
  *
- * @param globalContext Global Context
- * @param root          Root AST node
+ * @param ctx  NativeContext for macro
+ * @param root Root AST node
  */
 static void processMacros(
-  std::unique_ptr<codegen::GlobalContext>& globalContext,
-  const std::shared_ptr<ast::Block>&       root
+  ast::Macro::NativeContext&         ctx,
+  const std::shared_ptr<ast::Block>& root
 ) {
-  auto ctx = ast::Macro::NativeContext {*globalContext};
-
-  root->visit([&globalContext, &ctx](auto node) -> std::shared_ptr<ast::Node> {
+  root->visit([&ctx](auto node) -> std::shared_ptr<ast::Node> {
     if (node->is(ast::AST_VAR_DECL)) {
       ctx.vardecls[node->template as<ast::VarDecl>()->name->name()] = node;
     }
@@ -150,7 +150,7 @@ static void processMacros(
     if (node->is(ast::AST_EXPR_MACRO_CALL)) {
       auto call  = ast::Node::cast<ast::MacroCall>(node);
       auto name  = call->name->name();
-      auto macro = globalContext->getMacro(name);
+      auto macro = ctx.global.getMacro(name);
 
       assertRaise(macro != nullptr, Error(ERROR_UNKNOWN_MACRO, call->name->span, "'{}'", name));
       assertRaise(macro->args.size() == call->args.size(), Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->span, "'{}'", name));
@@ -172,7 +172,14 @@ static void processMacros(
 
       try {
         processMacroCall(macro, call, body);
-        processMacros(globalContext, body);
+
+        // Include current macro's args into expansion of inner macros
+        ast::Macro::NativeContext mctx = ctx;
+        for (size_t i = 0; i < macro->args.size(); ++i) {
+          mctx.args[macro->args[i]->template as<ast::Identifier>()->name()] = call->args[i];
+        }
+
+        processMacros(mctx, body);
       } catch (CompilationException& ex) {
         ex.error.note(macro->span, "During expansion of macro {}", name).raise();
       }
@@ -326,10 +333,12 @@ CompilationResult xcc::compile(
   logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
 #endif
 
+  auto mctx = ast::Macro::NativeContext {*globalContext};
+
   processAttributes(ast);
   registerCustomTypes(globalContext, ast);
   registerMacros(globalContext, ast);
-  processMacros(globalContext, ast);
+  processMacros(mctx, ast);
 
 #if USE_PRINT_EXPANDED_AST
   logger.info("AST (After Attribute & Macro processing):");
