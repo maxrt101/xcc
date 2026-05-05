@@ -32,6 +32,15 @@ std::shared_ptr<Node> ast::getOrGetLastInBlock(std::shared_ptr<Node> node, NodeT
   return nullptr;
 }
 
+std::shared_ptr<Node> ast::getOrGetLastInBlock(std::shared_ptr<Node> node) {
+  if (node->is(AST_BLOCK)) {
+    auto block = node->as<Block>();
+    return getOrGetLastInBlock(block->body.back());
+  }
+
+  return node;
+}
+
 void subtree::replaceIdentifierWithNode(const std::shared_ptr<Node>& node, const std::string& oldValue, std::shared_ptr<Node> newNode) {
   node->visit([&](auto node) -> std::shared_ptr<Node> {
   if (node->is(AST_EXPR_IDENTIFIER) && node->template as<Identifier>()->name() == oldValue) {

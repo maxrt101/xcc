@@ -43,6 +43,11 @@ bool isOrIsLastInBlock(std::shared_ptr<Node> node, NodeType type);
  */
 std::shared_ptr<Node> getOrGetLastInBlock(std::shared_ptr<Node> node, NodeType type);
 
+/**
+ * Returns `note` if it is not a block, recursively searches for last node in block, and returns it otherwise
+ */
+std::shared_ptr<Node> getOrGetLastInBlock(std::shared_ptr<Node> node);
+
 namespace subtree {
 
 /**
