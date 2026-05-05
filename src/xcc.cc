@@ -105,6 +105,9 @@ static void processMacroCall(
  * Recursively mark each generated node with provided attribute and a new span
  */
 static void markExpandedMacro(std::shared_ptr<ast::Node> body, ast::Node::Attribute attr, SourceSpan span) {
+  body->addAttribute(attr);
+  body->span = span;
+
   body->visit([&attr, &span](auto node) -> std::shared_ptr<ast::Node> {
     node->addAttribute(attr);
     node->span = span;
