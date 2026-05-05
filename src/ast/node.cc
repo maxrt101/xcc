@@ -9,30 +9,39 @@ using namespace xcc::ast;
 
 static auto logger = xcc::util::log::Logger("AST_NODE");
 
-static const std::unordered_map<NodeType, std::string> s_type_map {
-    {AST_EXPR_ASSIGN,           "AST_EXPR_ASSIGN"},
-    {AST_EXPR_BINARY,           "AST_EXPR_BINARY"},
-    {AST_BLOCK,                 "AST_BLOCK"},
-    {AST_EXPR_CALL,             "AST_EXPR_CALL"},
-    {AST_EXPR_CAST,             "AST_EXPR_CAST"},
-    {AST_FUNCTION_DECL,         "AST_FUNCTION_DECL"},
-    {AST_FUNCTION_DEF,          "AST_FUNCTION_DEF"},
-    {AST_FOR,                   "AST_FOR"},
-    {AST_EXPR_IDENTIFIER,       "AST_EXPR_IDENTIFIER"},
-    {AST_IF,                    "AST_IF"},
-    {AST_EXPR_MEMBER_ACCESS,    "AST_EXPR_MEMBER_ACCESS"},
-    {AST_EXPR_NUMBER,           "AST_EXPR_NUMBER"},
-    {AST_RETURN,                "AST_RETURN"},
-    {AST_EXPR_STRING,           "AST_EXPR_STRING"},
-    {AST_STRUCT,                "AST_STRUCT"},
-    {AST_EXPR_SUBSCRIPT,        "AST_EXPR_SUBSCRIPT"},
-    {AST_EXPR_TYPE,             "AST_EXPR_TYPE"},
-    {AST_EXPR_TYPED_IDENTIFIER, "AST_EXPR_TYPED_IDENTIFIER"},
-    {AST_EXPR_UNARY,            "AST_EXPR_UNARY"},
-    {AST_MOD,                   "AST_MOD"},
-    {AST_MACRO,                 "AST_MACRO"},
-    {AST_VAR_DECL,              "AST_VAR_DECL"},
-    {AST_WHILE,                 "AST_WHILE"},
+#define DESC(__type, __name) {__type, {#__type, __name}}
+
+struct NodeString {
+  std::string type_name;
+  std::string name;
+};
+
+static const std::unordered_map<NodeType, NodeString> s_type_map {
+    DESC(AST_EXPR_ASSIGN,           "assignment"),
+    DESC(AST_EXPR_BINARY,           "binary operation"),
+    DESC(AST_BLOCK,                 "block"),
+    DESC(AST_EXPR_CALL,             "call"),
+    DESC(AST_EXPR_MACRO_CALL,       "macro call"),
+    DESC(AST_EXPR_CAST,             "cast"),
+    DESC(AST_FUNCTION_DECL,         "function declaration"),
+    DESC(AST_FUNCTION_DEF,          "function definition"),
+    DESC(AST_TYPE_DECL,             "type declaration"),
+    DESC(AST_FOR,                   "for statement"),
+    DESC(AST_EXPR_IDENTIFIER,       "identifier"),
+    DESC(AST_IF,                    "if statement"),
+    DESC(AST_EXPR_MEMBER_ACCESS,    "member access"),
+    DESC(AST_EXPR_NUMBER,           "number literal"),
+    DESC(AST_RETURN,                "return statement"),
+    DESC(AST_EXPR_STRING,           "string literal"),
+    DESC(AST_STRUCT,                "struct declaration"),
+    DESC(AST_EXPR_SUBSCRIPT,        "subscript"),
+    DESC(AST_EXPR_TYPE,             "type"),
+    DESC(AST_EXPR_TYPED_IDENTIFIER, "typed identifier"),
+    DESC(AST_EXPR_UNARY,            "unary operation"),
+    DESC(AST_MOD,                   "module"),
+    DESC(AST_MACRO,                 "macro declaration"),
+    DESC(AST_VAR_DECL,              "variable declaration"),
+    DESC(AST_WHILE,                 "while statement"),
 };
 
 Node::Payload::Payload(NodeType type) : type(type) {}
@@ -44,7 +53,7 @@ void Node::Attribute::validateArgsStrict(const std::vector<NodeType>& arg_types)
   for (size_t i = 0; i < arg_types.size(); ++i) {
     assertRaise(args[i]->is(arg_types[i]),
       Error(ERROR_ATTR_ARG_TYPE_MISMATCH, span, "Attribute '{}' expected {} as {} argument, got {}",
-        name, typeToString(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToString(args[i]->type)));
+        name, typeToHumanReadableString(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToHumanReadableString(args[i]->type)));
   }
 }
 
@@ -103,7 +112,18 @@ Node::Attribute& Node::getAttribute(const std::string& name) {
     }
   }
 
-  logger.error("Attribute '{}' is missing from node {}", name, typeToString(type));
+  logger.error("Attribute '{}' is missing from {}", name, typeToString(type));
+  throw std::runtime_error("Missing attribute");
+}
+
+const Node::Attribute& Node::getAttribute(const std::string& name) const {
+  for (const auto& attr : attributes) {
+    if (attr.name == name) {
+      return attr;
+    }
+  }
+
+  logger.error("Attribute '{}' is missing from {}", name, typeToString(type));
   throw std::runtime_error("Missing attribute");
 }
 
@@ -132,10 +152,18 @@ std::shared_ptr<meta::Type> Node::generateTypeForValueWithoutLoad(codegen::Modul
 
 std::string Node::typeToString(NodeType type) {
   if (s_type_map.find(type) != s_type_map.end()) {
-    return s_type_map.at(type);
+    return s_type_map.at(type).type_name;
   }
 
-  return "UNKNOWN";
+  return "?";
+}
+
+std::string Node::typeToHumanReadableString(NodeType type) {
+  if (s_type_map.find(type) != s_type_map.end()) {
+    return s_type_map.at(type).name;
+  }
+
+  return "?";
 }
 
 std::string Node::getIndent(int indent) {

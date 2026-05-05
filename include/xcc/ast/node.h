@@ -272,6 +272,16 @@ public:
   Attribute& getAttribute(const std::string& name);
 
   /**
+   * Get attribute by name
+   *
+   * @note Will throw if attribute is missing
+   *
+   * @param name Attribute name
+   * @return Const attribute reference
+   */
+  const Attribute& getAttribute(const std::string& name) const;
+
+  /**
    * Perform a clone (deep copy) of current node;
    *
    * @return Identical node to current
@@ -357,6 +367,13 @@ public:
    * @param type Node type
    */
   static std::string typeToString(NodeType type);
+
+  /**
+   * Converts node type to its human-readable string representation
+   *
+   * @param type Node type
+   */
+  static std::string typeToHumanReadableString(NodeType type);
 
   /**
    * Used to generate indent in toString
