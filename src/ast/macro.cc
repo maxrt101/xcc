@@ -15,7 +15,7 @@ Macro::Macro(
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     NativeFn                                 fn
-) : Node(AST_MACRO, {}), name(std::move(name)), args(std::move(args)), native(true), fn(fn) {}
+) : Node(AST_MACRO, SourceSpan::builtin()), name(std::move(name)), args(std::move(args)), native(true), fn(fn) {}
 
 std::shared_ptr<Macro> Macro::create(
   SourceSpan                               span,

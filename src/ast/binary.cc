@@ -92,7 +92,7 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     return binop->handler(ctx, lhs_val, rhs_val, binop->twine);
   }
 
-  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op={} type={}", operation.toString(), common_type->toString()).raise();
+  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op={} type={}", operation.toString(), common_type->toString()).raiseFromNode(this);
 }
 
 std::shared_ptr<meta::Type> Binary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {

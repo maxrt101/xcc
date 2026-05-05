@@ -58,7 +58,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
   if (!isVariadic && expectedArgs != providedArgs) {
     Error(ERROR_FN_CALL_ARG_COUNT_MISMATCH, span,
         "Argument mismatch (function: '{}', expected: {}, got: {})",
-        info.fnName, expectedArgs, providedArgs).raise();
+        info.fnName, expectedArgs, providedArgs).raiseFromNode(this);
   }
 
   for (size_t i = 0; i < args.size(); ++i) {
@@ -71,7 +71,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
       : args[i]->generateValue(ctx, {});
 
     if (!val) {
-      Error(ERROR_INTERNAL_FAILURE, args[i]->span, "Failed to generate function call argument #{}", i).raise();
+      Error(ERROR_INTERNAL_FAILURE, args[i]->span, "Failed to generate function call argument #{}", i).raiseFromNode(this);
     }
 
     if (i < signature->getNumParams()) {
@@ -111,7 +111,7 @@ Call::CalleeInfo Call::getCalleeInfo(codegen::ModuleContext& ctx, PayloadList pa
   }
 
   if (!info.metaType || !info.metaType->isFunction()) {
-    Error(ERROR_EXPR_NOT_CALLABLE, callee->span, "Expression of type '{}' is not callable", typeToString(callee->type)).raise();
+    Error(ERROR_EXPR_NOT_CALLABLE, callee->span, "Expression of type '{}' is not callable", typeToString(callee->type)).raiseFromNode(this);
   }
 
   return info;
@@ -145,7 +145,7 @@ void Call::getCalleeInfoForMethodCall(codegen::ModuleContext& ctx, PayloadList p
   auto * directFn = ctx.getFunction(info.fnName);
 
   if (!directFn) {
-    Error(ERROR_UNKNOWN_METHOD, callee->span, "'{}'", info.fnName).raise();
+    Error(ERROR_UNKNOWN_METHOD, callee->span, "'{}'", info.fnName).raiseFromNode(this);
   }
 
   auto meta_fn   = ctx.globalContext.getMetaFunction(info.fnName);

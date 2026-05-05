@@ -1,5 +1,7 @@
 #include "xcc/error.h"
 #include "xcc/exceptions.h"
+#include "xcc/ast/identifier.h"
+#include "xcc/ast/node.h"
 #include "xcc/util/fs.h"
 #include "xcc/util/log.h"
 #include "xcc/util/ansi.h"
@@ -177,12 +179,14 @@ SourceSpan SourceSpan::pointPastLast() const {
 }
 
 SourceSpan SourceSpan::builtin() {
-  return {BuildInFileId, 0, 0};
+  return {BuiltInFileId, 0, 0};
 }
 
 std::string SourceSpan::toString() const {
-  if (fileId == BuildInFileId) {
-    return ANSI_COLOR_FG_BLUE "     |" ANSI_TEXT_RESET " <built-in/native>\n";
+  if (fileId == BuiltInFileId) {
+    return ANSI_COLOR_FG_YELLOW "      |" ANSI_TEXT_RESET "\n"
+           ANSI_COLOR_FG_YELLOW "    0 |" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "<built-in/native>" ANSI_TEXT_RESET "\n"
+           ANSI_COLOR_FG_YELLOW "      |" ANSI_TEXT_RESET "\n";
   }
 
   auto file = FileManager::get(fileId);
@@ -193,10 +197,10 @@ std::string SourceSpan::toString() const {
   auto line_ofs = offset - info.offset;
 
   return std::format(
-    ANSI_COLOR_FG_MAGENTA "     -->" ANSI_TEXT_RESET " {}:{}:{}\n"
-    ANSI_COLOR_FG_MAGENTA "      |"  ANSI_TEXT_RESET "\n"
-    ANSI_COLOR_FG_MAGENTA " {:04} |" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n"
-    ANSI_COLOR_FG_MAGENTA "      |"  ANSI_TEXT_RESET " {}\n",
+    ANSI_COLOR_FG_YELLOW "     -->" ANSI_TEXT_RESET " {}:{}:{}\n"
+    ANSI_COLOR_FG_YELLOW "      |"  ANSI_TEXT_RESET "\n"
+    ANSI_COLOR_FG_YELLOW " {:04} |" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n"
+    ANSI_COLOR_FG_YELLOW "      |"  ANSI_TEXT_RESET " {}\n",
     file->path, line, line_ofs, line,
     file->contents.substr(info.offset, info.length),
     generateHighlight(line_ofs, length)
@@ -220,4 +224,16 @@ std::string Error::toString() const {
 
 void Error::raise() const {
   throw CompilationException(*this);
+}
+
+void Error::raiseFromNode(ast::Node * node) const {
+  auto err = *this;
+
+  if (node && node->hasAttribute("__xcc_macro_expanded_from")) {
+    auto attr = node->getAttribute("__xcc_macro_expanded_from");
+    auto name = attr.args[0]->as<ast::Identifier>();
+    err = err.note(name->span, "Expanded from macro '{}'", name->name());
+  }
+
+  err.raise();
 }

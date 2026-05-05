@@ -103,7 +103,7 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
     if (arg->is(AST_EXPR_TYPED_IDENTIFIER)) {
       arg_meta_types[arg->name->name()] = arg->generateType(ctx, {});
     } else {
-      Error(ERROR_INTERNAL_UNEXPECTED_NODE, arg->span, "Unexpected node '{}' in function '{}' argument declaration", typeToString(arg->type), fn_name).raise();
+      Error(ERROR_INTERNAL_UNEXPECTED_NODE, arg->span, "Unexpected node '{}' in function '{}' argument declaration", typeToString(arg->type), fn_name).raiseFromNode(this);
     }
   }
 

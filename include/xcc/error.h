@@ -1,12 +1,19 @@
 #pragma once
 
 #include "xcc/util/filemng.h"
+
+#include <llvm/Support/Error.h>
+
 #include <format>
 #include <string>
 #include <vector>
-#include <llvm/Support/Error.h>
+#include <memory>
 
 namespace xcc {
+
+namespace ast {
+class Node;
+}
 
 enum ErrorId {
   ERROR_RESERVED                         = 0,
@@ -169,6 +176,7 @@ struct Error {
   [[nodiscard]] std::string toString() const;
 
   [[noreturn]] void raise() const;
+  [[noreturn]] void raiseFromNode(ast::Node * node) const;
 };
 
 template <typename E>

@@ -49,7 +49,7 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   } else if (s_equal_to_op.find(kind.type) != s_equal_to_op.end()) {
     value = Binary::create(span, kind.clone(s_equal_to_op[kind.type]), lhs, rhs)->generateValue(ctx, payload);
   } else {
-    Error(ERROR_INVALID_ASSIGNMENT_OP, kind.span, "{}", Token::typeToString(kind.type)).raise();
+    Error(ERROR_INVALID_ASSIGNMENT_OP, kind.span, "{}", Token::typeToString(kind.type)).raiseFromNode(this);
   }
 
   value = codegen::castIfNotSame(
@@ -72,7 +72,7 @@ std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ct
       return ctx.getLocalType(name->name());
     }
 
-    Error(ERROR_UNKNOWN_VARIABLE, name->span, "'{}'", name->name()).raise();
+    Error(ERROR_UNKNOWN_VARIABLE, name->span, "'{}'", name->name()).raiseFromNode(this);
   }
 
   return lhs->generateTypeForValueWithoutLoad(ctx, {});
