@@ -396,7 +396,7 @@ std::shared_ptr<Type> Type::create(TypeTag tag) {
   return std::make_shared<Type>(tag);
 }
 
-std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std::string& name) {
+std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std::string& name, SourceSpan span) {
   switch (util::strhash(name.c_str())) {
     case util::strhash("void"):  return createVoid();
     case util::strhash("i8"):    return createI8();
@@ -422,7 +422,7 @@ std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std:
         return customTypes[prefixed_name];
       }
 
-      Error(ERROR_UNKNOWN_TYPE, {}, "Unknown type '" + name + "'").raise();
+      Error(ERROR_UNKNOWN_TYPE, span, "Unknown type '" + name + "'").raise();
     }
   }
 }

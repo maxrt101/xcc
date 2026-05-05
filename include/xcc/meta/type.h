@@ -186,7 +186,7 @@ public:
   std::shared_ptr<ast::Node> toAst(SourceSpan span = SourceSpan::builtin()) const;
 
   static std::shared_ptr<Type> create(TypeTag tag);
-  static std::shared_ptr<Type> fromTypeName(codegen::GlobalContext& ctx, const std::string& name);
+  static std::shared_ptr<Type> fromTypeName(codegen::GlobalContext& ctx, const std::string& name, SourceSpan span);
 
   static std::shared_ptr<Type> createVoid();
   static std::shared_ptr<Type> createI8();
