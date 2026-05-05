@@ -2,6 +2,7 @@
 #include "xcc/exceptions.h"
 #include "xcc/util/fs.h"
 #include "xcc/util/log.h"
+#include "xcc/util/ansi.h"
 
 using namespace xcc;
 
@@ -109,7 +110,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t len) {
-  std::string res;
+  std::string res = ANSI_COLOR_FG_RED;
 
   for (size_t i = 0; i < line_ofs; ++i) {
     res += " ";
@@ -119,7 +120,7 @@ static std::string generateHighlight(size_t line_ofs, size_t len) {
     res += "~";
   }
 
-  return res;
+  return res + ANSI_TEXT_RESET;
 }
 
 const ErrorDescription& ErrorDescription::get(ErrorId id) {
@@ -180,7 +181,7 @@ SourceSpan SourceSpan::builtin() {
 
 std::string SourceSpan::toString() const {
   if (fileId == BuildInFileId) {
-    return "     | <built-in/native>\n";
+    return ANSI_COLOR_FG_BLUE "     |" ANSI_TEXT_RESET " <built-in/native>\n";
   }
 
   auto file = FileManager::get(fileId);
@@ -191,10 +192,10 @@ std::string SourceSpan::toString() const {
   auto line_ofs = offset - info.offset;
 
   return std::format(
-    "     --> {}:{}:{}\n"
-    "      |\n"
-    " {:04} | {}\n"
-    "      | {}\n",
+    ANSI_COLOR_FG_MAGENTA "     -->" ANSI_TEXT_RESET " {}:{}:{}\n"
+    ANSI_COLOR_FG_MAGENTA "      |"  ANSI_TEXT_RESET "\n"
+    ANSI_COLOR_FG_MAGENTA " {:04} |" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n"
+    ANSI_COLOR_FG_MAGENTA "      |"  ANSI_TEXT_RESET " {}\n",
     file->path, line, line_ofs, line,
     file->contents.substr(info.offset, info.length),
     generateHighlight(line_ofs, length)
@@ -203,14 +204,14 @@ std::string SourceSpan::toString() const {
 
 std::string Error::toString() const {
   std::string result = std::format(
-    "error[E{:04}]: {}{}\n{}",
+    "error[" ANSI_COLOR_FG_RED "E{:04}" ANSI_TEXT_RESET "]: " ANSI_TEXT_BOLD "{}{}" ANSI_TEXT_RESET "\n{}",
     (size_t)id, ErrorDescription::get(id).name,
     message.empty() ? "" : ": " + message,
     span.toString()
   );
 
   for (auto& note : notes) {
-    result += std::format("note: {}\n{}", note.message, note.span.toString());
+    result += std::format( ANSI_COLOR_FG_GREEN "note:" ANSI_TEXT_RESET " {}\n{}", note.message, note.span.toString());
   }
 
   return result;
