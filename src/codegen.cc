@@ -282,7 +282,7 @@ std::shared_ptr<meta::Type> ModuleContext::getLocalType(const std::string& name)
   return locals[name]->type;
 }
 
-llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type) {
+llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type, SourceSpan span) {
   if (!val || !target_type) {
     throw std::runtime_error("codegen::cast received nullptr");
   }
@@ -350,6 +350,11 @@ llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Ty
     );
   }
 
-  // TODO: Pass span & convert val, type to string
-  Error(ERROR_INVALID_CAST, {}, "").raise();
+  util::RawStreamCollector rsc_v;
+  val->getType()->print(*rsc_v.stream());
+
+  util::RawStreamCollector rsc_t;
+  target_type->print(*rsc_t.stream());
+
+  Error(ERROR_INVALID_CAST, span, "Tried to cast '{}' into '{}'", rsc_v.string(), rsc_t.string()).raise();
 }
