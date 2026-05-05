@@ -26,8 +26,9 @@ void MemberAccess::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string MemberAccess::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return std::format("{}.{}",
+  return std::format("{}{}{}",
     lhs->toString(parent, this, indent, false),
+    kind == MEMBER_ACCESS_POINTER ? "->" : ".",
     rhs->toString(parent, this, indent, false)
   );
 }
@@ -36,8 +37,12 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 
   if (kind == MEMBER_ACCESS_POINTER) {
-    assertRaise(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, ""));
+    assertRaise(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, "'{}'", type->toString()));
     type = type->getPointedType();
+  }
+
+  if (!type->isStruct()) {
+    Error(ERROR_INVALID_TYPE, span, "Type '{}' is not a struct", type->toString()).throwException();
   }
 
   assertRaise(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()));
@@ -57,7 +62,7 @@ std::shared_ptr<xcc::meta::Type> MemberAccess::generateTypeForValueWithoutLoad(c
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 
   if (kind == MEMBER_ACCESS_POINTER) {
-    assertRaise(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, ""));
+    assertRaise(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, "'{}'", type->toString()));
     type = type->getPointedType();
   }
 

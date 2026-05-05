@@ -257,7 +257,7 @@ int Type::getNumberBitWidth() const {
 }
 
 bool Type::hasMember(const std::string& name) const {
-  assertThrow(isStruct(), "Type is not a struct");
+  assertRaise(isStruct(), Error(ERROR_INVALID_UNARY_AMP_RHS, {}, "Type '{}' is not a struct", toString()));
 
   return std::find_if(
     _struct.members.begin(), _struct.members.end(),

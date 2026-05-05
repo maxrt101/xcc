@@ -107,6 +107,7 @@ enum ErrorId {
   ERROR_VARDECL_NO_VAL_AND_TYPE          = 94,
   ERROR_UNIMPLEMENTED                    = 95,
   ERROR_UNKNOWN_TYPE                     = 96,
+  ERROR_MISSING_TYPE                     = 97,
 
   ERROR_MAX,
 };

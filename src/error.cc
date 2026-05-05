@@ -107,6 +107,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_VARDECL_NO_VAL_AND_TYPE,          "Value and type are missing from variable declaration"),
   DESC(ERROR_UNIMPLEMENTED,                    "Unimplemented functionality"),
   DESC(ERROR_UNKNOWN_TYPE,                     "Unknown type"),
+  DESC(ERROR_MISSING_TYPE,                     "Missing type"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t len) {
