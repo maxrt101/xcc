@@ -38,6 +38,7 @@ Arguments:
   -t, --target TARGET     - Specify target triple (use 'list' to see all)
   -m, --machine MACHINE   - Specify target machine (cpu) (use 'list' to see all)
   -o, --output OUT_FILE   - Set output file name
+  --log LOG_MODULE_NAME   - Enable logger for module ('*' to enable for all)
   IN_FILE...              - Input (source/object) files
 Environment:
   XCC_LD                  - Path to linker executable
@@ -85,11 +86,12 @@ fn main() -> i32 {
  - [X] Target/Machine selection via command line (which enables cross-compiling)  
  - [X] Macros  
  - [ ] Procedural macros  
+ - [X] Better error handling  
  - [ ] Port of libc (stdc)  
  - [ ] Standard library  
- - [ ] Built-ins (sizeof, offsetof, typeof)  
+ - [X] Built-ins (sizeof, offsetof, typeof)  
  - [ ] Procedural attributes  
- - [ ] Conditional imports  
+ - [X] Conditional imports  
  - [ ] Compound struct initialization  
  - [ ] Destructors (or something like `defer`)  
  - [ ] Lambdas (closures)
