@@ -1,7 +1,7 @@
 #pragma once
 
 #include <unordered_map>
-#include <cstdint>
+#include <climits>
 #include <string>
 #include <memory>
 
@@ -9,7 +9,7 @@ namespace xcc
 {
 using FileId = size_t;
 
-constexpr FileId BuildInFileId = SIZE_T_MAX;
+constexpr FileId BuildInFileId = ULONG_MAX;
 
 class File {
 public:
