@@ -62,5 +62,18 @@ llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payl
 }
 
 std::shared_ptr<xcc::meta::Type> Block::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  return body.back()->generateType(ctx, {});
+  codegen::ModuleContext::ScopedPhantomList variables;
+
+  for (auto& node : body) {
+    if (node->is(AST_VAR_DECL)) {
+      auto vardecl = node->as<VarDecl>();
+      auto name = vardecl->name->name();
+
+      variables[name] = vardecl->type->generateType(ctx, payload);
+    }
+  }
+
+  auto phantoms = ctx.phantomScope(variables);
+
+  return body.back()->generateType(ctx, {});;
 }
