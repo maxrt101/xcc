@@ -58,7 +58,7 @@
     __LOGIC_BINARY_OP_STR(__name, __ctx, __call, __op);                                                               \
   } else {                                                                                                            \
     Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->span, __name " expects either 2 strings or 2 numbers")          \
-        .raise();                                                                                            \
+        .raise();                                                                                                     \
   }
 
 using namespace xcc;
