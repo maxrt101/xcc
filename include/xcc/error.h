@@ -118,6 +118,9 @@ enum ErrorId {
   ERROR_UNEXPECTED_CHAR                  = 98,
   ERROR_NOT_A_TYPE                       = 99,
   ERROR_MODULE_NOT_FOUND                 = 100,
+  ERROR_USE_MISSING_CLOSING_BRACE        = 101,
+  ERROR_USE_WILDCARD_WITH_SYMBOLS        = 102,
+  ERROR_ALIAS_EXISTS                     = 103,
 
   ERROR_MAX,
 };
@@ -141,9 +144,9 @@ struct SourceSpan {
   SourceSpan operator+(const SourceSpan& rhs) const;
   SourceSpan& operator+=(const SourceSpan& rhs);
 
-  SourceSpan pointToFirst() const;
-  SourceSpan pointToLast() const;
-  SourceSpan pointPastLast() const;
+  [[nodiscard]] SourceSpan pointToFirst() const;
+  [[nodiscard]]SourceSpan pointToLast() const;
+  [[nodiscard]]SourceSpan pointPastLast() const;
 
   [[nodiscard]] std::string toString() const;
 

@@ -113,6 +113,9 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_UNEXPECTED_CHAR,                  "Unexpected character"),
   DESC(ERROR_NOT_A_TYPE,                       "Expected a type"),
   DESC(ERROR_MODULE_NOT_FOUND,                 "Module not found"),
+  DESC(ERROR_USE_MISSING_CLOSING_BRACE,        "Missing '}' after inclusion symbol list"),
+  DESC(ERROR_USE_WILDCARD_WITH_SYMBOLS,        "Can't specify symbols to bring into current scope alongside with a wildcard"),
+  DESC(ERROR_ALIAS_EXISTS,                     "Can't create an alias, as it already exists"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
