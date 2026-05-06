@@ -487,7 +487,7 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
     path = path_attr->args[0]->as<ast::String>()->value;
   }
 
-  auto res = path.empty() ? includeModule(name->name(), scoped) : includeModuleFromPath(name->name(), path, scoped);
+  auto res = path.empty() ? includeModule(name->name(), name->span, scoped) : includeModuleFromPath(name->name(), path, name->span, scoped);
 
   // Happens, if module was already included
   if (!res.body) return ast::Empty::create();
@@ -928,11 +928,11 @@ ast::Node::AttributeList Parser::parseAttributeList() {
   return attrs;
 }
 
-Parser::IncludedModule Parser::includeModule(const std::string& name, bool scoped) {
-  return includeModuleFromPath(name, resolveModulePath(name), scoped);
+Parser::IncludedModule Parser::includeModule(const std::string& name, SourceSpan span, bool scoped) {
+  return includeModuleFromPath(name, resolveModulePath(name, span), span, scoped);
 }
 
-Parser::IncludedModule Parser::includeModuleFromPath(const std::string& name, const std::string& path, bool scoped) {
+Parser::IncludedModule Parser::includeModuleFromPath(const std::string& name, const std::string& path, SourceSpan span, bool scoped) {
   IncludedModule result;
 
   if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
@@ -953,33 +953,37 @@ Parser::IncludedModule Parser::includeModuleFromPath(const std::string& name, co
 
   logger.info("Found module '{}' at {}", name, result.path);
 
-  auto lexer  = Lexer(file);
-  auto tokens = lexer.tokenize();
-  auto parser = Parser(file, tokens, true);
+  try {
+    auto lexer  = Lexer(file);
+    auto tokens = lexer.tokenize();
+    auto parser = Parser(file, tokens, true);
 
-  if (scoped) {
-    parser.module.stack = module.stack;
+    if (scoped) {
+      parser.module.stack = module.stack;
+    }
+
+    parser.module.stack.push_back(name);
+    parser.module.searchPaths = module.searchPaths;
+    parser.module.included    = module.included;
+
+    auto mod = parser.parse(false);
+
+    result.body = moduleReplaceDefinitions(mod);
+
+    module_cache[name] = result;
+
+    parser.module.stack.pop_back();
+
+    // Copy list of already included modules over to current parser
+    module.included.merge(parser.module.included);
+  } catch (CompilationException& ex) {
+    ex.error.note(span, "During inclusion of module '{}' ({})", name, path).raise();
   }
-
-  parser.module.stack.push_back(name);
-  parser.module.searchPaths = module.searchPaths;
-  parser.module.included    = module.included;
-
-  auto mod = parser.parse(false);
-
-  result.body = moduleReplaceDefinitions(mod);
-
-  module_cache[name] = result;
-
-  parser.module.stack.pop_back();
-
-  // Copy list of already included modules over to current parser
-  module.included.merge(parser.module.included);
 
   return result;
 }
 
-std::string Parser::resolveModulePath(const std::string& name) {
+std::string Parser::resolveModulePath(const std::string& name, SourceSpan span) {
   auto filename = name + ".xc";
 
   if (fs::exists(filename)) {
@@ -994,9 +998,7 @@ std::string Parser::resolveModulePath(const std::string& name) {
     }
   }
 
-  logger.error("Could not resolve module '{}'", name);
-
-  throw std::runtime_error("Could not resolve module");
+  Error(ERROR_MODULE_NOT_FOUND, span, "Could not resolve path to module '{}'", name).raise();
 }
 
 std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_ptr<ast::Block>& body) {

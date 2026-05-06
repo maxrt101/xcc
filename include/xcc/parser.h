@@ -198,9 +198,10 @@ private:
    * For more info look up @ref Parser::includeModuleFromPath
    *
    * @param name Module name
+   * @param span Inclusion site
    * @param scoped Is scoped, i.e. should current module stack be passed to child (module) parser
    */
-  IncludedModule includeModule(const std::string& name, bool scoped);
+  IncludedModule includeModule(const std::string& name, SourceSpan span, bool scoped);
 
   /**
    * Include module from path. Reads file from path, tokenizes and parses it, stripping variable & function definitions
@@ -254,10 +255,11 @@ private:
    *
    * @param name Module name
    * @param path Path to module file
+   * @param span Inclusion site
    * @param scoped Is scoped, i.e. should current module stack be passed to child (module) parser
    * @return
    */
-  IncludedModule includeModuleFromPath(const std::string& name, const std::string& path, bool scoped);
+  IncludedModule includeModuleFromPath(const std::string& name, const std::string& path, SourceSpan span, bool scoped);
 
   /**
    * Resolves a path to module file by name, using `this->module.searchPaths`
@@ -265,9 +267,10 @@ private:
    * To add search paths, use @ref Parser::addModuleSearchPath
    *
    * @param name Module name
+   * @param span Inclusion site
    * @return Path to module file, i.e. `.../{name}.xc`
    */
-  std::string resolveModulePath(const std::string& name);
+  std::string resolveModulePath(const std::string& name, SourceSpan span);
 
   /**
    * Performs definition stripping
