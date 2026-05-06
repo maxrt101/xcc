@@ -13,3 +13,6 @@ use mod str;
 
 # Contains declarations from stdlib.h
 use mod lib;
+
+# Contains declarations from stdarg.h
+use mod arg;
