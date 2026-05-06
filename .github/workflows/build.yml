@@ -83,7 +83,7 @@ jobs:
         fi
 
         if [ -z "${{ inputs.omit_tests }}" ]; then
-          python3 tests/testrun.py -c tests/tests.json -e build/xcc -l libs/stdc $ARGS
+          python3 tests/testrun.py -c tests/tests.json -e build/xcc -l lib/stdc $ARGS
         else
           echo "Omit tests"
         fi
@@ -142,7 +142,7 @@ jobs:
           fi
 
           if [ -z "${{ inputs.omit_tests }}" ]; then
-            python3 tests/testrun.py -c tests/tests.json -e build/xcc -l libs/stdc $ARGS
+            python3 tests/testrun.py -c tests/tests.json -e build/xcc -l lib/stdc $ARGS
           else
             echo "Omit tests"
           fi
