@@ -7,9 +7,11 @@ struct va_list {
     reg_save_area:     u8*;
 }
 
+# LLVM intrinsic
 [alias("llvm.va_start.p0")]
 fn __va_start(ap: u8*);
 
+# LLVM intrinsic
 [alias("llvm.va_end.p0")]
 fn __va_end(ap: u8*);
 

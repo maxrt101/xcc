@@ -6,13 +6,16 @@
 mod stdc;
 
 # Contains declarations from stdio.h
-use mod io;
+use mod io::*;
 
 # Contains declarations from string.h
-use mod str;
+use mod str::*;
 
 # Contains declarations from stdlib.h
-use mod lib;
+use mod lib::*;
 
 # Contains declarations from stdarg.h
-use mod arg;
+use mod arg::*;
+
+# Contains declarations from setjmp.h
+use mod jmp::*;
