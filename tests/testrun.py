@@ -58,10 +58,11 @@ class TestRun:
 class Runner:
     RESULT_REGEX = re.compile(r'Result: (\d+)', re.MULTILINE)
 
-    def __init__(self, config: str, executable: str, test_dir: str | None, verbose: bool, print_output: bool, announce: bool):
+    def __init__(self, config: str, executable: str, libs: list[str], test_dir: str | None, verbose: bool, print_output: bool, announce: bool):
         self.tests = Runner.__parse(config)
         self.test_dir = test_dir if test_dir else os.path.dirname(config)
         self.executable = executable
+        self.libs = libs
         self.verbose = verbose
         self.announce = announce
         self.print_output = print_output
@@ -124,7 +125,8 @@ class Runner:
             if isinstance(test.file, str) else
             [os.path.join(self.test_dir, file) for file in test.file]
         )
-        result = subprocess.run([self.executable, '--log', '*', '-r', '-I', self.test_dir, *files], capture_output=True, text=True, env=test.env)
+        libs = [x for p in [('-I', f'{lib}') for lib in self.libs] for x in p]
+        result = subprocess.run([self.executable, '--log', '*', '-r', '-I', self.test_dir, *libs, *files], capture_output=True, text=True, env=test.env)
         run = TestRun(True, result.returncode, 0, result.stdout, result.stderr, [])
 
         if match := self.RESULT_REGEX.search(run.stdout):
@@ -177,6 +179,9 @@ def main():
     parser.add_argument('-t', '--tests', action='store', dest='tests', default=None,
                         help='Comma separated list of test ids to run (default: all)')
 
+    parser.add_argument('-l', '--lib', action='append', dest='libs', default=None,
+                        help='Optional path to modules')
+
     parser.add_argument('-a', '--announce', action='store_true', dest='announce', default=False,
                         help='Announce what test runs now')
 
@@ -190,7 +195,7 @@ def main():
 
     print(f'{COLOR_MAGENTA}--- XCC Test Runner ---{COLOR_RESET}')
 
-    runner = Runner(args.config, args.executable, args.testdir, args.verbose, args.print_output, args.announce)
+    runner = Runner(args.config, args.executable, args.libs, args.testdir, args.verbose, args.print_output, args.announce)
 
     print(f'--- Parsed {COLOR_YELLOW}{len(runner.tests)}{COLOR_RESET} tests from {COLOR_BLUE}{args.config}{COLOR_RESET}')
 
