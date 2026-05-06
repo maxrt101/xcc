@@ -459,7 +459,9 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attrs) {
+  std::vector<std::shared_ptr<ast::Identifier>> symbols;
   bool scoped = false;
+  bool all    = false;
 
   auto span = current().span;
 
@@ -473,8 +475,34 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
 
   auto name = parseIdentifier("for module name");
 
+  if (checkAdvance(TOKEN_SCOPE)) {
+    if (checkAdvance(TOKEN_LEFT_BRACE)) {
+      do {
+        if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
+          break;
+        }
+
+        symbols.push_back(parseIdentifier("for import symbol"));
+      } while (checkAdvance(TOKEN_COMMA));
+
+      if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
+        Error(ERROR_USE_MISSING_CLOSING_BRACE, current().span, "").raise();
+      }
+    } else {
+      if (checkAdvance(TOKEN_STAR)) {
+        all = true;
+      } else {
+        symbols.push_back(parseIdentifier("for import symbol"));
+      }
+    }
+  }
+
   if (!checkAdvance(TOKEN_SEMICOLON)) {
     Error(ERROR_USE_MISSING_SEMICOLON, current().span, "").raise();
+  }
+
+  if (all && !symbols.empty()) {
+    Error(ERROR_USE_WILDCARD_WITH_SYMBOLS, span + previous().span, "").raise();
   }
 
   auto path_attr = std::find_if(attrs.begin(), attrs.end(), [](auto& a) { return a.name == "path"; });
@@ -490,11 +518,23 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
   auto res = path.empty() ? includeModule(name->name(), name->span, scoped) : includeModuleFromPath(name->name(), path, name->span, scoped);
 
   // Happens, if module was already included
-  if (!res.body) return ast::Empty::create();
+  if (!res.body) {
+    if (module_cache.contains(name->name())) {
+      for (auto& ref : module_cache[name->name()].references) {
+        updateModAliases(ref, all, symbols, span);
+      }
+    }
+
+    return ast::Empty::create();
+  }
 
   auto mod = ast::Module::create(span + previous().span, name, res.body);
 
-  mod->addAttribute({"__xcc_tag_used_from", { ast::String::create(span, res.path) }});
+  mod->addAttribute({"__xcc_tag_used_from", { ast::String::create(span, res.path) }, span});
+
+  updateModAliases(mod, all, symbols, span);
+
+  module_cache[name->name()].references.push_back(mod);
 
   return mod;
 }
@@ -928,11 +968,20 @@ ast::Node::AttributeList Parser::parseAttributeList() {
   return attrs;
 }
 
-Parser::IncludedModule Parser::includeModule(const std::string& name, SourceSpan span, bool scoped) {
+Parser::IncludedModule Parser::includeModule(
+  const std::string& name,
+  SourceSpan         span,
+  bool               scoped
+) {
   return includeModuleFromPath(name, resolveModulePath(name, span), span, scoped);
 }
 
-Parser::IncludedModule Parser::includeModuleFromPath(const std::string& name, const std::string& path, SourceSpan span, bool scoped) {
+Parser::IncludedModule Parser::includeModuleFromPath(
+  const std::string& name,
+  const std::string& path,
+  SourceSpan         span,
+  bool               scoped
+) {
   IncludedModule result;
 
   if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
@@ -999,6 +1048,21 @@ std::string Parser::resolveModulePath(const std::string& name, SourceSpan span) 
   }
 
   Error(ERROR_MODULE_NOT_FOUND, span, "Could not resolve path to module '{}'", name).raise();
+}
+
+void Parser::updateModAliases(
+  std::shared_ptr<ast::Module>&                        mod,
+  bool                                                 all,
+  const std::vector<std::shared_ptr<ast::Identifier>>& symbols,
+  SourceSpan                                           span
+) {
+  if (all) {
+    mod->addAttribute({"__xcc_tag_use_alias_all", {}, span});
+  }
+
+  for (auto& symbol : symbols) {
+    mod->addAttribute({"__xcc_tag_use_alias", { ast::String::create(symbol->span, symbol->name()) }, symbol->span});
+  }
 }
 
 std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_ptr<ast::Block>& body) {

@@ -32,8 +32,9 @@ public:
    * @note For internal use only
    */
   struct IncludedModule {
-    std::string                 path;
-    std::shared_ptr<ast::Block> body;
+    std::string                               path;
+    std::shared_ptr<ast::Block>               body;
+    std::vector<std::shared_ptr<ast::Module>> references;
   };
 
 private:
@@ -201,7 +202,11 @@ private:
    * @param span Inclusion site
    * @param scoped Is scoped, i.e. should current module stack be passed to child (module) parser
    */
-  IncludedModule includeModule(const std::string& name, SourceSpan span, bool scoped);
+  IncludedModule includeModule(
+    const std::string& name,
+    SourceSpan         span,
+    bool               scoped
+  );
 
   /**
    * Include module from path. Reads file from path, tokenizes and parses it, stripping variable & function definitions
@@ -259,7 +264,12 @@ private:
    * @param scoped Is scoped, i.e. should current module stack be passed to child (module) parser
    * @return
    */
-  IncludedModule includeModuleFromPath(const std::string& name, const std::string& path, SourceSpan span, bool scoped);
+  IncludedModule includeModuleFromPath(
+    const std::string& name,
+    const std::string& path,
+    SourceSpan         span,
+    bool               scoped
+  );
 
   /**
    * Resolves a path to module file by name, using `this->module.searchPaths`
@@ -271,6 +281,20 @@ private:
    * @return Path to module file, i.e. `.../{name}.xc`
    */
   std::string resolveModulePath(const std::string& name, SourceSpan span);
+
+  /**
+   * Add alias attributes to module
+   *
+   * @param mod     Module
+   * @param all     Add "use all" attribute
+   * @param symbols Symbols to alias
+   */
+  void updateModAliases(
+    std::shared_ptr<ast::Module>&                        mod,
+    bool                                                 all,
+    const std::vector<std::shared_ptr<ast::Identifier>>& symbols,
+    SourceSpan                                           span
+  );
 
   /**
    * Performs definition stripping
