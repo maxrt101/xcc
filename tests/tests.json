@@ -466,5 +466,14 @@
       "stdout": ["0\n1\n2\n3\n4\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 49,
+    "name": "stdc va_args test",
+    "file": "49.xc",
+    "expect": {
+      "stdout": ["test 42\n"],
+      "retcode": 0
+    }
   }
 ]
