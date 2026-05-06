@@ -59,10 +59,12 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     span
   );
 
-  return ctx.ir_builder->CreateStore(
+  ctx.ir_builder->CreateStore(
     value,
     lhs->generateValueWithoutLoad(ctx, payload)
   );
+
+  return lhs->generateValue(ctx, payload);
 }
 
 std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
