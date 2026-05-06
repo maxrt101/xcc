@@ -96,7 +96,7 @@ fn main() -> i32 {
  - [ ] Destructors (or something like `defer`)  
  - [ ] Lambdas (closures)
  - [ ] The rest of gcc/clang attributes (alias, section & packed are done)  
- - [ ] Full variadic support  
+ - [X] Full variadic support  
  - [ ] Stable ABI/FFI  
  - [ ] String interpolation  
  - [ ] Better type inference  
