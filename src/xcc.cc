@@ -25,6 +25,89 @@ static void processAttributes(const std::shared_ptr<ast::Block>& block) {
 }
 
 /**
+ * Process aliases for specific modules, specifically - symbols that have to be brought into current namespace
+ *
+ * @param globalContext Global Context
+ * @param mod           Module that has to be processed
+ * @param topLevel      Is current context a top-level
+ */
+static void processModAliases(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  std::shared_ptr<ast::Module>             mod,
+  bool                                     topLevel
+) {
+  using namespace xcc::ast;
+
+  auto prefix = topLevel ? globalContext->getModulePrefix() : globalContext->getParentModulePrefix();
+
+  if (mod->hasAttribute("__xcc_tag_use_alias_all")) {
+    for (auto& node : mod->body->body) {
+      auto attr = mod->getAttribute("__xcc_tag_use_alias_all");
+      std::shared_ptr<Identifier> id;
+
+      if (node->is(AST_FUNCTION_DECL)) {
+        id = node->as<FnDecl>()->name;
+      } else if (node->is(AST_FUNCTION_DEF)) {
+        id = node->as<FnDef>()->decl->name;
+      } else if (node->is(AST_STRUCT)) {
+        id = node->as<Struct>()->name;
+      } else if (node->is(AST_TYPE_DECL)) {
+        id = Node::cast<Identifier>(node->as<TypeDecl>()->name);
+      } else if (node->is(AST_MACRO)) {
+        id = node->as<Macro>()->name;
+      } else {
+        continue;
+      }
+
+      globalContext->addAlias(prefix + id->value, id->name(), attr.span);
+    }
+  }
+
+  auto symbols = mod->getAttributes("__xcc_tag_use_alias");
+
+  for (auto& sym : symbols) {
+    auto span = sym.get().span;
+    auto arg = sym.get().args[0];
+
+    assertRaiseFromNode(
+      arg->is(AST_EXPR_STRING),
+      Error(ERROR_ATTR_ARG_TYPE_MISMATCH, span, "__xcc_tag_use_alias expects a string as an argument"),
+      mod.get()
+    );
+
+    auto name = arg->as<String>()->value;
+
+    globalContext->addAlias(name, prefix + name, span);
+  }
+}
+
+/**
+ * Process included modules, specifically - symbols that have to be brought into current namespace
+ *
+ * @param globalContext Global Context
+ * @param block         Block to process
+ * @param topLevel      Is block at the very top level
+ */
+static void processAliases(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::shared_ptr<ast::Block>&       block,
+  bool                                     topLevel
+) {
+  for (auto& node : block->body) {
+    if (node->is(ast::AST_MOD)) {
+      auto mod = ast::Node::cast<ast::Module>(node);
+
+      globalContext->pushModule(mod->getName());
+      processModAliases(globalContext, mod, topLevel);
+      processAliases(globalContext, mod->body, false);
+      globalContext->popModule();
+    } else if (node->is(ast::AST_BLOCK)) {
+      processAliases(globalContext, ast::Node::cast<ast::Block>(node), false);
+    }
+  }
+}
+
+/**
  * Find and process all `type` and `struct` declarations, for types to be available
  * during macro expansion phase
  *
@@ -149,7 +232,7 @@ static void processMacros(
 
     if (node->is(ast::AST_EXPR_MACRO_CALL)) {
       auto call  = ast::Node::cast<ast::MacroCall>(node);
-      auto name  = call->name->name();
+      auto name  = ctx.global.aliased(call->name->name());
       auto macro = ctx.global.getMacro(name);
 
       assertRaise(macro != nullptr, Error(ERROR_UNKNOWN_MACRO, call->name->span, "'{}'", name));
@@ -252,8 +335,10 @@ static void compileBlock(
         compileFunction(globalContext, method);
       }
     } else if (node->is(ast::AST_MOD)) {
-      globalContext->pushModule(node->as<ast::Module>()->getName());
-      compileBlock(globalContext, result, node->as<ast::Module>()->body, isRepl);
+      auto mod = ast::Node::cast<ast::Module>(node);
+
+      globalContext->pushModule(mod->getName());
+      compileBlock(globalContext, result, mod->body, isRepl);
       globalContext->popModule();
     } else if (node->is(ast::AST_TYPE_DECL)) {
       node->generateType(*globalContext->globalModule, {});
@@ -336,6 +421,7 @@ CompilationResult xcc::compile(
   auto mctx = ast::Macro::NativeContext {*globalContext};
 
   processAttributes(ast);
+  processAliases(globalContext, ast, true);
   registerCustomTypes(globalContext, ast);
   registerMacros(globalContext, ast);
   processMacros(mctx, ast);
