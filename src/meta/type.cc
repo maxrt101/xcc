@@ -546,5 +546,6 @@ bool Type::hasCustomType(const std::string& name) {
 }
 
 std::shared_ptr<Type> Type::alignTypes(std::shared_ptr<Type> lhs, std::shared_ptr<Type> rhs) {
+  if (lhs->isVoid() || rhs->isVoid()) return createVoid();
   return (lhs->tag >= rhs->tag) ? std::move(lhs) : std::move(rhs);
 }
