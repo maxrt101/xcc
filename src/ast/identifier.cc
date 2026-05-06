@@ -83,6 +83,10 @@ std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx
 }
 
 std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
+  if (ctx.hasPhantom(name())) {
+    return ctx.getPhantomType(name());
+  }
+
   if (ctx.hasLocal(name())) {
     return ctx.getLocalType(name());
   }
