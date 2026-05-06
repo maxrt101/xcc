@@ -221,6 +221,19 @@ void GlobalContext::runFunction(const std::string& name) {
   checkLLVMError(rt->remove());
 }
 
+ModuleContext::ScopedPhantomVariables::ScopedPhantomVariables(ModuleContext& module, const ScopedPhantomList& vars) : module(module) {
+  for (auto& [name, type] : vars) {
+    names.push_back(name);
+    module.phantom_locals[name] = type;
+  }
+}
+
+ModuleContext::ScopedPhantomVariables::~ScopedPhantomVariables() {
+  for (auto& name : names) {
+    module.phantom_locals.erase(name);
+  }
+}
+
 ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, util::Target * target) : name(name), globalContext(global) {
   llvm.ctx = globalContext.tsc.getContext();
   llvm.module = std::make_unique<llvm::Module>(name, *llvm.ctx);
@@ -268,6 +281,18 @@ llvm::Function * ModuleContext::getFunction(const std::string& name) {
   }
 
   return nullptr;
+}
+
+ModuleContext::ScopedPhantomVariables ModuleContext::phantomScope(const ScopedPhantomList& vars) {
+  return {*this, vars};
+}
+
+bool ModuleContext::hasPhantom(const std::string& name) {
+  return phantom_locals.contains(name);
+}
+
+std::shared_ptr<meta::Type> ModuleContext::getPhantomType(const std::string& name) {
+  return phantom_locals[name];
 }
 
 bool ModuleContext::hasLocal(const std::string& name) {

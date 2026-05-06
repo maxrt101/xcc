@@ -130,6 +130,19 @@ public:
  */
 class ModuleContext {
 public:
+  using ScopedPhantomList = std::unordered_map<std::string, std::shared_ptr<meta::Type>>;
+
+private:
+  class ScopedPhantomVariables {
+    ModuleContext&           module;
+    std::vector<std::string> names;
+
+  public:
+    ScopedPhantomVariables(ModuleContext& module, const ScopedPhantomList& vars);
+    ~ScopedPhantomVariables();
+  };
+
+public:
   /* Module name */
   std::string name;
 
@@ -147,6 +160,9 @@ public:
 
   /* Named values (variables/args) */
   std::map<std::string, std::shared_ptr<meta::TypedValue>> locals;
+
+  /* Phantom named values (variables/args), that need to be in AST generator's scope without being generated */
+  std::map<std::string, std::shared_ptr<meta::Type>> phantom_locals;
 
 #if USE_OPTIMIZATION
   /* Optimization Contexts */
@@ -167,6 +183,10 @@ public:
   static std::unique_ptr<ModuleContext> create(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME, util::Target * target = nullptr);
 
   llvm::Function * getFunction(const std::string& name);
+
+  ScopedPhantomVariables phantomScope(const ScopedPhantomList& vars);
+  bool hasPhantom(const std::string& name);
+  std::shared_ptr<meta::Type> getPhantomType(const std::string& name);
 
   bool hasLocal(const std::string& name);
   llvm::AllocaInst * getLocalValue(const std::string& name);
