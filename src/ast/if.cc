@@ -70,7 +70,9 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
   ctx.ir_builder->SetInsertPoint(then_block);
   auto then_val = raiseIfNull(then_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "Error generating 'then' block of 'if' statement (then branch generated NULL)"));
 
-  then_val = codegen::castIfNotSame(ctx, then_val, common_type->getLLVMType(ctx), then_branch->span);
+  if (!common_type->isVoid() && then_val) {
+    then_val = codegen::castIfNotSame(ctx, then_val, common_type->getLLVMType(ctx), then_branch->span);
+  }
 
   if (!isOrIsLastInBlock(then_branch, AST_RETURN)) {
     ctx.ir_builder->CreateBr(merge_block);
@@ -84,7 +86,9 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
   auto else_val = else_branch ? raiseIfNull(else_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "Error generating 'then' block of 'if' statement (else branch generated NULL)")) : nullptr;
 
   if (else_val) {
-    else_val = codegen::castIfNotSame(ctx, else_val, common_type->getLLVMType(ctx), else_branch->span);
+    if (!common_type->isVoid() && else_val) {
+      else_val = codegen::castIfNotSame(ctx, else_val, common_type->getLLVMType(ctx), else_branch->span);
+    }
 
     // Generate branch to merge block if else_branch doesn't return from the function
     if (!isOrIsLastInBlock(else_branch, AST_RETURN)) {
