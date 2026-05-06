@@ -71,6 +71,9 @@ public:
   /* Defined macros */
   std::unordered_map<std::string, std::shared_ptr<ast::Macro>> macros;
 
+  /* Aliases for imported functions that are brought into scope */
+  std::unordered_map<std::string, std::string> aliases;
+
 public:
   GlobalContext(util::Target target);
   ~GlobalContext() = default;
@@ -116,9 +119,13 @@ public:
   void pushModule(const std::string& name);
   void popModule();
   [[nodiscard]] std::string getModulePrefix() const;
+  [[nodiscard]] std::string getParentModulePrefix() const;
 
   void registerMacro(const std::string& name, std::shared_ptr<ast::Macro> macro);
   std::shared_ptr<ast::Macro> getMacro(const std::string& name) const;
+
+  void addAlias(const std::string& name, const std::string& value, SourceSpan span);
+  std::string aliased(const std::string& name);
 
   void runExpr(std::shared_ptr<ast::Node> expr);
 

@@ -116,6 +116,16 @@ std::string GlobalContext::getModulePrefix() const {
   return res;
 }
 
+std::string GlobalContext::getParentModulePrefix() const {
+  std::string res;
+
+  for (size_t i = 0; i < moduleStack.size() - 1; ++i) {
+    res += moduleStack[i] + "_";
+  }
+
+  return res;
+}
+
 void GlobalContext::registerMacro(const std::string& name, std::shared_ptr<ast::Macro> macro) {
   macros[name] = macro;
 }
@@ -126,6 +136,26 @@ std::shared_ptr<ast::Macro> GlobalContext::getMacro(const std::string& name) con
   }
 
   return nullptr;
+}
+
+void GlobalContext::addAlias(const std::string& name, const std::string& value, SourceSpan span) {
+  if (aliases.contains(name)) {
+    Error(ERROR_ALIAS_EXISTS, span, "'{}'", name).raise();
+  }
+
+  logger.debug("Adding alias '{}' -> '{}'", name, value);
+
+  aliases[name] = value;
+}
+
+std::string GlobalContext::aliased(const std::string& name) {
+  std::string res = name;
+
+  while (aliases.contains(res)) {
+    res = aliases[res];
+  }
+
+  return res;
 }
 
 void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
