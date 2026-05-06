@@ -39,43 +39,47 @@ std::string Identifier::name() const {
 }
 
 llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (ctx.hasLocal(name())) {
-    return ctx.ir_builder->CreateLoad(ctx.getLocalValue(name())->getAllocatedType(), ctx.getLocalValue(name()), name().c_str());
+  auto id = ctx.globalContext.aliased(name());
+
+  if (ctx.hasLocal(id)) {
+    return ctx.ir_builder->CreateLoad(ctx.getLocalValue(id)->getAllocatedType(), ctx.getLocalValue(id), id.c_str());
   }
 
-  if (ctx.globalContext.hasGlobal(name())) {
-    auto global = ctx.globalContext.getGlobal(ctx, name());
+  if (ctx.globalContext.hasGlobal(id)) {
+    auto global = ctx.globalContext.getGlobal(ctx, id);
 
-    if (ctx.globalContext.getGlobalType(name())->isPointer()) {
-      auto alloca = ctx.ir_builder->CreateAlloca(ctx.globalContext.getGlobalType(name())->getLLVMType(ctx), nullptr);
+    if (ctx.globalContext.getGlobalType(id)->isPointer()) {
+      auto alloca = ctx.ir_builder->CreateAlloca(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), nullptr);
       ctx.ir_builder->CreateStore(global, alloca);
-      return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(name())->getLLVMType(ctx), alloca);
+      return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), alloca);
     }
 
-    return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(name())->getLLVMType(ctx), global);
+    return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), global);
   }
 
-  if (auto * fn = ctx.getFunction(name())) {
+  if (auto * fn = ctx.getFunction(id)) {
     return fn;
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).raiseFromNode(this);
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", id).raiseFromNode(this);
 }
 
 llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (ctx.hasLocal(name())) {
-    return ctx.getLocalValue(name());
+  auto id = ctx.globalContext.aliased(name());
+
+  if (ctx.hasLocal(id)) {
+    return ctx.getLocalValue(id);
   }
 
-  if (ctx.globalContext.hasGlobal(name())) {
-    return ctx.globalContext.getGlobal(ctx, name());
+  if (ctx.globalContext.hasGlobal(id)) {
+    return ctx.globalContext.getGlobal(ctx, id);
   }
 
-  if (auto * fn = ctx.getFunction(name())) {
+  if (auto * fn = ctx.getFunction(id)) {
     return fn;
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).raiseFromNode(this);
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", id).raiseFromNode(this);
 }
 
 std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -83,21 +87,23 @@ std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx
 }
 
 std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (ctx.hasPhantom(name())) {
-    return ctx.getPhantomType(name());
+  auto id = ctx.globalContext.aliased(name());
+
+  if (ctx.hasPhantom(id)) {
+    return ctx.getPhantomType(id);
   }
 
-  if (ctx.hasLocal(name())) {
-    return ctx.getLocalType(name());
+  if (ctx.hasLocal(id)) {
+    return ctx.getLocalType(id);
   }
 
-  if (ctx.globalContext.hasGlobal(name())) {
-    return ctx.globalContext.getGlobalType(name());
+  if (ctx.globalContext.hasGlobal(id)) {
+    return ctx.globalContext.getGlobalType(id);
   }
 
-  if (auto meta_fn = ctx.globalContext.getMetaFunction(name())) {
+  if (auto meta_fn = ctx.globalContext.getMetaFunction(id)) {
     return meta_fn->decl->generateType(ctx, payload);
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", name()).raiseFromNode(this);
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", id).raiseFromNode(this);
 }
