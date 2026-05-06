@@ -214,10 +214,20 @@ std::string Node::attributesToString(int indent, bool newline) {
     return "";
   }
 
+  if (std::all_of(attributes.begin(), attributes.end(),
+      [](auto& a) { return a.name == "__xcc_macro_expanded_from"; })
+  ) {
+    return "";
+  }
+
   std::string res = "[";
 
   for (size_t i = 0; i < attributes.size(); ++i) {
     auto& attr = attributes[i];
+
+    if (attr.name == "__xcc_macro_expanded_from") {
+      continue;
+    }
 
     res += attr.name;
 
