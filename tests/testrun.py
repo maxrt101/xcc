@@ -13,6 +13,25 @@ COLOR_BLUE    = '\033[34m'
 COLOR_MAGENTA = '\033[35m'
 COLOR_CYAN    = '\033[36m'
 
+def escape(s: str) -> str:
+    map = {
+        '\n': '\\n',
+        '\r': '\\r',
+        '\t': '\\t',
+        '\v': '\\v',
+    }
+
+    res = ''
+
+    for c in s:
+        if c in map:
+            res += map[c]
+        else:
+            res += c
+
+    return res
+
+
 @dataclass
 class Test:
     @dataclass
@@ -136,7 +155,7 @@ class Runner:
             for expect in getattr(test.expect, out):
                 if expect.search(run.stdout):
                     continue
-                run.fail_reasons.append(f'Couldn\'t find expected string \'{COLOR_YELLOW}{expect.pattern}{COLOR_RESET}\'')
+                run.fail_reasons.append(f'Couldn\'t find expected string \'{COLOR_YELLOW}{escape(expect.pattern)}{COLOR_RESET}\'')
                 run.passed = False
 
         # FIXME: For now, return code isn't returned from xcc process
@@ -179,7 +198,7 @@ def main():
     parser.add_argument('-t', '--tests', action='store', dest='tests', default=None,
                         help='Comma separated list of test ids to run (default: all)')
 
-    parser.add_argument('-l', '--lib', action='append', dest='libs', default=None,
+    parser.add_argument('-l', '--lib', action='append', dest='libs', default=[],
                         help='Optional path to modules')
 
     parser.add_argument('-a', '--announce', action='store_true', dest='announce', default=False,
