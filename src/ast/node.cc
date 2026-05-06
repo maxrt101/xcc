@@ -160,6 +160,30 @@ const Node::Attribute& Node::getAttribute(const std::string& name) const {
   throw std::runtime_error("Missing attribute");
 }
 
+std::vector<std::reference_wrapper<Node::Attribute>> Node::getAttributes(const std::string& name) {
+  std::vector<std::reference_wrapper<Attribute>> attrs;
+
+  for (auto& attr : attributes) {
+    if (attr.name == name) {
+      attrs.emplace_back(attr);
+    }
+  }
+
+  return attrs;
+}
+
+std::vector<std::reference_wrapper<const Node::Attribute>> Node::getAttributes(const std::string& name) const {
+  std::vector<std::reference_wrapper<const Attribute>> attrs;
+
+  for (const auto& attr : attributes) {
+    if (attr.name == name) {
+      attrs.emplace_back(attr);
+    }
+  }
+
+  return attrs;
+}
+
 llvm::Function * Node::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   logger.warn("Warning: Default Node::generateFunction is called on node with type '{}' ({})", Node::typeToString(type).c_str(), int(type));
   return nullptr;
@@ -234,7 +258,7 @@ std::string Node::attributesToString(int indent, bool newline) {
     if (!attr.args.empty()) {
       res += "(";
       for (size_t j = 0; j < attr.args.size(); ++j) {
-        res += attr.args[i]->toString(nullptr, this, indent, newline);
+        res += attr.args[j]->toString(nullptr, this, indent, newline);
         if (j + 1 < attr.args.size()) {
           res += ", ";
         }

@@ -289,6 +289,16 @@ public:
   const Attribute& getAttribute(const std::string& name) const;
 
   /**
+   * Get all attributes where Attribute::name == `name` as references
+   */
+  std::vector<std::reference_wrapper<Attribute>> getAttributes(const std::string& name);
+
+  /**
+   * Get all attributes where Attribute::name == `name` as const references
+   */
+  std::vector<std::reference_wrapper<const Attribute>> getAttributes(const std::string& name) const;
+
+  /**
    * Perform a clone (deep copy) of current node;
    *
    * @return Identical node to current
