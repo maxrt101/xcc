@@ -475,5 +475,14 @@
       "stdout": ["test 42\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 50,
+    "name": "Inclusion into scope",
+    "file": "50.xc",
+    "expect": {
+      "stdout": ["printf in scope\n", "variadic: variadic in scope 42\n"],
+      "retcode": 0
+    }
   }
 ]
