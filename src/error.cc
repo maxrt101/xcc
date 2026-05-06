@@ -112,6 +112,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_MISSING_TYPE,                     "Missing type"),
   DESC(ERROR_UNEXPECTED_CHAR,                  "Unexpected character"),
   DESC(ERROR_NOT_A_TYPE,                       "Expected a type"),
+  DESC(ERROR_MODULE_NOT_FOUND,                 "Module not found"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
@@ -199,10 +200,10 @@ std::string SourceSpan::toString() const {
   auto line_ofs = offset - info.offset;
 
   return std::format(
-    ANSI_COLOR_FG_YELLOW "     -->" ANSI_TEXT_RESET " {}:{}:{}\n"
-    ANSI_COLOR_FG_YELLOW "      |"  ANSI_TEXT_RESET "\n"
-    ANSI_COLOR_FG_YELLOW " {:04} |" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n"
-    ANSI_COLOR_FG_YELLOW "      |"  ANSI_TEXT_RESET " {}\n",
+    ANSI_COLOR_FG_YELLOW  "     -->" ANSI_TEXT_RESET " {}:{}:{}\n"
+    ANSI_COLOR_FG_YELLOW  "      |"  ANSI_TEXT_RESET "\n"
+    ANSI_COLOR_FG_YELLOW " {:04} |"  ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n"
+    ANSI_COLOR_FG_YELLOW  "      |"  ANSI_TEXT_RESET " {}\n",
     file->path, line, line_ofs, line,
     file->contents.substr(info.offset, info.length),
     generateHighlight(line_ofs, info.length, length)
@@ -218,7 +219,10 @@ std::string Error::toString() const {
   );
 
   for (auto& note : notes) {
-    result += std::format( ANSI_COLOR_FG_GREEN "note:" ANSI_TEXT_RESET " {}\n{}", note.message, note.span.toString());
+    result += std::format(
+      ANSI_COLOR_FG_GREEN "note:" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n{}",
+      note.message, note.span.toString()
+    );
   }
 
   return result;

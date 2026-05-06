@@ -117,6 +117,7 @@ enum ErrorId {
   ERROR_MISSING_TYPE                     = 97,
   ERROR_UNEXPECTED_CHAR                  = 98,
   ERROR_NOT_A_TYPE                       = 99,
+  ERROR_MODULE_NOT_FOUND                 = 100,
 
   ERROR_MAX,
 };
