@@ -490,7 +490,7 @@
     "name": "Array type",
     "file": "51.xc",
     "expect": {
-      "stdout": ["local 0=42 1=69 2=151\n", "global 0=68 1=42 2=151"],
+      "stdout": ["local 0=42 1=69 2=127\n", "global 0=68 1=42 2=127"],
       "retcode": 0
     }
   }

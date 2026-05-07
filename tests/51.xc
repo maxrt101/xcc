@@ -3,7 +3,7 @@ use stdc::printf;
 var arr: i8[4];
 
 fn modify(ptr: i8*, idx: usize) {
-  ptr[idx] = 151;
+  ptr[idx] = 127;
 }
 
 fn main() -> i32 {
