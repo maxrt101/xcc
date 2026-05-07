@@ -801,15 +801,16 @@ std::shared_ptr<ast::Node> Parser::parseSubscript() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseNumber() {
-  if (previous().value.find('.') != std::string::npos) {
-    return ast::Number::createFloating(previous().span, std::stod(previous().value));
-  }
-
   std::string value = previous().value;
+  auto        span  = previous().span;
+
+  if (value.find('.') != std::string::npos) {
+    return ast::Number::createFloating(span, std::stod(value));
+  }
 
   auto res = util::determineBase(value);
 
-  return ast::Number::createInteger(previous().span, std::stol(res.value, nullptr, res.base));
+  return ast::Number::createInteger(span, std::stol(res.value, nullptr, res.base));
 }
 
 std::shared_ptr<ast::Node> Parser::parseRvalue() {

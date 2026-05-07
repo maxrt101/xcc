@@ -1,5 +1,6 @@
 #pragma once
 
+#include "xcc/ast/asm.h"
 #include "xcc/ast/assign.h"
 #include "xcc/ast/binary.h"
 #include "xcc/ast/block.h"

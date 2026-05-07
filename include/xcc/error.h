@@ -123,6 +123,7 @@ enum ErrorId {
   ERROR_ALIAS_EXISTS                     = 103,
   ERROR_TYPE_ARRAY_SIZE_NOT_NUMBER       = 104,
   ERROR_TYPE_ARRAY_NO_CLOSING_BRACE      = 105,
+  ERROR_ASM_EXPECTED_STRING              = 106,
 
   ERROR_MAX,
 };

@@ -9,13 +9,14 @@ Macro::Macro(
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     std::shared_ptr<Block>                   body
-) : Node(AST_MACRO, span), name(std::move(name)), args(std::move(args)), body(std::move(body)), native(false) {}
+) : Node(AST_MACRO, span), name(std::move(name)), args(std::move(args)), body(std::move(body)), native(false), variadic(false) {}
 
 Macro::Macro(
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
-    NativeFn                                 fn
-) : Node(AST_MACRO, SourceSpan::builtin()), name(std::move(name)), args(std::move(args)), native(true), fn(fn) {}
+    NativeFn                                 fn,
+    bool                                     variadic
+) : Node(AST_MACRO, SourceSpan::builtin()), name(std::move(name)), args(std::move(args)), native(true), fn(fn), variadic(variadic) {}
 
 std::shared_ptr<Macro> Macro::create(
   SourceSpan                               span,
@@ -29,9 +30,10 @@ std::shared_ptr<Macro> Macro::create(
 std::shared_ptr<Macro> Macro::createNative(
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
-    NativeFn                                 fn
+    NativeFn                                 fn,
+    bool                                     variadic
 ) {
-  return std::make_shared<Macro>(std::move(name), std::move(args), fn);
+  return std::make_shared<Macro>(std::move(name), std::move(args), fn, variadic);
 }
 
 std::shared_ptr<Node> Macro::clone() {
@@ -62,6 +64,10 @@ std::string Macro::toString(Node * grandparent, Node * parent, int indent, bool 
     if (i + 1 < args.size()) {
       res += ", ";
     }
+  }
+
+  if (variadic) {
+    res += "...";
   }
 
   res += std::format(") {}", body->toString(parent, this, indent, newline));

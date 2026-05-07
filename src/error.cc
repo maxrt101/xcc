@@ -118,6 +118,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_ALIAS_EXISTS,                     "Can't create an alias, as it already exists"),
   DESC(ERROR_TYPE_ARRAY_SIZE_NOT_NUMBER,       "Array size must be an integer"),
   DESC(ERROR_TYPE_ARRAY_NO_CLOSING_BRACE,      "Missing ']' after array dimensions in type"),
+  DESC(ERROR_ASM_EXPECTED_STRING,              "Expected a string in asm! statement"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {

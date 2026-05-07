@@ -55,6 +55,8 @@ enum NodeType {
 
   AST_MOD,                    // module
   AST_MACRO,                  // macro id (id, ...) block
+
+  AST_ASM,                    // asm!(...)
 };
 
 /**

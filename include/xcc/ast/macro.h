@@ -33,6 +33,8 @@ public:
   bool     native;
   NativeFn fn;
 
+  bool variadic;
+
 public:
   Macro(
     SourceSpan                               span,
@@ -44,7 +46,8 @@ public:
   Macro(
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
-    NativeFn                                 fn
+    NativeFn                                 fn,
+    bool                                     variadic
   );
 
   ~Macro() override = default;
@@ -59,7 +62,8 @@ public:
   static std::shared_ptr<Macro> createNative(
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
-    NativeFn                                 fn
+    NativeFn                                 fn,
+    bool                                     variadic
   );
 
   std::shared_ptr<Node> clone() override;

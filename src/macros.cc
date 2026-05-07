@@ -124,14 +124,14 @@ static std::string getStr(std::shared_ptr<Node> node) {
   return "";
 }
 
-static std::shared_ptr<Macro> createNativeMacro(std::string name, std::vector<std::string> args, Macro::NativeFn fn) {
+static std::shared_ptr<Macro> createNativeMacro(std::string name, std::vector<std::string> args, Macro::NativeFn fn, bool variadic = false) {
   std::vector<std::shared_ptr<Identifier>> id_args;
 
   for (auto& arg : args) {
     id_args.push_back(Identifier::create(SourceSpan::builtin(), arg));
   }
 
-  return Macro::createNative(Identifier::create(SourceSpan::builtin(), name), id_args, fn);
+  return Macro::createNative(Identifier::create(SourceSpan::builtin(), name), id_args, fn, variadic);
 }
 
 static std::shared_ptr<Node> xcc_macro_cat(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
@@ -224,6 +224,21 @@ static std::shared_ptr<Node> xcc_macro_repeat(Macro::NativeContext& ctx, std::sh
   return block;
 }
 
+static std::shared_ptr<Node> xcc_macro_asm(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "asm! expects a string as first argument"));
+  assertRaise(isOrIsLastInBlock(call->args[1], AST_EXPR_STRING),
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[1]->span, "asm! expects a string as second argument"));
+
+  std::vector<std::shared_ptr<Node>> args;
+
+  for (size_t i = 2; i < call->args.size(); ++i) {
+    args.push_back(call->args[i]);
+  }
+
+  return Asm::create(call->span, call->args[0], call->args[1], args);
+}
+
 static std::vector builtin_macros = {
   createNativeMacro("cat",     {"a", "b"},               xcc_macro_cat),
   createNativeMacro("sizeof",  {"expr"},                 xcc_macro_sizeof),
@@ -234,6 +249,7 @@ static std::vector builtin_macros = {
   createNativeMacro("int",     {"expr"},                 xcc_macro_int),
   createNativeMacro("cond",    {"cond", "then", "else"}, xcc_macro_cond),
   createNativeMacro("repeat",  {"n", "var", "expr"},     xcc_macro_repeat),
+  createNativeMacro("asm",     {"code", "constraints"},  xcc_macro_asm, true),
 
   createNativeMacro("inc", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "inc!", ctx, call, ++); }),
   createNativeMacro("dec", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "dec!", ctx, call, --); }),
