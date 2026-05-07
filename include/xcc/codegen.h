@@ -149,6 +149,13 @@ private:
     ~ScopedPhantomVariables();
   };
 
+  struct Scope {
+    std::unordered_map<std::string, std::shared_ptr<meta::TypedValue>> locals;
+    bool cleared = false;
+
+    void clear(ModuleContext& ctx);
+  };
+
 public:
   /* Module name */
   std::string name;
@@ -165,11 +172,11 @@ public:
   /* LLVM IR Builder */
   std::unique_ptr<llvm::IRBuilder<>> ir_builder;
 
-  /* Named values (variables/args) */
-  std::map<std::string, std::shared_ptr<meta::TypedValue>> locals;
+  /* Named values (variables/args) organized in scopes */
+  std::vector<Scope> scopes;
 
   /* Phantom named values (variables/args), that need to be in AST generator's scope without being generated */
-  std::map<std::string, std::shared_ptr<meta::Type>> phantom_locals;
+  std::map<std::string, std::shared_ptr<meta::Type>> phantomLocals;
 
 #if USE_OPTIMIZATION
   /* Optimization Contexts */
@@ -198,6 +205,11 @@ public:
   bool hasLocal(const std::string& name);
   llvm::AllocaInst * getLocalValue(const std::string& name);
   std::shared_ptr<meta::Type> getLocalType(const std::string& name);
+  void addLocal(const std::string& name, std::shared_ptr<meta::TypedValue> tv);
+
+  void pushScope();
+  void popScope();
+  void clearScopes();
 };
 
 /**

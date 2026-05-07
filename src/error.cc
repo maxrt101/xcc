@@ -120,6 +120,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_TYPE_ARRAY_NO_CLOSING_BRACE,      "Missing ']' after array dimensions in type"),
   DESC(ERROR_ASM_EXPECTED_STRING,              "Expected a string in asm! statement"),
   DESC(ERROR_INLINE_ATTR_INVALID_VALUE,        "Invalid value for [inline] attribute (possible values: none, 'allways', 'never')"),
+  DESC(ERROR_NO_SUCH_LOCAL_VARIABLE,           "No such local variable"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {

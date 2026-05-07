@@ -51,17 +51,21 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 
   ctx.ir_builder->SetInsertPoint(basic_block);
 
-  ctx.locals.clear();
+  // Create a separate scope for function arguments
+  ctx.pushScope();
 
   for (auto& arg : fn->args()) {
     auto arg_name = std::string(arg.getName());
-    ctx.locals[arg_name] = meta::TypedValue::create(ctx, fn, meta_fn->args[arg_name], arg_name);
-    ctx.ir_builder->CreateStore(&arg, ctx.locals[arg_name]->value);
+    ctx.addLocal(arg_name, meta::TypedValue::create(ctx, fn, meta_fn->args[arg_name], arg_name));
+    ctx.ir_builder->CreateStore(&arg, ctx.getLocalValue(arg_name));
   }
 
   ctx.globalContext.setCurrentFunction(decl->name->name());
 
   auto last_val = body->generateValue(ctx, {});
+
+  // Pop function scope
+  ctx.popScope();
 
   if (!body->body.back()->is(AST_RETURN)) {
     if (meta_fn->returnType->isVoid()) {

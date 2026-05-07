@@ -40,6 +40,8 @@ std::string For::toString(Node * grandparent, Node * parent, int indent, bool ne
 llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
+  ctx.pushScope();
+
   auto var = meta::TypedValue::create(ctx, fn, init->generateType(ctx, {}), init->name->name());
 
   auto init_val = init->generateValue(ctx, {});
@@ -51,9 +53,6 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
   ctx.ir_builder->CreateBr(loop_block);
 
   ctx.ir_builder->SetInsertPoint(loop_block);
-
-  auto old_val = ctx.locals[init->name->name()];
-  ctx.locals[init->name->name()] = var;
 
   //
   auto body_val = body->generateValue(ctx, {});
@@ -78,11 +77,7 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
 
   ctx.ir_builder->SetInsertPoint(loop_after_block);
 
-  if (old_val) {
-    ctx.locals[init->name->name()] = old_val;
-  } else {
-    ctx.locals.erase(init->name->name());
-  }
+  ctx.popScope();
 
   return meta::Type::createI64()->getDefault(ctx);
 }

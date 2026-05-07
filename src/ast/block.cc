@@ -52,11 +52,15 @@ std::string Block::toString(Node * grandparent, Node * parent, int indent, bool 
 }
 
 llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payload) {
+  ctx.pushScope();
+
   llvm::Value * val = nullptr;
 
   for (auto& node : body) {
     val = node->generateValue(ctx, {});
   }
+
+  ctx.popScope();
 
   return val;
 }

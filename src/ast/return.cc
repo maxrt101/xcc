@@ -32,8 +32,10 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList pay
       val = codegen::castIfNotSame(ctx, val, fn->getLLVMReturnType(ctx), value->span);
     }
 
+    ctx.clearScopes();
     ctx.ir_builder->CreateRet(val);
   } else {
+    ctx.clearScopes();
     ctx.ir_builder->CreateRetVoid();
   }
 

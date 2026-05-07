@@ -254,14 +254,30 @@ void GlobalContext::runFunction(const std::string& name) {
 ModuleContext::ScopedPhantomVariables::ScopedPhantomVariables(ModuleContext& module, const ScopedPhantomList& vars) : module(module) {
   for (auto& [name, type] : vars) {
     names.push_back(name);
-    module.phantom_locals[name] = type;
+    module.phantomLocals[name] = type;
   }
 }
 
 ModuleContext::ScopedPhantomVariables::~ScopedPhantomVariables() {
   for (auto& name : names) {
-    module.phantom_locals.erase(name);
+    module.phantomLocals.erase(name);
   }
+}
+
+void ModuleContext::Scope::clear(ModuleContext& ctx) {
+  if (cleared) return;
+
+  auto lifetime_end = llvm::Intrinsic::getOrInsertDeclaration(ctx.llvm.module.get(), llvm::Intrinsic::lifetime_end, {ctx.ir_builder->getPtrTy()});
+
+  auto dl = ctx.llvm.module->getDataLayout();
+
+  for (auto& [name, tv] : locals) {
+    auto size = dl.getTypeAllocSize(tv->type->getLLVMType(ctx));
+
+    ctx.ir_builder->CreateCall(lifetime_end, {ctx.ir_builder->getInt64(size), tv->value});
+  }
+
+  cleared = true;
 }
 
 ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, util::Target * target) : name(name), globalContext(global) {
@@ -318,23 +334,72 @@ ModuleContext::ScopedPhantomVariables ModuleContext::phantomScope(const ScopedPh
 }
 
 bool ModuleContext::hasPhantom(const std::string& name) {
-  return phantom_locals.contains(name);
+  return phantomLocals.contains(name);
 }
 
 std::shared_ptr<meta::Type> ModuleContext::getPhantomType(const std::string& name) {
-  return phantom_locals[name];
+  return phantomLocals[name];
 }
 
 bool ModuleContext::hasLocal(const std::string& name) {
-  return locals.find(name) != locals.end();
+  for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
+    if (scope->locals.find(name) != scope->locals.end()) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 llvm::AllocaInst * ModuleContext::getLocalValue(const std::string& name) {
-  return locals[name]->value;
+  for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
+    if (scope->locals.find(name) != scope->locals.end()) {
+      return scope->locals.at(name)->value;
+    }
+  }
+
+  return nullptr;
 }
 
 std::shared_ptr<meta::Type> ModuleContext::getLocalType(const std::string& name) {
-  return locals[name]->type;
+  for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
+    if (scope->locals.find(name) != scope->locals.end()) {
+      return scope->locals.at(name)->type;
+    }
+  }
+
+  return nullptr;
+}
+
+void ModuleContext::addLocal(const std::string& name, std::shared_ptr<meta::TypedValue> tv) {
+  assertThrow(!scopes.empty(), std::runtime_error("No scopes declared"));
+
+  auto lifetime_start = llvm::Intrinsic::getOrInsertDeclaration(llvm.module.get(), llvm::Intrinsic::lifetime_start, {ir_builder->getPtrTy()});
+
+  auto dl   = llvm.module->getDataLayout();
+  auto size = dl.getTypeAllocSize(tv->type->getLLVMType(*this));
+
+  ir_builder->CreateCall(
+    lifetime_start,
+    { ir_builder->getInt64(size), tv->value }
+  );
+
+  scopes.back().locals[name] = std::move(tv);
+}
+
+void ModuleContext::pushScope() {
+  scopes.emplace_back();
+}
+
+void ModuleContext::popScope() {
+  scopes.back().clear(*this);
+  scopes.pop_back();
+}
+
+void ModuleContext::clearScopes() {
+  for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
+    scope->clear(*this);
+  }
 }
 
 llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type, SourceSpan span) {

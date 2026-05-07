@@ -102,7 +102,7 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
 
   ctx.ir_builder->CreateStore(init, tv->value);
 
-  ctx.locals[name->name()] = tv;
+  ctx.addLocal(name->name(), tv);
 
   return init;
 }
