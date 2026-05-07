@@ -72,6 +72,31 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     }
   }
 
+  processAttributes(fn);
+
+  ctx.globalContext.clearCurrentFunction();
+
+  util::RawStreamCollector collector;
+  if (llvm::verifyFunction(*fn, collector.stream())) {
+#if USE_PRINT_LLVM_IR_ON_VERIFY_FAIL
+    util::RawStreamCollector fn_collector;
+    fn->print(*fn_collector.stream());
+    logger.debug("Function {} IR:", meta_fn->name);
+    logger.print("{}", fn_collector.string());
+#endif
+    Error(ERROR_LLVM_ERROR, decl->span, "Function '{}' didn't pass validation", decl->name->name())
+      .note({}, "{}", std::string(collector.string()))
+      .raiseFromNode(this);
+  }
+
+  return fn;
+}
+
+std::shared_ptr<meta::Type> FnDef::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+  return decl->generateType(ctx, payload);
+}
+
+void FnDef::processAttributes(llvm::Function * fn) {
   if (hasAttribute("section")) {
     auto attr = getAttribute("section");
 
@@ -120,24 +145,11 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     }
   }
 
-  ctx.globalContext.clearCurrentFunction();
-
-  util::RawStreamCollector collector;
-  if (llvm::verifyFunction(*fn, collector.stream())) {
-#if USE_PRINT_LLVM_IR_ON_VERIFY_FAIL
-    util::RawStreamCollector fn_collector;
-    fn->print(*fn_collector.stream());
-    logger.debug("Function {} IR:", meta_fn->name);
-    logger.print("{}", fn_collector.string());
-#endif
-    Error(ERROR_LLVM_ERROR, decl->span, "Function '{}' didn't pass validation", decl->name->name())
-      .note({}, "{}", std::string(collector.string()))
-      .raiseFromNode(this);
+  if (hasAttribute("noreturn")) {
+    fn->addFnAttr(llvm::Attribute::NoReturn);
   }
 
-  return fn;
-}
-
-std::shared_ptr<meta::Type> FnDef::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  return decl->generateType(ctx, payload);
+  if (hasAttribute("weak")) {
+    fn->setLinkage(decl->isExtern ? llvm::Function::ExternalWeakLinkage : llvm::Function::WeakAnyLinkage);
+  }
 }

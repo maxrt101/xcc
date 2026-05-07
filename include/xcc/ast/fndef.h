@@ -24,6 +24,8 @@ public:
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;
 
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
+
+  void processAttributes(llvm::Function * fn);
 };
 
 } /* namespace xcc::ast */
