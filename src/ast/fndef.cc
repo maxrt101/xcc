@@ -84,6 +84,42 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     fn->setSection(section_name);
   }
 
+  if (hasAttribute("inline")) {
+    auto attr = getAttribute("inline");
+
+    enum {
+      INLINE_DEFAULT,
+      INLINE_ALLWAYS,
+      INLINE_NEVER,
+    } inline_type = INLINE_DEFAULT;
+
+    if (attr.args.size()) {
+      attr.validateArgsStrict({AST_EXPR_IDENTIFIER});
+
+      auto value = attr.args[0]->as<Identifier>()->value;
+
+      if (value == "allways") {
+        inline_type = INLINE_ALLWAYS;
+      } else if (value == "never") {
+        inline_type = INLINE_NEVER;
+      } else {
+        Error(ERROR_INLINE_ATTR_INVALID_VALUE, attr.span, "'{}'", value).raiseFromNode(this);
+      }
+    }
+
+    switch (inline_type) {
+      case INLINE_DEFAULT:
+        fn->addFnAttr(llvm::Attribute::InlineHint);
+        break;
+      case INLINE_ALLWAYS:
+        fn->addFnAttr(llvm::Attribute::AlwaysInline);
+        break;
+      case INLINE_NEVER:
+        fn->addFnAttr(llvm::Attribute::NoInline);
+        break;
+    }
+  }
+
   ctx.globalContext.clearCurrentFunction();
 
   util::RawStreamCollector collector;
