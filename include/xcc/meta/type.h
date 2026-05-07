@@ -21,6 +21,7 @@ namespace xcc::meta {
  */
 enum class TypeTag {
   VOID = 0, /** void type - empty */
+  BOOL,     /** boolean type */
   U8,       /** unsigned 8-bit integer */
   I8,       /** signed 8-bit integer */
   U16,      /** unsigned 16-bit integer */
@@ -177,6 +178,7 @@ public:
   [[nodiscard]] std::string toString() const;
 
   [[nodiscard]] bool isVoid() const;
+  [[nodiscard]] bool iBool() const;
   [[nodiscard]] bool isSigned() const;
   [[nodiscard]] bool isUnsigned() const;
   [[nodiscard]] bool isInteger() const;
@@ -212,6 +214,7 @@ public:
   static std::shared_ptr<Type> fromTypeName(codegen::GlobalContext& ctx, const std::string& name, SourceSpan span);
 
   static std::shared_ptr<Type> createVoid();
+  static std::shared_ptr<Type> createBool();
   static std::shared_ptr<Type> createI8();
   static std::shared_ptr<Type> createI16();
   static std::shared_ptr<Type> createI32();

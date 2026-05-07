@@ -50,13 +50,13 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
     common_type = meta::Type::alignTypes(then_type, else_type);
   }
 
-  auto i64_type = meta::Type::createI64()->getLLVMType(ctx);
+  auto i1_type = meta::Type::createBool()->getLLVMType(ctx);
 
-  if (!cond_val->getType()->isIntegerTy(64)) {
-    cond_val = codegen::cast(ctx, cond_val, i64_type, condition->span);
+  if (!cond_val->getType()->isIntegerTy(1)) {
+    cond_val = codegen::cast(ctx, cond_val, i1_type, condition->span);
   }
 
-  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i64_type, 0), "ifcond");
+  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i1_type, 0), "ifcond");
 
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 

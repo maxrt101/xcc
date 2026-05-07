@@ -91,6 +91,9 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     case TypeTag::VOID:
       return llvm::Type::getVoidTy(*ctx.llvm.ctx);
 
+    case TypeTag::BOOL:
+      return llvm::Type::getInt1Ty(*ctx.llvm.ctx);
+
     case TypeTag::U8:
     case TypeTag::I8:
       return llvm::IntegerType::get(*ctx.llvm.ctx, 8);
@@ -120,8 +123,6 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     }
 
     case TypeTag::ARRAY:
-      // return llvm::PointerType::getUnqual(getLLVMArrayType(ctx));
-      // return llvm::PointerType::get(arr.elementType->getLLVMType(ctx), 0);
       return getLLVMArrayType(ctx);
 
     case TypeTag::PTR:
@@ -178,6 +179,7 @@ std::string Type::getName() const {
 std::string Type::toString() const {
   switch (tag) {
     case TypeTag::VOID:   return "void";
+    case TypeTag::BOOL:   return "bool";
     case TypeTag::U8:     return "u8";
     case TypeTag::I8:     return "i8";
     case TypeTag::U16:    return "u16";
@@ -231,6 +233,10 @@ bool Type::isVoid() const {
   return is(TypeTag::VOID);
 }
 
+bool Type::iBool() const {
+  return is(TypeTag::BOOL);
+}
+
 bool Type::isSigned() const {
   return isAnyOf(TypeTag::I8, TypeTag::I16, TypeTag::I32, TypeTag::I64, TypeTag::ISIZE);
 }
@@ -267,6 +273,8 @@ bool Type::isStruct() const {
 
 int Type::getNumberBitWidth() const {
   switch (tag) {
+    case TypeTag::BOOL:
+      return 1;
     case TypeTag::U8:
     case TypeTag::I8:
       return 8;
@@ -351,6 +359,7 @@ bool Type::isVariadic() const {
 
 llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
   switch (tag) {
+    case TypeTag::BOOL:
     case TypeTag::U8:
     case TypeTag::U16:
     case TypeTag::U32:
@@ -359,24 +368,15 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
     case TypeTag::I16:
     case TypeTag::I32:
     case TypeTag::I64:
+    case TypeTag::ISIZE:
+    case TypeTag::USIZE:
       return llvm::ConstantInt::get(getLLVMType(ctx), 0);
 
     case TypeTag::F32:
     case TypeTag::F64:
       return llvm::ConstantFP::get(getLLVMType(ctx), 0.0);
 
-    case TypeTag::ISIZE:
-    case TypeTag::USIZE:
-      return llvm::ConstantInt::get(getLLVMType(ctx), 0);
-
     case TypeTag::ARRAY: {
-      // std::vector<llvm::Constant *> initializers;
-      //
-      // for (size_t i = 0; i < arr.size; ++i) {
-      //   initializers.push_back((llvm::Constant*) arr.elementType->getDefault(ctx));
-      // }
-      //
-      // return llvm::ConstantArray::get(getLLVMArrayType(ctx), initializers);
       return llvm::ConstantAggregateZero::get(getLLVMArrayType(ctx));
     }
 
@@ -406,6 +406,7 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
 std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
   switch (tag) {
     case TypeTag::VOID:  return ast::Type::create(span, ast::Identifier::create(span, "void"));
+    case TypeTag::BOOL:  return ast::Type::create(span, ast::Identifier::create(span, "bool"));
     case TypeTag::U8:    return ast::Type::create(span, ast::Identifier::create(span, "u8"));
     case TypeTag::U16:   return ast::Type::create(span, ast::Identifier::create(span, "u16"));
     case TypeTag::U32:   return ast::Type::create(span, ast::Identifier::create(span, "u32"));
@@ -452,6 +453,7 @@ std::shared_ptr<Type> Type::create(TypeTag tag) {
 std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std::string& name, SourceSpan span) {
   switch (util::strhash(name.c_str())) {
     case util::strhash("void"):  return createVoid();
+    case util::strhash("bool"):  return createBool();
     case util::strhash("i8"):    return createI8();
     case util::strhash("i16"):   return createI16();
     case util::strhash("i32"):   return createI32();
@@ -482,6 +484,10 @@ std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std:
 
 std::shared_ptr<Type> Type::createVoid() {
   return create(TypeTag::VOID);
+}
+
+std::shared_ptr<Type> Type::createBool() {
+  return create(TypeTag::BOOL);
 }
 
 std::shared_ptr<Type> Type::createI8() {

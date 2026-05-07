@@ -54,8 +54,9 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
     }
 
     case TOKEN_NOT: {
-      // TODO: Convert to i1
-      return ctx.ir_builder->CreateNot(rhs->generateValue(ctx, payload), "not");
+      auto val = rhs->generateValue(ctx, payload);
+      val = castIfNotSame(ctx, val, meta::Type::createBool()->getLLVMType(ctx), span);
+      return ctx.ir_builder->CreateNot(val, "b_not");
     }
 
     case TOKEN_MINUS: {

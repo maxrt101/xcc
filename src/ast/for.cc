@@ -64,13 +64,13 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
   //
   auto cond_val = cond->generateValue(ctx, {});
 
-  auto i64_type = meta::Type::createI64()->getLLVMType(ctx);
+  auto i1_type = meta::Type::createBool()->getLLVMType(ctx);
 
-  if (!cond_val->getType()->isIntegerTy(64)) {
-    cond_val = codegen::cast(ctx, cond_val, i64_type, cond->span);
+  if (!cond_val->getType()->isIntegerTy(1)) {
+    cond_val = codegen::cast(ctx, cond_val, i1_type, cond->span);
   }
 
-  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i64_type, 0), "for_cond");
+  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i1_type, 0), "for_cond");
 
   auto loop_after_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "after_loop", fn);
 
