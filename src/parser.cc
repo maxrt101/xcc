@@ -152,6 +152,16 @@ std::shared_ptr<ast::Node> Parser::parseType() {
     return parseCall(id);
   }
 
+  std::shared_ptr<ast::Node> size;
+
+  if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+    size = parseExpr();
+
+    if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
+      Error(ERROR_TYPE_ARRAY_NO_CLOSING_BRACE, previous().span.pointPastLast(), "").raise();
+    }
+  }
+
   // Check if referenced type was declared inside of this module
   auto isDeclaredInModule = std::find(module.typeAliases.begin(), module.typeAliases.end(), id->value) != module.typeAliases.end();
 
@@ -163,14 +173,18 @@ std::shared_ptr<ast::Node> Parser::parseType() {
 
   std::shared_ptr<ast::Type> type;
 
+  if (size) {
+    type = ast::Type::createArray(span + previous().span, ast::Node::cast(id), ast::Node::cast(size));
+  }
+
   while (checkAdvance(TOKEN_STAR)) {
     type = type
-      ? ast::Type::create(span + previous().span, type, true)
-      : ast::Type::create(span + previous().span, ast::Node::cast(id), true);
+      ? ast::Type::createPointer(span + previous().span, type)
+      : ast::Type::createPointer(span + previous().span, ast::Node::cast(id));
   }
 
   if (!type) {
-    type = ast::Type::create(span, ast::Node::cast(id), false);
+    type = ast::Type::create(span, ast::Node::cast(id));
   }
 
   return type;
@@ -226,7 +240,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
     args.push_back(ast::TypedIdentifier::create(
       span + current().span,
       ast::Identifier::create(previous().span, "self"),
-        ast::Type::create(previous().span, ast::Identifier::create(previous().span, structStack.back(), module.stack), true)
+        ast::Type::createPointer(previous().span, ast::Identifier::create(previous().span, structStack.back(), module.stack))
       )
     );
 
@@ -251,7 +265,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   if (checkAdvance(TOKEN_RIGHT_ARROW)) {
     return_type = parseType();
   } else {
-    return_type = ast::Type::create(previous().span, ast::Identifier::create(previous().span, "void"), false);;
+    return_type = ast::Type::create(previous().span, ast::Identifier::create(previous().span, "void"));;
   }
 
   auto fndecl = ast::FnDecl::create(span + previous().span, name, return_type, args, is_extern, is_variadic);

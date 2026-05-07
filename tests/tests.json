@@ -484,5 +484,14 @@
       "stdout": ["printf in scope\n", "variadic: variadic in scope 42\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 51,
+    "name": "Array type",
+    "file": "51.xc",
+    "expect": {
+      "stdout": ["local 0=42 1=69 2=151\n", "global 0=68 1=42 2=151"],
+      "retcode": 0
+    }
   }
 ]

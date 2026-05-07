@@ -9,20 +9,34 @@ namespace xcc::ast {
 
 class Type : public Node {
 public:
-  std::shared_ptr<Node> name;
-  bool                  pointer;
+  enum Kind {
+    NORMAL,
+    POINTER,
+    ARRAY,
+    FUNCTION,
+  };
 
-  std::shared_ptr<Node>              returnType;
-  std::vector<std::shared_ptr<Node>> args;
-  bool                               function;
-  bool                               isVariadic;
+  Kind kind;
+
+  std::shared_ptr<Node> name;
+
+  struct {
+    std::shared_ptr<Node> size;
+  } array;
+
+  struct {
+    std::shared_ptr<Node>              returnType;
+    std::vector<std::shared_ptr<Node>> args;
+    bool                               isVariadic;
+  } fn;
 
 public:
-  explicit Type(SourceSpan span, std::shared_ptr<Node> name, bool pointer);
-  Type(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic);
+  Type(SourceSpan span, Kind kind, std::shared_ptr<Node> name);
   ~Type() override = default;
 
-  static std::shared_ptr<Type> create(SourceSpan span, std::shared_ptr<Node> name, bool pointer = false);
+  static std::shared_ptr<Type> create(SourceSpan span, std::shared_ptr<Node> name);
+  static std::shared_ptr<Type> createPointer(SourceSpan span, std::shared_ptr<Node> name);
+  static std::shared_ptr<Type> createArray(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> size);
   static std::shared_ptr<Type> createFunction(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic = false);
 
   std::shared_ptr<Node> clone() override;
@@ -30,6 +44,8 @@ public:
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
+
+  std::shared_ptr<meta::Type> getBaseType(codegen::ModuleContext& ctx, PayloadList payload);
 };
 
 } /* namespace xcc::ast */

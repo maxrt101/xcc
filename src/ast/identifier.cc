@@ -42,7 +42,12 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
   auto id = ctx.globalContext.aliased(name());
 
   if (ctx.hasLocal(id)) {
-    return ctx.ir_builder->CreateLoad(ctx.getLocalValue(id)->getAllocatedType(), ctx.getLocalValue(id), id.c_str());
+    auto local = ctx.getLocalValue(id);
+    if (local->getAllocatedType()->isArrayTy()) {
+      return local;
+    }
+
+    return ctx.ir_builder->CreateLoad(local->getAllocatedType(), local, id.c_str());
   }
 
   if (ctx.globalContext.hasGlobal(id)) {
@@ -52,6 +57,10 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
       auto alloca = ctx.ir_builder->CreateAlloca(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), nullptr);
       ctx.ir_builder->CreateStore(global, alloca);
       return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), alloca);
+    }
+
+    if (ctx.globalContext.getGlobalType(id)->isArray()) {
+      return global;
     }
 
     return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), global);

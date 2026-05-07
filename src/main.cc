@@ -297,6 +297,9 @@ static int xcc_main(int argc, char ** argv) {
   return repl(std::move(globalContext), args);
 }
 
+#undef USE_CATCH_EXCEPTIONS
+#define USE_CATCH_EXCEPTIONS 0
+
 int main(int argc, char ** argv) {
 #if USE_CATCH_EXCEPTIONS
   try {

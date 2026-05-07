@@ -33,6 +33,7 @@ enum class TypeTag {
   F64,      /** 64-bit float point (equivalent to `double` type in C) */
   ISIZE,    /** Signed platform-dependent size type, (equivalent to ssize_t in C) */
   USIZE,    /** Unsigned platform-dependent size type, (equivalent to size_t in C) */
+  ARRAY,    /** Array type */
   PTR,      /** Generic/Opaque pointer type */
   FUNCTION, /** Function type */
   STRUCT,   /** Type tag for user-defined types */
@@ -53,6 +54,12 @@ using StructMembers = std::vector<std::pair<std::string, std::shared_ptr<Type>>>
 class Type : public std::enable_shared_from_this<Type> {
 private:
   TypeTag tag;
+
+  /** For TypeTag::ARRAY */
+  struct {
+    std::shared_ptr<Type> elementType;
+    size_t                size;
+  } arr;
 
   /** For TypeTag::PTR */
   struct {
@@ -94,9 +101,20 @@ public:
   [[nodiscard]] std::shared_ptr<Type> getPointedType() const;
 
   /**
+   * If type is an array - return element type
+   */
+  [[nodiscard]] std::shared_ptr<Type> getElementType() const;
+
+  /**
+   * For pointers - returns pointed type, for arrays - element type
+   * If neither - will crash
+   */
+  [[nodiscard]] std::shared_ptr<Type> getBaseType() const;
+
+  /**
    * Returns base type of a recursive pointer type ('i8***' -> 'i8')
    */
-  [[nodiscard]] std::shared_ptr<Type> getBaseType();
+  [[nodiscard]] std::shared_ptr<Type> getRootType();
 
   /**
    * If type is a struct - check if it has member with name `name`
@@ -139,10 +157,14 @@ public:
   [[nodiscard]] llvm::Type * getLLVMType(codegen::ModuleContext& ctx) const;
 
   /**
-   * Generate LLVM type from a valid meta type, needs ModuleContext
+   * Generate LLVM type from a valid meta funtion type, needs ModuleContext
    */
   [[nodiscard]] llvm::FunctionType * getLLVMFunctionType(codegen::ModuleContext& ctx) const;
 
+  /**
+   * Generate LLVM type from a valid meta array type, needs ModuleContext
+   */
+  [[nodiscard]] llvm::ArrayType * getLLVMArrayType(codegen::ModuleContext& ctx) const;
 
   /**
    * Returns type name. If struct - struct name, otherwise - just type name
@@ -159,6 +181,7 @@ public:
   [[nodiscard]] bool isUnsigned() const;
   [[nodiscard]] bool isInteger() const;
   [[nodiscard]] bool isFloat() const;
+  [[nodiscard]] bool isArray() const;
   [[nodiscard]] bool isPointer() const;
   [[nodiscard]] bool isFunction() const;
   [[nodiscard]] bool isStruct() const;
@@ -204,6 +227,7 @@ public:
   static std::shared_ptr<Type> createSigned(int bits);
   static std::shared_ptr<Type> createUnsigned(int bits);
   static std::shared_ptr<Type> createFloating(int bits);
+  static std::shared_ptr<Type> createArray(std::shared_ptr<Type> elementType, size_t size);
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
   static std::shared_ptr<Type> createFunction(
     std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);

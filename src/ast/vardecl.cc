@@ -85,7 +85,7 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
     );
 
     auto extern_global = llvm::cast<llvm::GlobalVariable>(
-      ctx.llvm.module->getOrInsertGlobal(name->name(), llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
+      ctx.llvm.module->getOrInsertGlobal(name->name(), meta_type->getLLVMType(ctx)));
 
     return extern_global;
   }
@@ -96,7 +96,7 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
       ? value->generateValue(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
       : meta_type->getDefault(ctx);
 
-  init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx), value->span);
+  init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx), value ? value->span : span);
 
   auto tv = meta::TypedValue::create(ctx, fn, meta_type, name->name());
 

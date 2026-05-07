@@ -116,6 +116,8 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_USE_MISSING_CLOSING_BRACE,        "Missing '}' after inclusion symbol list"),
   DESC(ERROR_USE_WILDCARD_WITH_SYMBOLS,        "Can't specify symbols to bring into current scope alongside with a wildcard"),
   DESC(ERROR_ALIAS_EXISTS,                     "Can't create an alias, as it already exists"),
+  DESC(ERROR_TYPE_ARRAY_SIZE_NOT_NUMBER,       "Array size must be an integer"),
+  DESC(ERROR_TYPE_ARRAY_NO_CLOSING_BRACE,      "Missing ']' after array dimensions in type"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {

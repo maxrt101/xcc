@@ -55,12 +55,32 @@ TypeTag Type::getTag() const {
 }
 
 std::shared_ptr<Type> Type::getPointedType() const {
+  assertThrow(isPointer(), std::runtime_error("Type is not a pointer"));
+
   return ptr.pointedType;
 }
 
-std::shared_ptr<Type> Type::getBaseType() {
+std::shared_ptr<Type> Type::getElementType() const {
+  assertThrow(isArray(), std::runtime_error("Type is not an array"));
+
+  return arr.elementType;
+}
+
+std::shared_ptr<Type> Type::getBaseType() const {
+  if (isArray()) {
+    return getElementType();
+  }
+
   if (isPointer()) {
-    return ptr.pointedType->getBaseType();
+    return getPointedType();
+  }
+
+  throw std::runtime_error("Type is not a pointer or an array");
+}
+
+std::shared_ptr<Type> Type::getRootType() {
+  if (isPointer()) {
+    return ptr.pointedType->getRootType();
   }
 
   return shared_from_this();
@@ -99,6 +119,11 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
       return llvm::IntegerType::get(*ctx.llvm.ctx, bits);
     }
 
+    case TypeTag::ARRAY:
+      // return llvm::PointerType::getUnqual(getLLVMArrayType(ctx));
+      // return llvm::PointerType::get(arr.elementType->getLLVMType(ctx), 0);
+      return getLLVMArrayType(ctx);
+
     case TypeTag::PTR:
       return llvm::PointerType::get(ptr.pointedType->getLLVMType(ctx), 0);
 
@@ -134,7 +159,12 @@ llvm::FunctionType * Type::getLLVMFunctionType(codegen::ModuleContext& ctx) cons
     args,
     fn.isVariadic
   );
+}
 
+llvm::ArrayType * Type::getLLVMArrayType(codegen::ModuleContext& ctx) const {
+  assertThrow(isArray(), std::runtime_error("Type is not an array"));
+
+  return llvm::ArrayType::get(arr.elementType->getLLVMType(ctx), arr.size);
 }
 
 std::string Type::getName() const {
@@ -160,6 +190,7 @@ std::string Type::toString() const {
     case TypeTag::F64:    return "f64";
     case TypeTag::ISIZE:  return "isize";
     case TypeTag::USIZE:  return "usize";
+    case TypeTag::ARRAY:  return std::format("{}[{}]", arr.elementType->toString(), arr.size);
     case TypeTag::PTR:    return ptr.pointedType->toString() + "*";
     case TypeTag::FUNCTION: {
       std::string result = "fn (";
@@ -218,6 +249,10 @@ bool Type::isFloat() const {
   return isAnyOf(TypeTag::F32, TypeTag::F64);
 }
 
+bool Type::isArray() const {
+  return is(TypeTag::ARRAY);
+}
+
 bool Type::isPointer() const {
   return is(TypeTag::PTR);
 }
@@ -268,7 +303,7 @@ bool Type::hasMember(const std::string& name) const {
 }
 
 size_t Type::getMemberIndex(const std::string& name) const {
-  assertThrow(isStruct(), "Type is not a struct");
+  assertThrow(isStruct(), std::runtime_error("Type is not a struct"));
 
   for (size_t idx = 0; idx < _struct.members.size(); ++idx) {
     if (_struct.members[idx].first == name) {
@@ -280,7 +315,7 @@ size_t Type::getMemberIndex(const std::string& name) const {
 }
 
 std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
-  assertThrow(isStruct(), "Type is not a struct");
+  assertThrow(isStruct(), std::runtime_error("Type is not a struct"));
 
   for (size_t idx = 0; idx < _struct.members.size(); ++idx) {
     if (_struct.members[idx].first == name) {
@@ -292,20 +327,20 @@ std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
 }
 
 std::shared_ptr<Type> Type::getReturnType() const {
-  assertThrow(isFunction(), "Type is not a function");
+  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
 
   return fn.returnType;
 }
 
 size_t Type::getArgumentCount() const {
-  assertThrow(isFunction(), "Type is not a function");
+  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
 
   return fn.args.size();
 }
 
 std::shared_ptr<Type> Type::getArgumentType(size_t i) const {
-  assertThrow(isFunction(), "Type is not a function");
-  assertThrow(i < fn.args.size(), "Out of bound argument type request");
+  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
+  assertThrow(i < fn.args.size(), std::runtime_error("Out of bound argument type request"));
 
   return fn.args[i];
 }
@@ -333,6 +368,17 @@ llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
     case TypeTag::ISIZE:
     case TypeTag::USIZE:
       return llvm::ConstantInt::get(getLLVMType(ctx), 0);
+
+    case TypeTag::ARRAY: {
+      // std::vector<llvm::Constant *> initializers;
+      //
+      // for (size_t i = 0; i < arr.size; ++i) {
+      //   initializers.push_back((llvm::Constant*) arr.elementType->getDefault(ctx));
+      // }
+      //
+      // return llvm::ConstantArray::get(getLLVMArrayType(ctx), initializers);
+      return llvm::ConstantAggregateZero::get(getLLVMArrayType(ctx));
+    }
 
     case TypeTag::PTR:
       return llvm::Constant::getNullValue(getLLVMType(ctx));
@@ -372,7 +418,14 @@ std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
     case TypeTag::F64:   return ast::Type::create(span, ast::Identifier::create(span, "f64"));
     case TypeTag::ISIZE: return ast::Type::create(span, ast::Identifier::create(span, "isize"));
     case TypeTag::USIZE: return ast::Type::create(span, ast::Identifier::create(span, "usize"));
-    case TypeTag::PTR:   return ast::Type::create(span, ptr.pointedType->toAst(), true);
+    case TypeTag::PTR:   return ast::Type::createPointer(span, ptr.pointedType->toAst());
+    case TypeTag::ARRAY: {
+      return ast::Type::createArray(
+        span,
+        arr.elementType->toAst(),
+        ast::Number::createInteger(span, arr.size)
+      );
+    }
     case TypeTag::FUNCTION: {
       std::vector<std::shared_ptr<ast::Node>> args;
 
@@ -384,11 +437,11 @@ std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
     }
 
     case TypeTag::STRUCT: {
-      return ast::Type::create(span, ast::Identifier::create(span, _struct.name), false);
+      return ast::Type::create(span, ast::Identifier::create(span, _struct.name));
     }
 
     default:
-      return xcc::ast::Empty::create();
+      return ast::Empty::create();
   }
 }
 
@@ -507,8 +560,15 @@ std::shared_ptr<Type> Type::createFloating(int bits) {
   }
 }
 
+std::shared_ptr<Type> Type::createArray(std::shared_ptr<Type> elementType, size_t size) {
+  auto type = create(TypeTag::ARRAY);
+  type->arr.elementType = std::move(elementType);
+  type->arr.size        = size;
+  return type;
+}
+
 std::shared_ptr<Type> Type::createPointer(std::shared_ptr<Type> pointedType) {
-  auto type = Type::create(TypeTag::PTR);
+  auto type = create(TypeTag::PTR);
   type->ptr.pointedType = std::move(pointedType);
   return type;
 }
