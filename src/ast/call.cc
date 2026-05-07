@@ -118,11 +118,14 @@ Call::CalleeInfo Call::getCalleeInfo(codegen::ModuleContext& ctx, PayloadList pa
 }
 
 void Call::getCalleeInfoForFunctionCall(codegen::ModuleContext& ctx, PayloadList payload, CalleeInfo& info, Identifier* ident, bool generateCallee) {
-  info.fnName = ident->name();
+  info.fnName = ctx.globalContext.aliased(ident->name());
 
   if (auto * directFn = ctx.getFunction(info.fnName)) {
     // Direct function call
-    auto meta_fn   = ctx.globalContext.getMetaFunction(info.fnName);
+    auto meta_fn = ctx.globalContext.getMetaFunction(info.fnName);
+
+    assertRaiseFromNode(meta_fn.get(), Error(ERROR_UNKNOWN_FUNCTION, ident->span, ""), this);
+
     info.metaType  = meta_fn->decl->generateType(ctx, payload);
     info.calleePtr = directFn;
   } else {
