@@ -75,7 +75,19 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
     }
 
     if (i < signature->getNumParams()) {
+      // Positional argument
       val = codegen::castIfNotSame(ctx, val, signature->getParamType(llvmParamIdx), args[i]->span);
+    } else {
+      // Variadic argument
+      llvm::Type* argType = val->getType();
+
+      if (argType->isIntegerTy() && argType->getIntegerBitWidth() < 32) {
+        // ABI Rule: Promote i1, i8, i16 to i32
+        val = ctx.ir_builder->CreateSExt(val, ctx.ir_builder->getInt32Ty());
+      } else if (argType->isFloatTy()) {
+        // ABI Rule: Promote float (32-bit) to double (64-bit)
+        val = ctx.ir_builder->CreateFPExt(val, ctx.ir_builder->getDoubleTy());
+      }
     }
 
     arg_vals.push_back(val);
