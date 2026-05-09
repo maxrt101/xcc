@@ -145,3 +145,13 @@ std::shared_ptr<meta::Type> FnDecl::generateType(codegen::ModuleContext& ctx, Pa
 
   return meta::Type::createFunction(return_type->generateType(ctx, payload), args, isVariadic);
 }
+
+std::shared_ptr<TypedIdentifier> FnDecl::getArgument(const std::string& name) {
+  for (auto& arg : args) {
+    if (arg->name->value == name) {
+      return arg;
+    }
+  }
+
+  return nullptr;
+}

@@ -39,6 +39,8 @@ std::string Identifier::name() const {
 }
 
 llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   auto id = ctx.globalContext.aliased(name());
 
   if (ctx.hasLocal(id)) {

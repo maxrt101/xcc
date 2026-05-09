@@ -45,6 +45,8 @@ public:
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;
 
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
+
+  std::shared_ptr<TypedIdentifier> getArgument(const std::string& name);
 };
 
 } /* namespace xcc::ast */

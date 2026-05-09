@@ -21,6 +21,8 @@ std::string String::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   auto hash = std::hash<std::string>{}(value);
   auto name = ".str." + std::to_string(hash);
 

@@ -40,9 +40,9 @@ std::string For::toString(Node * grandparent, Node * parent, int indent, bool ne
 llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
-  ctx.pushScope();
+  ctx.pushScope(span);
 
-  auto var = meta::TypedValue::create(ctx, fn, init->generateType(ctx, {}), init->name->name());
+  auto var = meta::TypedValue::create(ctx, fn, init->span, init->generateType(ctx, {}), init->name->name());
 
   auto init_val = init->generateValue(ctx, {});
 

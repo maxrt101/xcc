@@ -46,6 +46,8 @@ std::string Asm::toString(Node * grandparent, Node * parent, int indent, bool ne
 }
 
 llvm::Value * Asm::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   assertRaiseFromNode(isOrIsLastInBlock(code, AST_EXPR_STRING),
     Error(ERROR_ASM_EXPECTED_STRING, code->span, "asm! code must be a string, got {}", typeToHumanReadableString(code->type)), this);
 

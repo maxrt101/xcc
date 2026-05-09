@@ -37,7 +37,7 @@ std::shared_ptr<Node> Number::clone() {
     return withAttrs(createFloating(span, value.floating));
   }
 
-  Error(ERROR_INVALID_NUMBER_LITERAL, span, "").raiseFromNode(this);
+  Error(ERROR_INVALID_NUMBER_LITERAL, span).raiseFromNode(this);
 }
 
 void Number::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
@@ -51,6 +51,8 @@ llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 }
 
 llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   int bits = 64;
 
   if (auto p = selectPayloadFirst(payload)) {
@@ -70,7 +72,7 @@ llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, Payl
     return llvm::ConstantInt::get(llvm::IntegerType::get(*ctx.llvm.ctx, bits), value.integer);
   }
 
-  Error(ERROR_INVALID_NUMBER_LITERAL, span, "").raiseFromNode(this);
+  Error(ERROR_INVALID_NUMBER_LITERAL, span).raiseFromNode(this);
 }
 
 std::shared_ptr<xcc::meta::Type> Number::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -90,5 +92,5 @@ std::shared_ptr<xcc::meta::Type> Number::generateTypeForValueWithoutLoad(codegen
     return xcc::meta::Type::createSigned(bits);
   }
 
-  Error(ERROR_INVALID_NUMBER_LITERAL, span, "").raiseFromNode(this);
+  Error(ERROR_INVALID_NUMBER_LITERAL, span).raiseFromNode(this);
 }

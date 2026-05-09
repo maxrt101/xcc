@@ -56,6 +56,7 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
     cond_val = codegen::cast(ctx, cond_val, i1_type, condition->span);
   }
 
+  ctx.setDebugLocation(span);
   cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i1_type, 0), "ifcond");
 
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
@@ -68,7 +69,10 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
 
   // If then branch
   ctx.ir_builder->SetInsertPoint(then_block);
+
+  ctx.pushScope(then_branch->span);
   auto then_val = raiseIfNull(then_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "Error generating 'then' block of 'if' statement (then branch generated NULL)"));
+  ctx.popScope();
 
   if (!common_type->isVoid() && then_val) {
     then_val = codegen::castIfNotSame(ctx, then_val, common_type->getLLVMType(ctx), then_branch->span);
@@ -83,10 +87,17 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
   // If else branch
   fn->insert(fn->end(), else_block);
   ctx.ir_builder->SetInsertPoint(else_block);
-  auto else_val = else_branch ? raiseIfNull(else_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "Error generating 'then' block of 'if' statement (else branch generated NULL)")) : nullptr;
+
+  llvm::Value * else_val = nullptr;
+
+  if (else_branch) {
+    ctx.pushScope(else_branch->span);
+    else_val = raiseIfNull(else_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "Error generating 'then' block of 'if' statement (else branch generated NULL)"));
+    ctx.popScope();
+  }
 
   if (else_val) {
-    if (!common_type->isVoid() && else_val) {
+    if (!common_type->isVoid()) {
       else_val = codegen::castIfNotSame(ctx, else_val, common_type->getLLVMType(ctx), else_branch->span);
     }
 

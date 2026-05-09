@@ -3,6 +3,7 @@
 #include "xcc/util/filemng.h"
 
 #include <llvm/Support/Error.h>
+#include <llvm/IR/DebugInfoMetadata.h>
 
 #include <format>
 #include <string>
@@ -11,10 +12,15 @@
 
 namespace xcc {
 
-namespace ast {
-class Node;
-}
+/** Forward declarations of Node & ModuleContext to avoid circular includes */
+namespace ast { class Node; }
+namespace codegen { class ModuleContext; }
 
+/**
+ * Compiler error codes
+ *
+ * Contains all errors that can be triggered by invalid source code
+ */
 enum ErrorId {
   ERROR_RESERVED                         = 0,
 
@@ -130,10 +136,12 @@ enum ErrorId {
   ERROR_MAX,
 };
 
+/**
+ * Error Description. For now contains only the error message
+ */
 struct ErrorDescription {
   ErrorId     id;
   std::string name;
-  // std::string_view fmt; // TODO: Use format?
 
   static const ErrorDescription& get(ErrorId id);
 
@@ -141,23 +149,73 @@ private:
   static const std::unordered_map<ErrorId, ErrorDescription> descs;
 };
 
+/**
+ * Source location (a point in source code)
+ */
+struct SourceLocation {
+  size_t line;
+  size_t column;
+
+  [[nodiscard]] llvm::DILocation * getDILocation(codegen::ModuleContext& ctx, llvm::DIScope * scope = nullptr) const;
+};
+
+/**
+ * Source span within the file (a segment in source code)
+ */
 struct SourceSpan {
   FileId fileId = 0;
   size_t offset = 0;
   size_t length = 0;
 
+  /**
+   * Add two SourceSpans, summing lengths, choosing offset as `min(lhs.offset, rhs.offset)`
+   */
   SourceSpan operator+(const SourceSpan& rhs) const;
+
+  /**
+   * Calls `operator+` and sets result to `*this`
+   */
   SourceSpan& operator+=(const SourceSpan& rhs);
 
-  [[nodiscard]] SourceSpan pointToFirst() const;
-  [[nodiscard]]SourceSpan pointToLast() const;
-  [[nodiscard]]SourceSpan pointPastLast() const;
+  /**
+   * Returns location to the beginning of the segment
+   */
+  [[nodiscard]] SourceLocation start() const;
 
+  /**
+   * Returns location to the end of the segment
+   */
+  [[nodiscard]] SourceLocation end() const;
+
+  /**
+   * Returns new SourceSpan with `length=1` (effectively pointing to the beginning of current span)
+   */
+  [[nodiscard]] SourceSpan pointToFirst() const;
+
+  /**
+   * Returns new SourceSpan with `offset+=length` & `length=1` (effectively pointing to the end of current span)
+   */
+  [[nodiscard]] SourceSpan pointToLast() const;
+
+  /**
+   * Returns new SourceSpan with `offset+=length+1` & length=1 (effectively pointing past the end of current span)
+   */
+  [[nodiscard]] SourceSpan pointPastLast() const;
+
+  /**
+   * Converts span to a string, containing file name, line, column, line of code & highlight of span
+   */
   [[nodiscard]] std::string toString() const;
 
+  /**
+   * Default span for objects, that have to have one, but don't have a representation in source code
+   */
   static SourceSpan builtin();
 };
 
+/**
+ * A note that can be added to an error
+ */
 struct Note {
   SourceSpan  span;
   std::string message;
@@ -165,8 +223,22 @@ struct Note {
   template <typename... Args>
   Note(SourceSpan span, std::string_view fmt, Args&&... args)
     : span(span), message(std::vformat(fmt, std::make_format_args(args...))) {}
+
+  [[nodiscard]] std::string toString() const;
 };
 
+/**
+ * Compiler Error
+ *
+ * Constructed with Error Code (id) & span
+ * Optional custom message (format string + template arg tuple) can be added
+ *
+ * Notes can be appended using Error::note()
+ *
+ * Error::raise() is used to throw a C++ exception with current error object
+ * Error::raiseFromNode() is used when the error happened in Node::generate* context
+ * this will implicitly add macro expansion/module inclusion notes, when needed
+ */
 struct Error {
   ErrorId     id;
   SourceSpan  span;
@@ -174,22 +246,52 @@ struct Error {
 
   std::vector<Note> notes;
 
+  /** Default constructor */
+  Error(ErrorId id, SourceSpan span);
+
+  /** Constructor with custom message */
   template <typename... Args>
   Error(ErrorId id, SourceSpan span, std::string_view fmt, Args&&... args)
     : id(id), span(span), message(std::vformat(fmt, std::make_format_args(args...))) {}
 
+  /** Append a Note to this Error. Note will have no source span */
+  template <typename... Args>
+  Error& note(std::string_view fmt, Args&&... args) {
+    notes.push_back(Note({}, fmt, std::forward<Args>(args)...));
+    return *this;
+  }
+
+  /** Append a Note to this Error. With source span */
   template <typename... Args>
   Error& note(SourceSpan span, std::string_view fmt, Args&&... args) {
     notes.push_back(Note(span, fmt, std::forward<Args>(args)...));
     return *this;
   }
 
+  /**
+   * Converts Error to a pretty string with span info, error code & description & notes
+   */
   [[nodiscard]] std::string toString() const;
 
+  /**
+   * Throws exception, passing this Error to it
+   */
   [[noreturn]] void raise() const;
+
+  /**
+   * Throws exception, passing this Error to it
+   * Checks for macro expansion tags, and appends notes if needed
+   */
   [[noreturn]] void raiseFromNode(const ast::Node * node) const;
 };
 
+/**
+ * Raise provided Error, if assertion failed
+ *
+ * @tparam E   Error
+ * @param expr Assertion value
+ * @param err  Error to throw, if `!expr`
+ */
 template <typename E>
 void assertRaise(bool expr, const E& err) {
   if (!expr) {
@@ -197,6 +299,14 @@ void assertRaise(bool expr, const E& err) {
   }
 }
 
+/**
+ * Same as `assertRaise` but calls `.raiseFromNode(node)` instead of `.raise()`
+ *
+ * @tparam E   Error
+ * @param expr Assertion value
+ * @param err  Error to throw, if `!expr`
+ * @param node Pointer to node, where the error happened
+ */
 template <typename E>
 void assertRaiseFromNode(bool expr, const E& err, const ast::Node * node) {
   if (!expr) {
@@ -204,6 +314,15 @@ void assertRaiseFromNode(bool expr, const E& err, const ast::Node * node) {
   }
 }
 
+/**
+ * Raise a provided error, if `expr` isn't `true`, otherwise returns `expr`
+ *
+ * @tparam T Expression type
+ * @tparam E Error
+ * @param expr Expression to check
+ * @param err  Error to raise, if `expr` is `false`
+ * @return expr
+ */
 template <typename T, typename E>
 T raiseIfNull(T expr, const E& err) {
   if (!expr) {
@@ -213,7 +332,12 @@ T raiseIfNull(T expr, const E& err) {
   return expr;
 }
 
-static void checkLLVMError(llvm::Error&& err) {
+/**
+ * Check llvm::Error value, if the error has happened, raising ERROR_LLVM_ERROR if so
+ *
+ * @param err Error to check
+ */
+inline void checkLLVMError(llvm::Error&& err) {
   if (bool(err)) {
     std::string str;
     llvm::raw_string_ostream output(str);

@@ -6,6 +6,38 @@
 
 namespace xcc {
 
+/** Forward declaration of GlobalContext to avoid circular includes */
+namespace codegen { class GlobalContext; }
+
+/**
+ * Included (processed) module
+ *
+ * @note For internal use only
+ */
+struct IncludedModule {
+  std::string                               path;
+  std::shared_ptr<ast::Block>               body;
+  std::vector<std::shared_ptr<ast::Module>> references;
+  llvm::DIFile *                            di_file = nullptr;
+};
+
+/**
+ * Module Cache
+ *
+ * @note For internal use only
+ */
+class ModuleCache {
+public:
+  static void set(const std::string& name, IncludedModule module);
+  static IncludedModule& get(const std::string& name);
+  static bool contains(const std::string& name);
+
+  static void updateDebugInfo(codegen::GlobalContext& ctx);
+
+private:
+  static std::unordered_map<std::string, IncludedModule> modules;
+};
+
 /**
  * Parser context
  *
@@ -23,18 +55,6 @@ class Parser {
      * Creates MemberAccess AST Node from 2 contexts
      */
     static std::shared_ptr<ast::MemberAccess> from(const MemberAccessContext& a, const MemberAccessContext& b);
-  };
-
-public:
-  /**
-   * Result of includeModule
-   *
-   * @note For internal use only
-   */
-  struct IncludedModule {
-    std::string                               path;
-    std::shared_ptr<ast::Block>               body;
-    std::vector<std::shared_ptr<ast::Module>> references;
   };
 
 private:
@@ -329,6 +349,5 @@ public:
    */
   void addModuleSearchPath(const std::string& path);
 };
-
 
 } /* namespace xcc */

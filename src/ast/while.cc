@@ -28,5 +28,7 @@ std::string While::toString(Node * grandparent, Node * parent, int indent, bool 
 }
 
 llvm::Value * While::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   Error(ERROR_UNIMPLEMENTED, span, "while loops are unsupported").raiseFromNode(this);
 }

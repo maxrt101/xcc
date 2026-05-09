@@ -34,6 +34,8 @@ std::string MemberAccess::toString(Node * grandparent, Node * parent, int indent
 }
 
 llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 
   if (kind == MEMBER_ACCESS_POINTER) {

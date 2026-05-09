@@ -24,6 +24,8 @@ std::string Unary::toString(Node * grandparent, Node * parent, int indent, bool 
 }
 
 llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   switch (operation.type) {
     case TOKEN_STAR: {
       return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx, payload)->getLLVMType(ctx), generateValueWithoutLoad(ctx, {}), "dereferenced");
@@ -39,7 +41,7 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
 
   switch (operation.type) {
     case TOKEN_AMP: {
-      assertRaiseFromNode(rhs->is(ast::AST_EXPR_IDENTIFIER), Error(ERROR_INVALID_UNARY_AMP_RHS, rhs->span, ""), this);
+      assertRaiseFromNode(rhs->is(ast::AST_EXPR_IDENTIFIER), Error(ERROR_INVALID_UNARY_AMP_RHS, rhs->span), this);
 
       auto identifier = rhs->as<ast::Identifier>();
 
@@ -48,7 +50,7 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
 
     case TOKEN_STAR: {
       if (!rhs_type->isPointer()) {
-        Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").raiseFromNode(this);
+        Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span).raiseFromNode(this);
       }
       return raiseIfNull(rhs->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Value is NULL"));
     }
@@ -85,7 +87,7 @@ std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen:
   auto rhs_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
 
   if (!rhs_type->isPointer()) {
-    Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span, "").raiseFromNode(this);
+    Error(ERROR_INVALID_UNARY_STAR_RHS, rhs->span).raiseFromNode(this);
   }
 
   return rhs_type->getPointedType();

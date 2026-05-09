@@ -35,6 +35,8 @@ llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList 
 }
 
 llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   auto base_type = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
   auto index_type = raiseIfNull(rhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
 

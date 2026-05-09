@@ -1,4 +1,5 @@
 #include "xcc/error.h"
+#include "xcc/codegen.h"
 #include "xcc/exceptions.h"
 #include "xcc/ast/identifier.h"
 #include "xcc/ast/node.h"
@@ -141,6 +142,14 @@ const ErrorDescription& ErrorDescription::get(ErrorId id) {
   return descs.at(id);
 }
 
+llvm::DILocation * SourceLocation::getDILocation(codegen::ModuleContext& ctx, llvm::DIScope * scope) const {
+  if (!scope) {
+    scope = ctx.currentDIScope();
+  }
+
+  return llvm::DILocation::get(scope->getContext(), line, column, scope);
+}
+
 SourceSpan SourceSpan::operator+(const SourceSpan& rhs) const {
   if (length == 0)     return rhs;
   if (rhs.length == 0) return *this;
@@ -156,6 +165,29 @@ SourceSpan SourceSpan::operator+(const SourceSpan& rhs) const {
     start,
     end - start
   };
+}
+
+
+SourceLocation SourceSpan::start() const {
+  auto file = FileManager::get(fileId);
+
+  if (!file) return {0, 0};
+
+  auto line = file->lineByOffset(offset);
+  auto line_info = file->lines[line];
+
+  return {line, offset - line_info.offset};
+}
+
+SourceLocation SourceSpan::end() const {
+  auto file      = FileManager::get(fileId);
+
+  if (!file) return {0, 0};
+
+  auto line      = file->lineByOffset(offset + length);
+  auto line_info = file->lines[line];
+
+  return {line, (offset + length) - line_info.offset};
 }
 
 SourceSpan& SourceSpan::operator+=(const SourceSpan& rhs) {
@@ -218,6 +250,15 @@ std::string SourceSpan::toString() const {
   );
 }
 
+std::string Note::toString() const {
+  return std::format(
+      ANSI_COLOR_FG_GREEN "note:" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n{}",
+      message, span.toString()
+    );
+}
+
+Error::Error(ErrorId id, SourceSpan span) : id(id), span(span), message("") {}
+
 std::string Error::toString() const {
   std::string result = std::format(
     "error[" ANSI_COLOR_FG_RED "E{:04}" ANSI_TEXT_RESET "]: " ANSI_TEXT_BOLD "{}{}" ANSI_TEXT_RESET "\n{}",
@@ -227,10 +268,7 @@ std::string Error::toString() const {
   );
 
   for (auto& note : notes) {
-    result += std::format(
-      ANSI_COLOR_FG_GREEN "note:" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n{}",
-      note.message, note.span.toString()
-    );
+    result += note.toString();
   }
 
   return result;

@@ -168,6 +168,16 @@ public:
   [[nodiscard]] llvm::ArrayType * getLLVMArrayType(codegen::ModuleContext& ctx) const;
 
   /**
+   * Generate LLVM DebugInfo Type
+   */
+  [[nodiscard]] llvm::DIType * getDIType(codegen::ModuleContext& ctx) const;
+
+  /**
+   * Generate LLVM DebugInfo Function Type
+   */
+  [[nodiscard]] llvm::DISubroutineType * getDISubroutineType(codegen::ModuleContext& ctx) const;
+
+  /**
    * Returns type name. If struct - struct name, otherwise - just type name
    */
   [[nodiscard]] std::string getName() const;
@@ -196,10 +206,16 @@ public:
    */
   llvm::Value * getDefault(codegen::ModuleContext& ctx) const;
 
+  /**
+   * Check if type's tag matches provided one
+   */
   bool is(TypeTag expected) const {
     return tag == expected;
   }
 
+  /**
+   * Check if type's tag matches any of the provided one's
+   */
   template <typename ...Types>
   bool isAnyOf(Types... expected) const {
     return ((this->tag == expected) || ...);
@@ -210,7 +226,17 @@ public:
    */
   std::shared_ptr<ast::Node> toAst(SourceSpan span = SourceSpan::builtin()) const;
 
+  /**
+   * Create an empty type tagged with `tag`
+   *
+   * @note Internal helper
+   * @warning By itself produces malformed types
+   */
   static std::shared_ptr<Type> create(TypeTag tag);
+
+  /**
+   * Try to create a meta::Type from string name
+   */
   static std::shared_ptr<Type> fromTypeName(codegen::GlobalContext& ctx, const std::string& name, SourceSpan span);
 
   static std::shared_ptr<Type> createVoid();
@@ -236,6 +262,9 @@ public:
     std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);
   static std::shared_ptr<Type> createStruct(std::string name, StructMembers members, bool packed = false);
 
+  /**
+   * Try to infer meta::Type from ast::Node
+   */
   static std::shared_ptr<Type> inferFromNode(codegen::ModuleContext& ctx, std::shared_ptr<ast::Node> node);
 
   /**

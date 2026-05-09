@@ -55,13 +55,13 @@ TypeTag Type::getTag() const {
 }
 
 std::shared_ptr<Type> Type::getPointedType() const {
-  assertThrow(isPointer(), std::runtime_error("Type is not a pointer"));
+  assertThrow(isPointer(), std::runtime_error("getPointedType called on a non-pointer type"));
 
   return ptr.pointedType;
 }
 
 std::shared_ptr<Type> Type::getElementType() const {
-  assertThrow(isArray(), std::runtime_error("Type is not an array"));
+  assertThrow(isArray(), std::runtime_error("getElementType called on a non-array type"));
 
   return arr.elementType;
 }
@@ -147,7 +147,7 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
 }
 
 llvm::FunctionType * Type::getLLVMFunctionType(codegen::ModuleContext& ctx) const {
-  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
+  assertThrow(isFunction(), std::runtime_error("getLLVMFunctionType called on a non-function type"));
 
   std::vector<llvm::Type*> args;
 
@@ -163,9 +163,118 @@ llvm::FunctionType * Type::getLLVMFunctionType(codegen::ModuleContext& ctx) cons
 }
 
 llvm::ArrayType * Type::getLLVMArrayType(codegen::ModuleContext& ctx) const {
-  assertThrow(isArray(), std::runtime_error("Type is not an array"));
+  assertThrow(isArray(), std::runtime_error("getLLVMArrayType called on non-array type"));
 
   return llvm::ArrayType::get(arr.elementType->getLLVMType(ctx), arr.size);
+}
+
+llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
+  switch (tag) {
+    case TypeTag::VOID:   return ctx.globalContext.di_builder->createBasicType("void",  0,  0);
+    case TypeTag::BOOL:   return ctx.globalContext.di_builder->createBasicType("bool",  1,  llvm::dwarf::DW_ATE_boolean);
+    case TypeTag::U8:     return ctx.globalContext.di_builder->createBasicType("u8",    8,  llvm::dwarf::DW_ATE_unsigned);
+    case TypeTag::I8:     return ctx.globalContext.di_builder->createBasicType("i8",    8,  llvm::dwarf::DW_ATE_signed);
+    case TypeTag::U16:    return ctx.globalContext.di_builder->createBasicType("u16",   16, llvm::dwarf::DW_ATE_unsigned);
+    case TypeTag::I16:    return ctx.globalContext.di_builder->createBasicType("i16",   16, llvm::dwarf::DW_ATE_signed);
+    case TypeTag::U32:    return ctx.globalContext.di_builder->createBasicType("u32",   32, llvm::dwarf::DW_ATE_unsigned);
+    case TypeTag::I32:    return ctx.globalContext.di_builder->createBasicType("i32",   32, llvm::dwarf::DW_ATE_signed);
+    case TypeTag::U64:    return ctx.globalContext.di_builder->createBasicType("u64",   64, llvm::dwarf::DW_ATE_unsigned);
+    case TypeTag::I64:    return ctx.globalContext.di_builder->createBasicType("u64",   64, llvm::dwarf::DW_ATE_signed);
+    case TypeTag::F32:    return ctx.globalContext.di_builder->createBasicType("f32",   32, llvm::dwarf::DW_ATE_float);
+    case TypeTag::F64:    return ctx.globalContext.di_builder->createBasicType("f64",   64, llvm::dwarf::DW_ATE_float);
+    case TypeTag::ISIZE:  return ctx.globalContext.di_builder->createBasicType("isize", 64, llvm::dwarf::DW_ATE_signed);   // FIXME: Bitwidth Hardcode
+    case TypeTag::USIZE:  return ctx.globalContext.di_builder->createBasicType("usize", 64, llvm::dwarf::DW_ATE_unsigned); // FIXME: Bitwidth Hardcode
+
+    case TypeTag::ARRAY: {
+      return ctx.globalContext.di_builder->createArrayType(
+        arr.size,
+        8, // FIXME: Alignment hardcode
+        arr.elementType->getDIType(ctx),
+        ctx.globalContext.di_builder->getOrCreateArray({
+          ctx.globalContext.di_builder->getOrCreateSubrange(0, arr.size)
+        })
+      );
+    }
+
+    case TypeTag::PTR: {
+      return ctx.globalContext.di_builder->createPointerType(ptr.pointedType->getDIType(ctx), getLLVMType(ctx)->getScalarSizeInBits());
+    }
+
+    case TypeTag::FUNCTION: {
+      auto& dl = ctx.llvm.module->getDataLayout();
+      uint64_t ptrSize = dl.getPointerSizeInBits();
+      uint32_t ptrAlign = dl.getPointerABIAlignment(0).value() * 8;
+
+      return ctx.globalContext.di_builder->createPointerType(getDISubroutineType(ctx), ptrSize, ptrAlign);
+    }
+
+    case TypeTag::STRUCT: {
+      auto& dl = ctx.llvm.module->getDataLayout();
+      auto * llvmType = getLLVMType(ctx);
+
+      std::vector<llvm::Metadata*> members;
+
+      uint64_t structSize  = dl.getTypeAllocSizeInBits(llvmType);
+      uint32_t structAlign = dl.getABITypeAlign(llvmType).value() * 8;
+
+      for (size_t i = 0; i < _struct.members.size(); ++i) {
+        auto& member        = _struct.members[i];
+        auto memberName     = member.first;
+        auto memberMetaType = member.second;
+
+        uint64_t memberSize  = dl.getTypeAllocSizeInBits(memberMetaType->getLLVMType(ctx));
+        uint32_t memberAlign = dl.getABITypeAlign(memberMetaType->getLLVMType(ctx)).value() * 8;
+
+        // Calculate bit offset using DataLayout
+        uint64_t offsetInBits = dl.getStructLayout(llvm::cast<llvm::StructType>(llvmType))->getElementOffsetInBits(i);
+
+        auto * memberDI = ctx.globalContext.di_builder->createMemberType(
+            ctx.currentDIScope(),
+            memberName,
+            ctx.globalContext.di_compile_unit->getFile(),
+            0,
+            memberSize,
+            memberAlign,
+            offsetInBits,
+            llvm::DINode::FlagZero,
+            memberMetaType->getDIType(ctx)
+        );
+
+        members.push_back(memberDI);
+      }
+
+      return ctx.globalContext.di_builder->createStructType(
+          ctx.currentDIScope(),
+          _struct.name,
+          ctx.globalContext.getCurrentDIFile(),
+          0,
+          structSize,
+          structAlign,
+          llvm::DINode::FlagZero,
+          nullptr,
+          ctx.globalContext.di_builder->getOrCreateArray(members)
+      );
+    }
+
+    default:
+      return nullptr;
+  }
+}
+
+llvm::DISubroutineType * Type::getDISubroutineType(codegen::ModuleContext& ctx) const {
+  assertThrow(is(TypeTag::FUNCTION), std::runtime_error("getDISubroutineType called on non-function type"));
+
+  std::vector<llvm::Metadata*> typeEltArray;
+
+  typeEltArray.push_back(fn.returnType->getDIType(ctx));
+
+  for (auto& argType : fn.args) {
+    typeEltArray.push_back(argType->getDIType(ctx));
+  }
+
+  llvm::DITypeRefArray typeArray = ctx.globalContext.di_builder->getOrCreateTypeArray(typeEltArray);
+
+  return ctx.globalContext.di_builder->createSubroutineType(typeArray);
 }
 
 std::string Type::getName() const {

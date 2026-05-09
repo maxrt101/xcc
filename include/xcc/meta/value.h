@@ -10,15 +10,16 @@ namespace xcc::meta {
  */
 class TypedValue {
 public:
-  std::shared_ptr<xcc::meta::Type> type;
-  llvm::AllocaInst * value;
+  SourceSpan            span;
+  std::shared_ptr<Type> type;
+  llvm::AllocaInst *    value;
 
 public:
   TypedValue();
-  TypedValue(std::shared_ptr<xcc::meta::Type> type, llvm::AllocaInst * value);
+  TypedValue(SourceSpan span, std::shared_ptr<Type> type, llvm::AllocaInst * value);
   ~TypedValue() = default;
 
-  static std::shared_ptr<TypedValue> create(codegen::ModuleContext& ctx, llvm::Function* fn, std::shared_ptr<xcc::meta::Type> type, const std::string& name);
+  static std::shared_ptr<TypedValue> create(codegen::ModuleContext& ctx, llvm::Function* fn, SourceSpan span, std::shared_ptr<Type> type, const std::string& name);
 };
 
 }

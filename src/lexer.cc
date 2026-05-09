@@ -276,7 +276,7 @@ void Lexer::tokenizeString() {
   size_t start = consume();
   while (!check('"')) {
     if (isAtEnd()) {
-      Error(ERROR_UNEXPECTED_EOF, {fileId, start, current_index - start}, "").raise();
+      Error(ERROR_UNEXPECTED_EOF, {fileId, start, current_index - start}).raise();
     }
 
     if (check('\n')) {
@@ -323,7 +323,7 @@ void Lexer::tokenizeIdentifier() {
 
   while (isIdentifierChar(current())) {
     if (isAtEnd()) {
-      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}, "").raise();
+      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}).raise();
     }
 
     consume();
@@ -359,7 +359,7 @@ void Lexer::tokenizeNumber() {
          || current() == '.'
          || allow_base_16_chars && isBase16Char(current())) {
     if (isAtEnd()) {
-      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}, "").raise();
+      Error(ERROR_UNEXPECTED_EOF, {fileId, begin, current_index - begin}).raise();
     }
 
     consume();

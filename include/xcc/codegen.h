@@ -7,6 +7,7 @@
 #include <llvm/IR/DerivedTypes.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/IRBuilder.h>
+#include "llvm/IR/DIBuilder.h"
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
@@ -25,6 +26,7 @@
 
 #include "xcc/jit.h"
 #include "xcc/ast.h"
+#include "xcc/parser.h"
 #include "xcc/meta/value.h"
 #include "xcc/meta/function.h"
 #include "xcc/ast/fndecl.h"
@@ -52,6 +54,12 @@ public:
 
   /* Global Module */
   std::shared_ptr<ModuleContext> globalModule;
+
+  /* LLVM DebugInfo Builder */
+  std::unique_ptr<llvm::DIBuilder> di_builder;
+
+  /* LLVM DebugInfo Compile Unit */
+  llvm::DICompileUnit * di_compile_unit;
 
   /* Already processed modules, which are waiting to be flushed to JIT, or merged to an object file */
   std::vector<std::unique_ptr<ModuleContext>> pendingModules;
@@ -105,30 +113,94 @@ public:
    */
   void mergeModules() const;
 
+  /**
+   * Creates llvm::DICompileUnit for currently processed file
+   */
+  void createCompileUnit(FileId fileId);
+
+  /**
+   * Returns a reference to IncludedModule of currently processed Module
+   *
+   * @warning Will throw an exception if currently in top-level scope
+   * @warning Will throw an exception if no module with such nam is present in ModuleCache
+   */
+  IncludedModule& getCurrentModule();
+
+  /**
+   * Return current llvm::DIFIle, returns a file for currently processed module,
+   * if in module context, and file of CU if in top-level scope
+   */
+  llvm::DIFile * getCurrentDIFile();
+
+  /**
+   * Add a (meta) function record to internal function table
+   */
   void addFunction(const std::string& name, std::shared_ptr<meta::Function> fn);
+
+  /**
+   * Retrieve function record from function table by name
+   * Returns nullptr if no such function is present
+   */
   std::shared_ptr<meta::Function> getMetaFunction(const std::string& name);
 
+  /** Set name for currently processed function */
   void setCurrentFunction(const std::string& name);
+
+  /** Clear current function */
   void clearCurrentFunction();
+
+  /** Return a function record for currently processed function. Relies on setCurrentFunction */
   std::shared_ptr<meta::Function> getCurrentFunction();
 
+  /** Return true if a global variable with provided name exists */
   bool hasGlobal(const std::string& name);
+
+  /** Retrieve global variable by name */
   llvm::GlobalVariable * getGlobal(ModuleContext& ctx, const std::string& name);
+
+  /** Get type of global variable by name */
   std::shared_ptr<meta::Type> getGlobalType(const std::string& name);
 
+  /** Push a module into currently processed module stack */
   void pushModule(const std::string& name);
+
+  /** Pop a module from currently processed module stack */
   void popModule();
+
+  /** Get module prefix (a::b -> a_b_). Used by module symbol mangling. Relies on pushModule */
   [[nodiscard]] std::string getModulePrefix() const;
+
+  /** Get parent module prefix (a::b -> a_). Used by module symbol mangling. Relies on pushModule */
   [[nodiscard]] std::string getParentModulePrefix() const;
 
+  /** Register macro in internal macro map */
   void registerMacro(const std::string& name, std::shared_ptr<ast::Macro> macro);
-  std::shared_ptr<ast::Macro> getMacro(const std::string& name) const;
 
+  /** Retrieve registered macro from macro map */
+  [[nodiscard]] std::shared_ptr<ast::Macro> getMacro(const std::string& name) const;
+
+  /**
+   * Add identifier alias
+   * Used in scoped `use` statements:
+   * `use a::{b, c}`: module a in included fully with a::b & a::c aliased into current scope as b & c
+   */
   void addAlias(const std::string& name, const std::string& value, SourceSpan span);
+
+  /** Recursively search for `name` in alias map, returning 'true' name, or `name` if not found */
   std::string aliased(const std::string& name);
 
+  /**
+   * Run provided expression using JIT
+   *
+   * @note Expression will be put into anonymous function, which will be run using runFunction
+   */
   void runExpr(std::shared_ptr<ast::Node> expr);
 
+  /**
+   * Run function using JIT
+   *
+   * @note Function needs to be compiled, and flushModulesToJIT called
+   */
   void runFunction(const std::string& name);
 };
 
@@ -137,19 +209,53 @@ public:
  */
 class ModuleContext {
 public:
-  using ScopedPhantomList = std::unordered_map<std::string, std::shared_ptr<meta::Type>>;
+  /** Map of scoped phantom variables, used as an initializer to PhantomScope */
+  using PhantomsList = std::unordered_map<std::string, std::shared_ptr<meta::Type>>;
 
 private:
-  class ScopedPhantomVariables {
+  /**
+   * Holds 'phantom' variables
+   *
+   * Phantom variables are used, when a type for expression is needed, but can't be
+   * generated out-of-line because it is dependent on sequential evaluation.
+   * For example, let's consider this:
+   * ```
+   * var b = { var a: i32 = 30; a += 12; a; }
+   * ```
+   *
+   * When generating IR for this statement, the compiler needs to know the type for `b`,
+   * because type annotation was provided - type can be retrieved from initializer value.
+   * Because initializer value can be a block - compiler will call getOrGetLast, which
+   * will return the node, or the last node in block if the node is a block.
+   * When trying to generate a type for last value in this block, compiler will fail,
+   * because the block wasn't evaluated so ast::Identifier("a") isn't registered anywhere
+   * and can't provide a type in on itself. So here phantom variables come in handy -
+   * a `phantomScope()` is called on a module to create a RAII PhantomScope
+   * instance, to which all variable declarations are tied. So then `generateType()` is
+   * called on initializer value of `b`, the compiler will try to find `a` in `phantomLocals`
+   * map, and successfully generate a type for `b`.
+   */
+  class PhantomScope {
     ModuleContext&           module;
     std::vector<std::string> names;
 
   public:
-    ScopedPhantomVariables(ModuleContext& module, const ScopedPhantomList& vars);
-    ~ScopedPhantomVariables();
+    PhantomScope(ModuleContext& module, const PhantomsList& vars);
+    ~PhantomScope();
   };
 
+  /**
+   * Represents a lexical scope in the codegen
+   *
+   * Holds span for block ('{}'), DebugInfo scope, locals map & 'cleared' flag
+   * Cleared flag is used to signal that this scope was already finished, and it
+   * just waits to be popped from scope stack.
+   * Clearing means that local variables are marked as `freed` to the LLVM, this
+   * enables some stack-space optimization later on
+   */
   struct Scope {
+    SourceSpan      span;
+    llvm::DIScope * di_scope;
     std::unordered_map<std::string, std::shared_ptr<meta::TypedValue>> locals;
     bool cleared = false;
 
@@ -196,20 +302,50 @@ public:
 
   static std::unique_ptr<ModuleContext> create(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME, util::Target * target = nullptr);
 
+  /** Try to get function from current module, if fails - try to get from global module */
   llvm::Function * getFunction(const std::string& name);
 
-  ScopedPhantomVariables phantomScope(const ScopedPhantomList& vars);
+  /** Creates a RAII PhantomScope, provided with a list of variables and their types */
+  PhantomScope phantomScope(const PhantomsList& vars);
+
+  /** Returns true if phantom variable with provided name exists */
   bool hasPhantom(const std::string& name);
+
+  /** Retrieves type of specific phantom variable */
   std::shared_ptr<meta::Type> getPhantomType(const std::string& name);
 
+  /** Returns true if local variable with provided name exists. Searches recursively up the scope stack */
   bool hasLocal(const std::string& name);
+
+  /** Retrieves value of specific local variable */
   llvm::AllocaInst * getLocalValue(const std::string& name);
+
+  /** Retrieves type of specific local variable */
   std::shared_ptr<meta::Type> getLocalType(const std::string& name);
+
+  /** Save local variable record in current scope */
   void addLocal(const std::string& name, std::shared_ptr<meta::TypedValue> tv);
 
-  void pushScope();
+  /** Create new lexical scope and push it to scope stack. `scope` can be used to override default DIScope creation */
+  void pushScope(SourceSpan span, llvm::DIScope * scope = nullptr);
+
+  /** Pop lexical scope from scope stack */
   void popScope();
+
+  /** Clear all scopes. Very dangerous, can break everything if called in the wrong place */
   void clearScopes();
+
+  /**
+   * Returns a reference to current Scope
+   * @warning Will throw an exception, if no scopes are present
+   */
+  Scope& currentScope();
+
+  /** Returns current DIScope. If scope stack is not empty - return current Scope's di_scope, otherwise returns CU scope */
+  llvm::DIScope * currentDIScope();
+
+  /** Set current IR debug location from SourceSpan */
+  void setDebugLocation(SourceSpan span, llvm::DIScope * scope = nullptr);
 };
 
 /**

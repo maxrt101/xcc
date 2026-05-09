@@ -52,7 +52,8 @@ std::string Block::toString(Node * grandparent, Node * parent, int indent, bool 
 }
 
 llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payload) {
-  ctx.pushScope();
+  ctx.pushScope(span);
+  ctx.setDebugLocation(span);
 
   llvm::Value * val = nullptr;
 
@@ -66,7 +67,7 @@ llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payl
 }
 
 std::shared_ptr<xcc::meta::Type> Block::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  codegen::ModuleContext::ScopedPhantomList variables;
+  codegen::ModuleContext::PhantomsList variables;
 
   for (auto& node : body) {
     if (node->is(AST_VAR_DECL)) {

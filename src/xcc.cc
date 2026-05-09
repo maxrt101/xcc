@@ -301,11 +301,18 @@ static llvm::Function * compileFunction(std::unique_ptr<codegen::GlobalContext>&
 
     auto fn = node->generateFunction(*ctx, {});
 
-#if USE_PRINT_LLVM_IR
+#if USE_PRINT_FUNCTION_LLVM_IR
     logger.info("LLVM IR for function {}:", fn->getName().str());
-    util::RawStreamCollector collector;
-    fn->print(*collector.stream());
-    logger.print("{}", collector.string());
+    util::RawStreamCollector fn_ir_collector;
+    fn->print(*fn_ir_collector.stream());
+    logger.print("{}", fn_ir_collector.string());
+#endif
+
+#if USE_PRINT_MODULE_LLVM_IR
+    util::RawStreamCollector mod_ir_collector;
+    ctx->llvm.module->print(*mod_ir_collector.stream(), nullptr);
+    logger.info("Compiled LLVM Module for {}:", fn->getName().str());
+    logger.print("{}\n", mod_ir_collector.string());
 #endif
 
     globalContext->addModule(ctx);
@@ -392,6 +399,8 @@ CompilationResult xcc::compile(
   bool                                     isRepl,
   const std::vector<std::string>&          includePaths
 ) {
+  globalContext->createCompileUnit(file);
+
   auto lexer  = Lexer(file);
   auto tokens = lexer.tokenize();
 
@@ -415,6 +424,8 @@ CompilationResult xcc::compile(
   for (auto& path : includePaths) {
     parser.addModuleSearchPath(path);
   }
+
+  ModuleCache::updateDebugInfo(*globalContext);
 
   auto ast = parser.parse(isRepl);
 

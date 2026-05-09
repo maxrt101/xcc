@@ -47,16 +47,52 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     Error(ERROR_INTERNAL_FAILURE, decl->span, "Error generating Function object for '{}'", decl->name->name()).raiseFromNode(this);
   }
 
+  auto di_fn = ctx.globalContext.di_builder->createFunction(
+    ctx.currentDIScope(), // or ctx.currentScope().di_scope
+    meta_fn->name,
+    meta_fn->name,
+    ctx.globalContext.getCurrentDIFile(),
+    span.start().line,
+    generateType(ctx, payload)->getDISubroutineType(ctx),
+    body->span.start().line,
+    llvm::DINode::FlagPrototyped,
+    llvm::DISubprogram::SPFlagDefinition
+  );
+
+  fn->setSubprogram(di_fn);
+
+  ctx.setDebugLocation(span, di_fn);
+
   auto basic_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", fn);
 
   ctx.ir_builder->SetInsertPoint(basic_block);
 
   // Create a separate scope for function arguments
-  ctx.pushScope();
+  ctx.pushScope(span, di_fn);
 
   for (auto& arg : fn->args()) {
     auto arg_name = std::string(arg.getName());
-    ctx.addLocal(arg_name, meta::TypedValue::create(ctx, fn, meta_fn->args[arg_name], arg_name));
+    auto span = decl->getArgument(arg_name)->span;
+    ctx.addLocal(arg_name, meta::TypedValue::create(ctx, fn, span, meta_fn->args[arg_name], arg_name));
+
+    llvm::DILocalVariable * di_param = ctx.globalContext.di_builder->createParameterVariable(
+      di_fn,
+      arg_name,
+      arg.getArgNo() + 1,
+      ctx.globalContext.getCurrentDIFile(),
+      span.start().line,
+      meta_fn->args[arg_name]->getDIType(ctx),
+      true
+    );
+
+    ctx.globalContext.di_builder->insertDeclare(
+      ctx.getLocalValue(arg_name),
+      di_param,
+      ctx.globalContext.di_builder->createExpression(),
+      span.start().getDILocation(ctx, di_fn),
+      ctx.ir_builder->GetInsertBlock()
+    );
+
     ctx.ir_builder->CreateStore(&arg, ctx.getLocalValue(arg_name));
   }
 
@@ -89,7 +125,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     logger.print("{}", fn_collector.string());
 #endif
     Error(ERROR_LLVM_ERROR, decl->span, "Function '{}' didn't pass validation", decl->name->name())
-      .note({}, "{}", std::string(collector.string()))
+      .note("{}", std::string(collector.string()))
       .raiseFromNode(this);
   }
 

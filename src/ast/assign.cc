@@ -42,6 +42,8 @@ std::string Assign::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   llvm::Value * value = nullptr;
 
   if (kind.type == TOKEN_EQUALS) {

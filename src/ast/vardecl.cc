@@ -57,8 +57,10 @@ std::string VarDecl::toString(Node * grandparent, Node * parent, int indent, boo
 }
 
 llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  ctx.setDebugLocation(span);
+
   // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
-  assertRaiseFromNode(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span, ""), this);
+  assertRaiseFromNode(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span), this);
 
   if (type) {
     assertRaiseFromNode(isOrIsLastInBlock(type, AST_EXPR_TYPE), Error(ERROR_NOT_A_TYPE, type->span, "got a {}", typeToHumanReadableString(getOrGetLastInBlock(type)->type)), this);
@@ -66,30 +68,14 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
 
   auto meta_type = type ? type->generateType(ctx, {}) : meta::Type::inferFromNode(ctx, value);
 
-  if (global) {
-    // FIXME: Check if can convert to constant
+  return global ? generateGlobal(ctx, meta_type) : generateLocal(ctx, meta_type);
+}
 
-    auto constant = (llvm::Constant *)(value
-        ? value->generateValueWithoutLoad(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
-        : meta_type->getDefault(ctx));
+std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+  return type->generateType(ctx, {});
+}
 
-    ctx.globalContext.globals[name->name()] = meta_type;
-
-    [[maybe_unused]] auto global = new llvm::GlobalVariable(
-        *ctx.globalContext.globalModule->llvm.module,
-        constant->getType(),
-        false,
-        llvm::GlobalValue::ExternalLinkage,
-        constant,
-        name->name()
-    );
-
-    auto extern_global = llvm::cast<llvm::GlobalVariable>(
-      ctx.llvm.module->getOrInsertGlobal(name->name(), meta_type->getLLVMType(ctx)));
-
-    return extern_global;
-  }
-
+llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
   llvm::Value * init = value
@@ -98,7 +84,24 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
 
   init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx), value ? value->span : span);
 
-  auto tv = meta::TypedValue::create(ctx, fn, meta_type, name->name());
+  auto tv = meta::TypedValue::create(ctx, fn, span, meta_type, name->name());
+
+  auto di_local = ctx.globalContext.di_builder->createAutoVariable(
+      ctx.currentDIScope(),
+      name->name(),
+      ctx.globalContext.getCurrentDIFile(),
+      span.start().line,
+      meta_type->getDIType(ctx),
+      true
+    );
+
+  ctx.globalContext.di_builder->insertDeclare(
+    tv->value,
+    di_local,
+    ctx.globalContext.di_builder->createExpression(),
+    span.start().getDILocation(ctx),
+    ctx.ir_builder->GetInsertBlock()
+  );
 
   ctx.ir_builder->CreateStore(init, tv->value);
 
@@ -107,6 +110,45 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
   return init;
 }
 
-std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  return type->generateType(ctx, {});
+llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type) {
+  // FIXME: Check if can convert to constant
+
+  auto constant = (llvm::Constant *)(value
+      ? value->generateValueWithoutLoad(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
+      : meta_type->getDefault(ctx));
+
+  ctx.globalContext.globals[name->name()] = meta_type;
+
+  [[maybe_unused]] auto global = new llvm::GlobalVariable(
+      *ctx.globalContext.globalModule->llvm.module,
+      constant->getType(),
+      false,
+      llvm::GlobalValue::ExternalLinkage,
+      constant,
+      name->name()
+  );
+
+  auto extern_global = llvm::cast<llvm::GlobalVariable>(
+    ctx.llvm.module->getOrInsertGlobal(name->name(), meta_type->getLLVMType(ctx)));
+
+  auto di_global = ctx.globalContext.di_builder->createTempGlobalVariableFwdDecl(
+    ctx.currentDIScope(),
+    name->name(),
+    name->name(),
+    ctx.globalContext.getCurrentDIFile(),
+    span.start().line,
+    meta_type->getDIType(ctx),
+    true
+  );
+
+  // TODO: How to add global variable?
+  // ctx.globalContext.di_builder->insertDeclare(
+  //   global,
+  //   di_global,
+  //   ctx.globalContext.di_builder->createExpression(),
+  //   span.start().getDILocation(ctx),
+  //   ctx.ir_builder->GetInsertBlock()
+  // );
+
+  return extern_global;
 }

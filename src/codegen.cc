@@ -4,9 +4,12 @@
 #include "xcc/util/llvm.h"
 #include "xcc/ast.h"
 
-#include <llvm/Linker/Linker.h>
+#include "llvm/Linker/Linker.h"
+// #include "llvm/Passes/PassBuilder.h"
 
 #include <utility>
+
+#include "xcc/util/fs.h"
 
 using namespace xcc;
 using namespace xcc::codegen;
@@ -21,6 +24,8 @@ GlobalContext::GlobalContext(util::Target target) : target(target) {
   tsc = std::make_unique<llvm::LLVMContext>();
 
   globalModule = ModuleContext::create(*this, "<global>", &target);
+
+  di_builder = std::make_unique<llvm::DIBuilder>(*globalModule->llvm.module);
 
   registerBuiltinMacros(*this);
 }
@@ -38,6 +43,8 @@ void GlobalContext::addModule(std::unique_ptr<ModuleContext>& module) {
 }
 
 void GlobalContext::flushModulesToJIT() {
+  di_builder->finalize();
+
   for (auto& mod : pendingModules) {
     auto tsm = llvm::orc::ThreadSafeModule(std::move(mod->llvm.module), tsc);
     checkLLVMError(jit->addModule(std::move(tsm)));
@@ -47,6 +54,8 @@ void GlobalContext::flushModulesToJIT() {
 }
 
 void GlobalContext::mergeModules() const {
+  di_builder->finalize();
+
   for (auto& mod : pendingModules) {
     if (llvm::Linker::linkModules(*globalModule->llvm.module, std::move(mod->llvm.module))) {
       logger.error("Failed to link modules <global> and {}", mod->name);
@@ -56,6 +65,32 @@ void GlobalContext::mergeModules() const {
 
   // TODO: ?
   // pendingModules.clear();
+}
+
+void GlobalContext::createCompileUnit(FileId fileId) {
+  auto file = FileManager::get(fileId);
+
+  di_compile_unit = di_builder->createCompileUnit(
+    llvm::dwarf::DW_LANG_C,
+    di_builder->createFile(fs::path::getFileName(file->path), fs::path::getParent(file->path)),
+    "XCC",
+    false, "", 0 // what
+  );
+}
+
+IncludedModule& GlobalContext::getCurrentModule() {
+  assertThrow(!moduleStack.empty(), std::runtime_error("No module declared"));
+  assertThrow(ModuleCache::contains(moduleStack.back()), std::runtime_error("No included module named " + moduleStack.back()));
+
+  return ModuleCache::get(moduleStack.back());
+}
+
+llvm::DIFile * GlobalContext::getCurrentDIFile() {
+  if (!moduleStack.empty() && ModuleCache::contains(moduleStack.back())) {
+    return getCurrentModule().di_file;
+  }
+
+  return di_compile_unit->getFile();
 }
 
 void GlobalContext::addFunction(const std::string& name, std::shared_ptr<meta::Function> fn) {
@@ -251,14 +286,14 @@ void GlobalContext::runFunction(const std::string& name) {
   checkLLVMError(rt->remove());
 }
 
-ModuleContext::ScopedPhantomVariables::ScopedPhantomVariables(ModuleContext& module, const ScopedPhantomList& vars) : module(module) {
+ModuleContext::PhantomScope::PhantomScope(ModuleContext& module, const PhantomsList& vars) : module(module) {
   for (auto& [name, type] : vars) {
     names.push_back(name);
     module.phantomLocals[name] = type;
   }
 }
 
-ModuleContext::ScopedPhantomVariables::~ScopedPhantomVariables() {
+ModuleContext::PhantomScope::~PhantomScope() {
   for (auto& name : names) {
     module.phantomLocals.erase(name);
   }
@@ -329,7 +364,7 @@ llvm::Function * ModuleContext::getFunction(const std::string& name) {
   return nullptr;
 }
 
-ModuleContext::ScopedPhantomVariables ModuleContext::phantomScope(const ScopedPhantomList& vars) {
+ModuleContext::PhantomScope ModuleContext::phantomScope(const PhantomsList& vars) {
   return {*this, vars};
 }
 
@@ -387,11 +422,35 @@ void ModuleContext::addLocal(const std::string& name, std::shared_ptr<meta::Type
   scopes.back().locals[name] = std::move(tv);
 }
 
-void ModuleContext::pushScope() {
-  scopes.emplace_back();
+void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
+  auto start = span.start();
+
+  llvm::DIScope * parent = nullptr;
+
+  if (!scope) {
+    parent = scopes.empty() ? globalContext.di_compile_unit : scopes.back().di_scope;
+    scope = globalContext.di_builder->createLexicalBlock(
+      parent,
+      globalContext.di_compile_unit->getFile(),
+      start.line,
+      start.column
+    );
+  }
+
+  ir_builder->SetCurrentDebugLocation(
+    llvm::DILocation::get(*llvm.ctx, start.line, start.column, scope)
+  );
+
+  scopes.emplace_back(span, scope);
 }
 
 void ModuleContext::popScope() {
+  if (!scopes.empty()) {
+    auto end = scopes.back().span.end();
+
+    ir_builder->SetCurrentDebugLocation(end.getDILocation(*this));
+  }
+
   scopes.back().clear(*this);
   scopes.pop_back();
 }
@@ -400,6 +459,30 @@ void ModuleContext::clearScopes() {
   for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
     scope->clear(*this);
   }
+}
+
+ModuleContext::Scope& ModuleContext::currentScope() {
+  assertThrow(!scopes.empty(), std::runtime_error("No scopes declared"));
+
+  return scopes.back();
+}
+
+llvm::DIScope * ModuleContext::currentDIScope() {
+  if (scopes.empty()) {
+    return globalContext.di_compile_unit;
+  }
+
+  return scopes.back().di_scope;
+}
+
+void ModuleContext::setDebugLocation(SourceSpan span, llvm::DIScope * scope) {
+  if (!scope) {
+    scope = currentDIScope();
+  }
+
+  auto start = span.start();
+
+  ir_builder->SetCurrentDebugLocation(llvm::DILocation::get(scope->getContext(), start.line, start.column, scope));
 }
 
 llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type, SourceSpan span) {
