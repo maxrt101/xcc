@@ -855,13 +855,27 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
       Error(ERROR_DOLLAR_MISSING_IDENTIFIER, previous().span.pointPastLast()).raise();
     }
 
-    char * value = getenv(previous().value.c_str());
+    auto id = previous();
 
-    if (!value) {
-      Error(ERROR_NO_ENV_VARIABLE, previous().span, "'{}'", previous().value).raise();
+    std::string str_val;
+
+    if (checkAdvance(TOKEN_VERTICAL_LINE)) {
+      if (!checkAdvance(TOKEN_STRING)) {
+        Error(ERROR_ENV_VAR_MISSING_DEFAULT, current().span).raise();
+      }
+
+      str_val = previous().value;
     }
 
-    return ast::String::create(span + previous().span, value);
+    char * value = getenv(id.value.c_str());
+
+    if (value) {
+      str_val = value;
+    } else {
+      assertRaise(!str_val.empty(), Error(ERROR_NO_ENV_VARIABLE, id.span, "'{}'", id.value));
+    }
+
+    return ast::String::create(span + id.span, str_val);
   }
 
   if (checkAdvance(TOKEN_LEFT_PAREN)) {
