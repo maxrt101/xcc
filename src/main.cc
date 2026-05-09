@@ -195,9 +195,14 @@ static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::
 }
 
 static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
+  logger.setEnable(true);
+
   logger.print("xcc (experimental) repl {}\n", xcc::getVersion());
 
+  size_t input_counter = 0;
+
   while (true) {
+    // TODO: History, arrow key parser
     logger.print("xcc> ");
 
     std::string line;
@@ -239,8 +244,7 @@ static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
       continue;
     }
 
-    throw std::runtime_error("REPL is broken for now");
-    // xcc::run(globalContext, 0, true);
+    xcc::run(globalContext, xcc::FileManager::createVirtual("repl_input_" + std::to_string(input_counter++), line), true);
   }
 
   return 0;

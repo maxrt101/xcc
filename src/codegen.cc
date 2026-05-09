@@ -68,6 +68,8 @@ void GlobalContext::mergeModules() const {
 }
 
 void GlobalContext::createCompileUnit(FileId fileId) {
+  if (di_compile_unit) return;
+
   auto file = FileManager::get(fileId);
 
   di_compile_unit = di_builder->createCompileUnit(
