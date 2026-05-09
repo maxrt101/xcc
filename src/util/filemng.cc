@@ -19,6 +19,29 @@ size_t File::lineByOffset(size_t offset) {
   return 0;
 }
 
+void File::process() {
+  size_t start  = 0;
+  size_t offset = 0;
+  size_t line   = 1;
+
+  while (offset < contents.size()) {
+    if (contents[offset] == '\n') {
+      if (contents[start] == '\n') {
+        start += 1;
+      }
+
+      lines[line] = LineInfo(line, start, offset - start);
+
+      line   += 1;
+      start   = offset;
+    }
+
+    offset++;
+  }
+
+  lines[line] = LineInfo(line, start, offset - start);
+}
+
 FileId FileManager::load(const std::string& path) {
   if (auto id = lookup(path)) {
     return id;
@@ -28,24 +51,7 @@ FileId FileManager::load(const std::string& path) {
 
   auto file = std::make_shared<File>(id, path, fs::readFile(path));
 
-  size_t start  = 0;
-  size_t offset = 0;
-  size_t line   = 1;
-
-  while (offset < file->contents.size()) {
-    if (file->contents[offset] == '\n') {
-      if (file->contents[start] == '\n') {
-        start += 1;
-      }
-
-      file->lines[line] = File::LineInfo(line, start, offset - start);
-
-      line   += 1;
-      start   = offset;
-    }
-
-    offset++;
-  }
+  file->process();
 
   files[id] = file;
 
@@ -76,4 +82,20 @@ std::string FileManager::getOrLoad(const std::string& path) {
   }
 
   return files[load(path)]->contents;
+}
+
+void FileManager::purge(FileId id) {
+  files.erase(id);
+}
+
+FileId FileManager::createVirtual(const std::string& path, const std::string& contents) {
+  FileId id = FileManager::id++;
+
+  auto file = std::make_shared<File>(id, path, contents);
+
+  file->process();
+
+  files[id] = file;
+
+  return id;
 }
