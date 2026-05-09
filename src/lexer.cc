@@ -288,11 +288,16 @@ void Lexer::tokenizeString() {
 
   auto size = current_index - start;
 
-  result.push_back({
-    TOKEN_STRING,
-    util::strescseq(text.substr(start, size), true),
-    {fileId, current_index, size}
-  });
+  if (!result.empty() && result.back().is(TOKEN_STRING)) {
+    result.back().span  += SourceSpan {fileId, current_index, size};
+    result.back().value += util::strescseq(text.substr(start, size), true);
+  } else {
+    result.push_back({
+      TOKEN_STRING,
+      util::strescseq(text.substr(start, size), true),
+      {fileId, current_index, size}
+    });
+  }
 
   // Skip closing quote
   consume();
