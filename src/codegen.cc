@@ -72,9 +72,11 @@ void GlobalContext::createCompileUnit(FileId fileId) {
 
   auto file = FileManager::get(fileId);
 
+  di_file = di_builder->createFile(fs::path::getFileName(file->path), fs::path::getParent(file->path));
+
   di_compile_unit = di_builder->createCompileUnit(
     llvm::dwarf::DW_LANG_C,
-    di_builder->createFile(fs::path::getFileName(file->path), fs::path::getParent(file->path)),
+    di_file,
     "XCC",
     false, "", 0 // what
   );
@@ -92,7 +94,7 @@ llvm::DIFile * GlobalContext::getCurrentDIFile() {
     return getCurrentModule().di_file;
   }
 
-  return di_compile_unit->getFile();
+  return di_file;
 }
 
 void GlobalContext::addFunction(const std::string& name, std::shared_ptr<meta::Function> fn) {

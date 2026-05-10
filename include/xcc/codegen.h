@@ -59,7 +59,10 @@ public:
   std::unique_ptr<llvm::DIBuilder> di_builder;
 
   /* LLVM DebugInfo Compile Unit */
-  llvm::DICompileUnit * di_compile_unit;
+  llvm::DICompileUnit * di_compile_unit = nullptr;
+
+  /* Top-level DebugInfo File */
+  llvm::DIFile * di_file = nullptr;
 
   /* Already processed modules, which are waiting to be flushed to JIT, or merged to an object file */
   std::vector<std::unique_ptr<ModuleContext>> pendingModules;
