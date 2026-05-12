@@ -490,7 +490,16 @@
     "name": "Array type",
     "file": "51.xc",
     "expect": {
-      "stdout": ["local 0=42 1=69 2=127\n", "global 0=69 1=42 2=127"],
+      "stdout": ["local 0=42 1=69 2=127\n", "global 0=69 1=42 2=127\n"],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 52,
+    "name": "Struct & array initializers",
+    "file": "52.xc",
+    "expect": {
+      "stdout": ["t=\\{42, 155\\}\n", "a=\\{1, 2, 3, 4\\}\n"],
       "retcode": 0
     }
   }

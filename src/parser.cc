@@ -135,10 +135,10 @@ std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string
   return id;
 }
 
-std::shared_ptr<ast::Node> Parser::parseType() {
+std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> name) {
   auto span = current().span;
 
-  if (checkAdvance(TOKEN_FN)) {
+  if (!name && checkAdvance(TOKEN_FN)) {
     if (!checkAdvance(TOKEN_LEFT_PAREN)) {
       Error(ERROR_FN_TYPE_MISSING_OPENING_PAREN, current().span).raise();
     }
@@ -168,7 +168,7 @@ std::shared_ptr<ast::Node> Parser::parseType() {
     return ast::Type::createFunction(span + previous().span, returnType, args, isVariadic);
   }
 
-  auto id = parseScopedIdentifier("for type name");
+  auto id = name ? name : parseScopedIdentifier("for type name");
 
   if (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN)) {
     return parseCall(id);
@@ -322,15 +322,20 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
 
   std::vector<std::shared_ptr<ast::Node>> nodes;
 
-  bool shouldContinue = true;
-
-  do {
+  while (true) {
     if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
       break;
     }
     nodes.push_back(parseStmt(parseTopLevel));
-    shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_SEMICOLON);
-  } while (shouldContinue);
+    if (!checkAdvance(TOKEN_SEMICOLON)) {
+      // Allows for '{ if (1) {} x }'
+      //                         ^
+      // But (should) disallow any other missing semicolons
+      if (!previous().is(TOKEN_RIGHT_BRACE) && !current().is(TOKEN_RIGHT_BRACE)) {
+        Error(ERROR_BLOCK_MISSING_SEMICOLON, current().span, "").raise();
+      }
+    }
+  }
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
     Error(ERROR_BLOCK_MISSING_CLOSING_BRACE, current().span).raise();
@@ -697,7 +702,8 @@ std::shared_ptr<ast::Node> Parser::parseStmt(bool parseTopLevel) {
       assertRaise(parseTopLevel, Error(ERROR_INVALID_TOKEN_FOR_CONTEXT, current().span, "Unexpected 'struct' in current context"));
       return parseStruct({});
     }
-    default:                return parseExpr();
+    default:
+      return parseExpr();
   }
 }
 
@@ -936,6 +942,10 @@ std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
     return parseCall(id);
   }
 
+  if (check(TOKEN_LEFT_BRACE)) {
+    return parseInitializer(id);
+  }
+
   return ast::Node::cast<ast::Node>(id);
 }
 
@@ -975,6 +985,45 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   }
 
   return ast::Call::create(callee->span + previous().span, callee, args);
+}
+
+std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identifier> typeName) {
+  std::vector<ast::Initializer::Value> values;
+
+  auto span = previous().span;
+
+  if (!checkAdvance(TOKEN_LEFT_BRACE)) {
+    Error(ERROR_INIT_MISSING_OPENING_BRACE, current().span).raise();
+  }
+
+  if (!check(TOKEN_RIGHT_BRACE)) {
+    do {
+      if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
+        break;
+      }
+
+      ast::Initializer::Value value;
+
+      if (checkNext(TOKEN_COLON)) {
+        value.name = parseIdentifier("for field name");
+        advance();
+      }
+
+      value.value = parseExpr();
+
+      values.push_back(value);
+    } while (checkAdvance(TOKEN_COMMA));
+  }
+
+  if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
+    Error(ERROR_INIT_MISSING_CLOSING_BRACE, current().span).raise();
+  }
+
+  return ast::Initializer::create(
+    span + previous().span,
+    ast::Type::create(typeName->span, typeName),
+    values
+  );
 }
 
 ast::Node::AttributeList Parser::parseAttributeList() {
@@ -1053,7 +1102,7 @@ IncludedModule Parser::includeModuleFromPath(
 
   logger.info("Found module '{}' at {}", name, result.path);
 
-  try {
+  // try {
     auto lexer  = Lexer(file);
     auto tokens = lexer.tokenize();
     auto parser = Parser(file, tokens, true);
@@ -1076,9 +1125,9 @@ IncludedModule Parser::includeModuleFromPath(
 
     // Copy list of already included modules over to current parser
     module.included.merge(parser.module.included);
-  } catch (CompilationException& ex) {
-    ex.error.note(span, "During inclusion of module '{}' ({})", name, path).raise();
-  }
+  // } catch (CompilationException& ex) {
+  //   ex.error.note(span, "During inclusion of module '{}' ({})", name, path).raise();
+  // }
 
   return result;
 }

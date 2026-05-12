@@ -123,6 +123,9 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_INLINE_ATTR_INVALID_VALUE,        "Invalid value for [inline] attribute (possible values: none, 'allways', 'never')"),
   DESC(ERROR_NO_SUCH_LOCAL_VARIABLE,           "No such local variable"),
   DESC(ERROR_ENV_VAR_MISSING_DEFAULT,          "Expected a string after '||' for default environment variable value"),
+  DESC(ERROR_INIT_EXPECTED_NAMED_VALUE,        "Expected a 'field: name' pair for struct initializer"),
+  DESC(ERROR_BLOCK_MISSING_SEMICOLON,          "Expected a ';' after a statement in block"),
+  DESC(ERROR_INIT_MISSING_OPENING_BRACE,       "Expected a '{' at the beginning of initializer expression"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {

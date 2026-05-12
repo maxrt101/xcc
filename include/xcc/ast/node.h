@@ -53,6 +53,8 @@ enum NodeType {
   AST_WHILE,                  // while (cond) body
   AST_RETURN,                 // return expr
 
+  AST_INIT,                   // type { id: expr, ... } OR type { expr, ... }
+
   AST_MOD,                    // module
   AST_MACRO,                  // macro id (id, ...) block
 

@@ -489,6 +489,18 @@ void ModuleContext::setDebugLocation(SourceSpan span, llvm::DIScope * scope) {
   ir_builder->SetCurrentDebugLocation(llvm::DILocation::get(scope->getContext(), start.line, start.column, scope));
 }
 
+llvm::AllocaInst * ModuleContext::createEntryBlockAlloca(llvm::Type * type, const std::string& name) const {
+  // Find the entry block of the current function
+  llvm::Function *  fn         = ir_builder->GetInsertBlock()->getParent();
+  llvm::BasicBlock& entryBlock = fn->getEntryBlock();
+
+  // Create a temporary builder that points to the beginning of the entry block
+  // If there are already allocas there, it's best to put it at the start
+  llvm::IRBuilder<> tmpBuilder(&entryBlock, entryBlock.begin());
+
+  return tmpBuilder.CreateAlloca(type, nullptr, name);
+}
+
 llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type, SourceSpan span) {
   if (!val || !target_type) {
     throw std::runtime_error("codegen::cast received nullptr");

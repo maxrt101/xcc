@@ -32,6 +32,7 @@ static const std::unordered_map<NodeType, NodeString> s_type_map {
     DESC(AST_EXPR_MEMBER_ACCESS,    "member access"),
     DESC(AST_EXPR_NUMBER,           "number literal"),
     DESC(AST_RETURN,                "return statement"),
+    DESC(AST_INIT,                  "initializer expression"),
     DESC(AST_EXPR_STRING,           "string literal"),
     DESC(AST_STRUCT,                "struct declaration"),
     DESC(AST_EXPR_SUBSCRIPT,        "subscript"),

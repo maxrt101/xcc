@@ -349,6 +349,8 @@ public:
 
   /** Set current IR debug location from SourceSpan */
   void setDebugLocation(SourceSpan span, llvm::DIScope * scope = nullptr);
+
+  llvm::AllocaInst * createEntryBlockAlloca(llvm::Type * type, const std::string& name) const;
 };
 
 /**

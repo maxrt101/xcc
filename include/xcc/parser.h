@@ -168,7 +168,7 @@ private:
   /**
    * Parses type
    */
-  std::shared_ptr<ast::Node> parseType();
+  std::shared_ptr<ast::Node> parseType(std::shared_ptr<ast::Identifier> name = nullptr);
 
   /**
    * Parses a value declaration, e.g. `a: b = c`
@@ -207,6 +207,7 @@ private:
   std::shared_ptr<ast::Node> parseRvalue();
   std::shared_ptr<ast::Node> parseLvalueAndCall();
   std::shared_ptr<ast::Node> parseCall(std::shared_ptr<ast::Node> callee);
+  std::shared_ptr<ast::Node> parseInitializer(std::shared_ptr<ast::Identifier> typeName);
 
   /**
    * Parse an attribute list, that can precede any top-level declaration, e.g. `[a, b(c)]`
@@ -260,7 +261,7 @@ private:
    * }
    * @endcode
    *
-   * AST for file that includes the module `test`, will look like this:
+   * AST for file that includes the module `test`, will look roughly like this:
    * @code
    * [__xcc_tag_used_from("/resolved/path/to/test.xc")]
    * mod test {
