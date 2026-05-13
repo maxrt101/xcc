@@ -41,11 +41,7 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
 
   switch (operation.type) {
     case TOKEN_AMP: {
-      assertRaiseFromNode(rhs->is(ast::AST_EXPR_IDENTIFIER), Error(ERROR_INVALID_UNARY_AMP_RHS, rhs->span), this);
-
-      auto identifier = rhs->as<ast::Identifier>();
-
-      return identifier->generateValueWithoutLoad(ctx, payload);
+      return rhs->generateValueWithoutLoad(ctx, payload);
     }
 
     case TOKEN_STAR: {
