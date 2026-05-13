@@ -133,6 +133,11 @@ public:
   [[nodiscard]] std::shared_ptr<Type> getMemberType(const std::string& name) const;
 
   /**
+   * Add member to a struct
+   */
+  void addMember(const std::string& name, const std::shared_ptr<Type>& type);
+
+  /**
    * If type in a function - get return type
    */
   [[nodiscard]] std::shared_ptr<Type> getReturnType() const;

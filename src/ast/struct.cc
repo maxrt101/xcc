@@ -73,20 +73,20 @@ std::shared_ptr<meta::Type> Struct::generateType(codegen::ModuleContext &ctx, Pa
 }
 
 std::shared_ptr<meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  meta::StructMembers members;
   bool packed = false;
 
   if (hasAttribute("packed")) {
     packed = true;
   }
 
-  for (auto & field : fields) {
-    members.emplace_back(field->name->name(), field->generateType(ctx, {}));
-  }
+  auto type = meta::Type::createStruct(name->name(), {}, packed);
 
-  auto type = meta::Type::createStruct(name->name(), members, packed);
-
+  // Create an empty struct type, to allow self-referential types
   meta::Type::registerCustomType(name->name(), type);
+
+  for (auto & field : fields) {
+    type->addMember(field->name->name(), field->generateType(ctx, {}));
+  }
 
   return type;
 }

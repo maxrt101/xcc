@@ -443,6 +443,12 @@ std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
   Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").raise();
 }
 
+void Type::addMember(const std::string& name, const std::shared_ptr<Type>& type) {
+  assertThrow(isStruct(), std::runtime_error("Type is not a struct"));
+
+  _struct.members.emplace_back(name, type);
+}
+
 std::shared_ptr<Type> Type::getReturnType() const {
   assertThrow(isFunction(), std::runtime_error("Type is not a function"));
 
