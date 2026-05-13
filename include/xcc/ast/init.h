@@ -12,6 +12,16 @@ public:
     std::shared_ptr<Node> name, value;
   };
 
+  struct Payload : Node::Payload {
+    std::shared_ptr<meta::Type> type;
+
+    explicit Payload(std::shared_ptr<meta::Type> type);
+    ~Payload() override = default;
+
+    static std::shared_ptr<Node::Payload> create(std::shared_ptr<meta::Type> type);
+  };
+
+public:
   std::shared_ptr<Node> value_type;
   std::vector<Value>    values;
   bool                  has_square_braces;

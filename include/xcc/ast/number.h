@@ -6,10 +6,10 @@ namespace xcc::ast {
 
 class Number : public Node {
 public:
-  struct Payload : public Node::Payload {
+  struct Payload : Node::Payload {
     int bits;
 
-    Payload(int bits);
+    explicit Payload(int bits);
     ~Payload() override = default;
 
     static std::shared_ptr<Node::Payload> create(int bits);
@@ -40,8 +40,8 @@ public:
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Constant * generateConstant(codegen::ModuleContext& ctx, PayloadList payload) override;
-  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
-  std::shared_ptr<xcc::meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
+  std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
+  std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
 };
 
 } /* namespace xcc::ast */

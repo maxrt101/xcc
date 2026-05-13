@@ -1010,9 +1010,13 @@ std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identif
 
   if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
     has_square_braces = true;
-    type = parseType();
+
+    // Allow empty type '[] {...}' for inferance
     if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
-      Error(ERROR_INIT_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
+      type = parseType();
+      if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
+        Error(ERROR_INIT_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
+      }
     }
   } else {
     type = ast::Type::create(typeName->span, typeName);

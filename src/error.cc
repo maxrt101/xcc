@@ -129,6 +129,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_INIT_MISSING_CLOSING_BRACE,        "Expected a '}' at the end of initializer expression"),
   DESC(ERROR_INIT_MISSING_CLOSING_SQUARE_BRACE, "Expected a ']' after type in initializer expression"),
   DESC(ERROR_NOT_CONSTANT,                      "Provided value is not a constant expression"),
+  DESC(ERROR_CANT_INFER_TYPE,                   "Can't infer type for expression"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {

@@ -139,6 +139,7 @@ enum ErrorId {
   ERROR_INIT_MISSING_CLOSING_BRACE        = 113,
   ERROR_INIT_MISSING_CLOSING_SQUARE_BRACE = 114,
   ERROR_NOT_CONSTANT                      = 115,
+  ERROR_CANT_INFER_TYPE                   = 116,
 
   ERROR_MAX,
 };

@@ -3,6 +3,15 @@
 
 using namespace xcc::ast;
 
+Initializer::Payload::Payload(std::shared_ptr<meta::Type> type)
+  : Node::Payload(AST_INIT), type(std::move(type)) {}
+
+std::shared_ptr<Node::Payload> Initializer::Payload::create(std::shared_ptr<meta::Type> type) {
+  return std::dynamic_pointer_cast<Node::Payload>(
+      std::make_shared<Initializer::Payload>(std::move(type))
+  );
+}
+
 Initializer::Initializer(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces)
   : Node(AST_INIT, span), value_type(std::move(value_type)), values(std::move(values)), has_square_braces(has_square_braces) {}
 
@@ -32,11 +41,13 @@ void Initializer::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 std::string Initializer::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   std::string res = attributesToString(indent, newline);
 
-  bool not_normal = value_type->as<Type>()->kind != Type::NORMAL;
+  bool not_normal = value_type ? value_type->as<Type>()->kind != Type::NORMAL : true;
 
   if (not_normal) res += "[";
 
-  res += value_type->toString(parent, this, indent, false);
+  if (value_type) {
+    res += value_type->toString(parent, this, indent, false);
+  }
 
   if (not_normal) res += "]";
 
@@ -107,6 +118,14 @@ llvm::Constant * Initializer::generateConstant(codegen::ModuleContext& ctx, Payl
 }
 
 std::shared_ptr<xcc::meta::Type> Initializer::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+  if (!value_type) {
+    if (auto p = selectPayloadFirst(payload)) {
+      return p->as<Initializer::Payload>()->type;
+    }
+
+    Error(ERROR_CANT_INFER_TYPE, span, "").raiseFromNode(this);
+  }
+
   auto t = value_type->generateType(ctx, payload);
 
   // If initializer is not for a struct, it must be for an array

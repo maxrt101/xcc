@@ -1,4 +1,4 @@
-use stdc::{printf, jmp_buf, setjmp, longjmp};
+use stdc::printf;
 
 struct Test {
   x: i32;

@@ -42,8 +42,8 @@ public:
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
 
-  llvm::Value * generateLocal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type);
-  llvm::Value * generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type);
+  llvm::Value * generateLocal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload);
+  llvm::Value * generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload);
 };
 
 } /* namespace xcc::ast */

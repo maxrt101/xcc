@@ -126,6 +126,11 @@ std::shared_ptr<Node::Payload> Node::selectPayloadFirst(const PayloadList& paylo
   return {};
 }
 
+Node::PayloadList Node::extendPayload(PayloadList list, std::shared_ptr<Payload> payload) {
+  list.push_back(std::move(payload));
+  return list;
+}
+
 void Node::addAttribute(const Attribute& attr) {
   attributes.push_back(attr);
 }

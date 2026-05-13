@@ -28,10 +28,16 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   llvm::Value * val = nullptr;
 
   if (value) {
-    val = value->generateValue(ctx, {});
+    std::shared_ptr<meta::Type> type;
 
     if (auto fn = ctx.globalContext.getCurrentFunction()) {
-      val = codegen::castIfNotSame(ctx, val, fn->getLLVMReturnType(ctx), value->span);
+      type = fn->returnType;
+    }
+
+    val = value->generateValue(ctx, extendPayload(payload, Initializer::Payload::create(type)));
+
+    if (type) {
+      val = castIfNotSame(ctx, val, type->getLLVMType(ctx), value->span);
     }
 
     ctx.clearScopes();
@@ -49,5 +55,5 @@ std::shared_ptr<xcc::meta::Type> Return::generateType(codegen::ModuleContext& ct
     return value->generateType(ctx, {});
   }
 
-  return xcc::meta::Type::createVoid();
+  return meta::Type::createVoid();
 }

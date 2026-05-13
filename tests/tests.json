@@ -509,5 +509,17 @@
       ],
       "retcode": 0
     }
+  },
+  {
+    "id": 53,
+    "name": "Inferred initializers",
+    "file": "53.xc",
+    "expect": {
+      "stdout": [
+        "var=69 420\n",
+        "ret=32 2\n"
+      ],
+      "retcode": 0
+    }
   }
 ]

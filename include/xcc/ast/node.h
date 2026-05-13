@@ -257,6 +257,8 @@ public:
    */
   std::shared_ptr<Node::Payload> selectPayloadFirst(const PayloadList& payload);
 
+  static PayloadList extendPayload(PayloadList list, std::shared_ptr<Payload> payload);
+
   /**
    * Add attribute to the attribute list
    *

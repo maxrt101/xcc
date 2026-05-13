@@ -63,23 +63,26 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
   assertRaiseFromNode(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span), this);
 
   if (type) {
-    assertRaiseFromNode(isOrIsLastInBlock(type, AST_EXPR_TYPE), Error(ERROR_NOT_A_TYPE, type->span, "got a {}", typeToHumanReadableString(getOrGetLastInBlock(type)->type)), this);
+    assertRaiseFromNode(isOrIsLastInBlock(type, AST_EXPR_TYPE),
+      Error(ERROR_NOT_A_TYPE, type->span, "got a {}", typeToHumanReadableString(getOrGetLastInBlock(type)->type)), this);
   }
 
-  auto meta_type = type ? type->generateType(ctx, {}) : meta::Type::inferFromNode(ctx, value);
+  auto meta_type = type ? type->generateType(ctx, payload) : meta::Type::inferFromNode(ctx, value);
 
-  return global ? generateGlobal(ctx, meta_type) : generateLocal(ctx, meta_type);
+  payload = extendPayload(payload, Initializer::Payload::create(meta_type));
+
+  return global ? generateGlobal(ctx, meta_type, payload) : generateLocal(ctx, meta_type, payload);
 }
 
 std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   return type->generateType(ctx, {});
 }
 
-llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type) {
+llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
   llvm::Value * init = value
-      ? value->generateValue(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
+      ? value->generateValue(ctx, extendPayload(payload, Number::Payload::create(meta_type->getNumberBitWidth())))
       : meta_type->getDefault(ctx);
 
   init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx), value ? value->span : span);
@@ -110,10 +113,10 @@ llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_pt
   return init;
 }
 
-llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type) {
+llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload) {
   auto llvm_type = meta_type->getLLVMType(ctx);
   auto constant  = (llvm::Constant *)(value
-      ? value->generateConstant(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
+      ? value->generateConstant(ctx, extendPayload(payload, Number::Payload::create(meta_type->getNumberBitWidth())))
       : meta_type->getDefault(ctx));
 
   ctx.globalContext.globals[name->name()] = meta_type;
