@@ -136,6 +136,8 @@ std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string
 }
 
 std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> name) {
+  std::shared_ptr<ast::Type> type;
+
   auto span = current().span;
 
   if (!name && checkAdvance(TOKEN_FN)) {
@@ -174,15 +176,26 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
     return parseCall(id);
   }
 
-  std::shared_ptr<ast::Node> size;
+  // Parse nested pointer types
+  // Needs to be before array bounds, because array can have a pointer base type
+  while (checkAdvance(TOKEN_STAR)) {
+    type = type
+      ? ast::Type::createPointer(span + previous().span, type)
+      : ast::Type::createPointer(span + previous().span, ast::Node::cast(id));
+  }
 
-  if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+  // Parse nested array bounds
+  while (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
     // Allow 0-sized arrays
-    size = check(TOKEN_RIGHT_SQUARE_BRACE) ? ast::Number::createInteger(previous().span, 0) : parseExpr();
+    auto size = check(TOKEN_RIGHT_SQUARE_BRACE) ? ast::Number::createInteger(previous().span, 0) : parseExpr();
 
     if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
       Error(ERROR_TYPE_ARRAY_NO_CLOSING_BRACE, previous().span.pointPastLast()).raise();
     }
+
+    type = type
+      ? ast::Type::createArray(span + previous().span, type, ast::Node::cast(size))
+      : ast::Type::createArray(span + previous().span, ast::Node::cast(id), ast::Node::cast(size));
   }
 
   // Check if referenced type was declared inside of this module
@@ -194,12 +207,7 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
     id->scope = module.stack;
   }
 
-  std::shared_ptr<ast::Type> type;
-
-  if (size) {
-    type = ast::Type::createArray(span + previous().span, ast::Node::cast(id), ast::Node::cast(size));
-  }
-
+  // If base type is an array, it also can be a pointer to an array
   while (checkAdvance(TOKEN_STAR)) {
     type = type
       ? ast::Type::createPointer(span + previous().span, type)
