@@ -61,7 +61,7 @@ llvm::Value * Asm::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
   std::vector<llvm::Type *>  arg_types;
 
   for (auto& arg : args) {
-    auto val = arg->generateValue(ctx, {});
+    auto val = arg->generateValue(ctx, payload);
     arg_values.push_back(val);
     arg_types.push_back(val->getType());
   }

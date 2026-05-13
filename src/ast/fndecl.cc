@@ -100,17 +100,17 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
     logger.debug("Aliasing '{}' as '{}'", fn_name, alias_to);
   }
 
-  OrderedMap<std::string, std::shared_ptr<xcc::meta::Type>> arg_meta_types;
+  OrderedMap<std::string, std::shared_ptr<meta::Type>> arg_meta_types;
 
   for (auto& arg : args) {
     if (arg->is(AST_EXPR_TYPED_IDENTIFIER)) {
-      arg_meta_types[arg->name->name()] = arg->generateType(ctx, {});
+      arg_meta_types[arg->name->name()] = arg->generateType(ctx, payload);
     } else {
       Error(ERROR_INTERNAL_UNEXPECTED_NODE, arg->span, "Unexpected {} in function '{}' argument declaration", typeToHumanReadableString(arg->type), fn_name).raiseFromNode(this);
     }
   }
 
-  auto return_meta_type = return_type->generateType(ctx, {});
+  auto return_meta_type = return_type->generateType(ctx, payload);
 
   auto llvm_fn_type = llvm::FunctionType::get(return_meta_type->getLLVMType(ctx), meta::Function::typesFromMetaArgs(ctx, arg_meta_types), isVariadic);
   // auto llvm_fn = llvm::Function::Create(llvm_fn_type, isExtern ? llvm::Function::ExternalLinkage : llvm::Function::CommonLinkage, fn_name, ctx.llvm.module.get());

@@ -45,5 +45,5 @@ std::shared_ptr<xcc::meta::Type> TypedIdentifier::generateType(codegen::ModuleCo
     Error(ERROR_MISSING_TYPE, span, "Can't infer value's type, because no type or default value is present").raiseFromNode(this);
   }
 
-  return t->generateType(ctx, {});
+  return t->generateType(ctx, payload);
 }

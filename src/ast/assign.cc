@@ -47,7 +47,7 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   llvm::Value * value = nullptr;
 
   if (kind.type == TOKEN_EQUALS) {
-    value = rhs->generateValue(ctx, {});
+    value = rhs->generateValue(ctx, payload);
   } else if (s_equal_to_op.find(kind.type) != s_equal_to_op.end()) {
     value = Binary::create(span, kind.clone(s_equal_to_op[kind.type]), lhs, rhs)->generateValue(ctx, payload);
   } else {
@@ -57,7 +57,7 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   value = codegen::castIfNotSame(
     ctx,
     throwIfNull(value, std::runtime_error("assignment value generated NULL")),
-    lhs->generateTypeForValueWithoutLoad(ctx, {})->getLLVMType(ctx),
+    lhs->generateTypeForValueWithoutLoad(ctx, payload)->getLLVMType(ctx),
     span
   );
 
@@ -80,5 +80,5 @@ std::shared_ptr<xcc::meta::Type> Assign::generateType(codegen::ModuleContext& ct
     Error(ERROR_UNKNOWN_VARIABLE, name->span, "'{}'", name->name()).raiseFromNode(this);
   }
 
-  return lhs->generateTypeForValueWithoutLoad(ctx, {});
+  return lhs->generateTypeForValueWithoutLoad(ctx, payload);
 }

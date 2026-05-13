@@ -52,7 +52,7 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
   llvm::Value * value_to_load;
 
   if (kind == MEMBER_ACCESS_VALUE) {
-    value_to_load = lhs->generateValueWithoutLoad(ctx, {});
+    value_to_load = lhs->generateValueWithoutLoad(ctx, payload);
   } else {
     value_to_load = ctx.ir_builder->CreateLoad(meta::Type::createPointer(type)->getLLVMType(ctx), lhs->generateValueWithoutLoad(ctx, payload));
   }

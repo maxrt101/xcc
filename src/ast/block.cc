@@ -58,7 +58,7 @@ llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payl
   llvm::Value * val = nullptr;
 
   for (auto& node : body) {
-    val = node->generateValue(ctx, {});
+    val = node->generateValue(ctx, payload);
   }
 
   ctx.popScope();
@@ -80,5 +80,5 @@ std::shared_ptr<xcc::meta::Type> Block::generateType(codegen::ModuleContext& ctx
 
   auto phantoms = ctx.phantomScope(variables);
 
-  return body.back()->generateType(ctx, {});;
+  return body.back()->generateType(ctx, payload);
 }

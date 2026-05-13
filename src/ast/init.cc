@@ -76,13 +76,13 @@ llvm::Value * Initializer::generateValue(codegen::ModuleContext& ctx, PayloadLis
 llvm::Value * Initializer::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
-  auto t = generateType(ctx, payload);
+  auto t      = generateType(ctx, payload);
   auto alloca = ctx.createEntryBlockAlloca(t->getLLVMType(ctx), "init");
 
   if (t->isStruct()) {
-    fillStruct(ctx, t, alloca);
+    fillStruct(ctx, t, alloca, payload);
   } else if (t->isArray()) {
-    fillArray(ctx, t, alloca);
+    fillArray(ctx, t, alloca, payload);
   } else {
     // TODO: Raise error
   }
@@ -148,7 +148,7 @@ std::shared_ptr<xcc::meta::Type> Initializer::generateTypeForValueWithoutLoad(co
   return meta::Type::createPointer(generateType(ctx, payload));
 }
 
-void Initializer::fillStruct(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca) {
+void Initializer::fillStruct(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca, PayloadList payload) {
   auto * structTy = llvm::cast<llvm::StructType>(t->getLLVMType(ctx));;
 
   // Zero-initialize the whole thing to have a determined state for uninitialized fields
@@ -187,14 +187,17 @@ void Initializer::fillStruct(codegen::ModuleContext& ctx, std::shared_ptr<meta::
 
     auto * fieldPtr = ctx.ir_builder->CreateStructGEP(structTy, alloca, fieldIdx);
 
-    auto * val = value.value->generateValue(ctx, {});
+    auto * val = value.value->generateValue(ctx, payload);
 
     ctx.ir_builder->CreateStore(val, fieldPtr);
   }
 }
 
-void Initializer::fillArray(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca) {
+void Initializer::fillArray(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca, PayloadList payload) {
   auto * arrayTy = t->getLLVMArrayType(ctx);
+
+  // Hint for nested initializers
+  payload = extendPayload(excludePayload(payload, AST_INIT), Initializer::Payload::create(t->getElementType()));
 
   for (size_t i = 0; i < values.size(); ++i) {
     std::vector<llvm::Value *> indices = {
@@ -202,7 +205,7 @@ void Initializer::fillArray(codegen::ModuleContext& ctx, std::shared_ptr<meta::T
       ctx.ir_builder->getInt32(i)  // Index of the child element
     };
     auto * elementPtr = ctx.ir_builder->CreateInBoundsGEP(arrayTy, alloca, indices);
-    auto * val = castIfNotSame(ctx, values[i].value->generateValue(ctx, {}), arrayTy->getElementType(), values[i].value->span);
+    auto * val = castIfNotSame(ctx, values[i].value->generateValue(ctx, payload), arrayTy->getElementType(), values[i].value->span);
     ctx.ir_builder->CreateStore(val, elementPtr);
   }
 }

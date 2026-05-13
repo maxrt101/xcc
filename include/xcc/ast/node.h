@@ -255,9 +255,25 @@ public:
    * @param payload Payload list
    * @return first of filtered payload in regard to this->type
    */
-  std::shared_ptr<Node::Payload> selectPayloadFirst(const PayloadList& payload);
+  std::shared_ptr<Payload> selectPayloadFirst(const PayloadList& payload);
 
+  /**
+   * Extends provided payload list with new value
+   *
+   * @param list    Payload list to extend
+   * @param payload New payload
+   * @return `list` with appended `payload`
+   */
   static PayloadList extendPayload(PayloadList list, std::shared_ptr<Payload> payload);
+
+  /**
+   * Excludes payload for provided node from list
+   *
+   * @param list List of payload to filter
+   * @param type Node type, payload for which must be excluded
+   * @return Filtered `list`
+   */
+  static PayloadList excludePayload(PayloadList list, NodeType type);
 
   /**
    * Add attribute to the attribute list

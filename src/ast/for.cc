@@ -42,9 +42,9 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
 
   ctx.pushScope(span);
 
-  auto var = meta::TypedValue::create(ctx, fn, init->span, init->generateType(ctx, {}), init->name->name());
+  auto var = meta::TypedValue::create(ctx, fn, init->span, init->generateType(ctx, payload), init->name->name());
 
-  auto init_val = init->generateValue(ctx, {});
+  auto init_val = init->generateValue(ctx, payload);
 
   ctx.ir_builder->CreateStore(init_val, var->value);
 
@@ -55,13 +55,13 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
   ctx.ir_builder->SetInsertPoint(loop_block);
 
   //
-  auto body_val = body->generateValue(ctx, {});
+  auto body_val = body->generateValue(ctx, payload);
 
   //
-  auto step_val = step->generateValue(ctx, {});
+  auto step_val = step->generateValue(ctx, payload);
 
   //
-  auto cond_val = cond->generateValue(ctx, {});
+  auto cond_val = cond->generateValue(ctx, payload);
 
   auto i1_type = meta::Type::createBool()->getLLVMType(ctx);
 

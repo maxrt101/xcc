@@ -37,16 +37,16 @@ std::string If::toString(Node * grandparent, Node * parent, int indent, bool new
 }
 
 llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto cond_val = raiseIfNull(condition->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, condition->span, "Error generating condition of 'if' statement (condition generated NULL)"));
+  auto cond_val = raiseIfNull(condition->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, condition->span, "Error generating condition of 'if' statement (condition generated NULL)"));
 
-  auto then_type = raiseIfNull(then_branch->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "if then branch generated NULL type"));
+  auto then_type = raiseIfNull(then_branch->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "if then branch generated NULL type"));
   auto else_type = meta::Type::createVoid();
 
   auto common_type = then_type;
 
   // If else_branch exists, use its type - otherwise use then_branch type
   if (else_branch) {
-    else_type = raiseIfNull(else_branch->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span,"if else branch generated NULL type"));
+    else_type = raiseIfNull(else_branch->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span,"if else branch generated NULL type"));
     common_type = meta::Type::alignTypes(then_type, else_type);
   }
 
@@ -71,7 +71,7 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
   ctx.ir_builder->SetInsertPoint(then_block);
 
   ctx.pushScope(then_branch->span);
-  auto then_val = raiseIfNull(then_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "Error generating 'then' block of 'if' statement (then branch generated NULL)"));
+  auto then_val = raiseIfNull(then_branch->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "Error generating 'then' block of 'if' statement (then branch generated NULL)"));
   ctx.popScope();
 
   if (!common_type->isVoid() && then_val) {
@@ -92,7 +92,7 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
 
   if (else_branch) {
     ctx.pushScope(else_branch->span);
-    else_val = raiseIfNull(else_branch->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "Error generating 'then' block of 'if' statement (else branch generated NULL)"));
+    else_val = raiseIfNull(else_branch->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "Error generating 'then' block of 'if' statement (else branch generated NULL)"));
     ctx.popScope();
   }
 
@@ -142,11 +142,11 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
 }
 
 std::shared_ptr<xcc::meta::Type> If::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto then_type = raiseIfNull(then_branch->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span,  "if then branch generated NULL type"));
+  auto then_type = raiseIfNull(then_branch->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span,  "if then branch generated NULL type"));
   auto else_type = meta::Type::createVoid();
 
   if (else_branch) {
-    else_type = raiseIfNull(else_branch->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "if else branch generated NULL type"));
+    else_type = raiseIfNull(else_branch->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "if else branch generated NULL type"));
   }
 
   return meta::Type::alignTypes(then_type, else_type);

@@ -63,8 +63,8 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   ctx.setDebugLocation(span);
 
   auto common_type = meta::Type::alignTypes(
-    raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL")),
-    raiseIfNull(rhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"))
+    raiseIfNull(lhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL")),
+    raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"))
   );
 
   // Pointer comparisons are actually converted to integer
@@ -75,7 +75,7 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   auto lhs_val = castIfNotSame(
     ctx,
     raiseIfNull(
-      lhs->generateValue(ctx, {}),
+      lhs->generateValue(ctx, payload),
       Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL")
     ),
     common_type->getLLVMType(ctx),
@@ -85,7 +85,7 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   auto rhs_val = castIfNotSame(
     ctx,
     raiseIfNull(
-      rhs->generateValue(ctx, {}),
+      rhs->generateValue(ctx, payload),
       Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Value is NULL")
     ),
     common_type->getLLVMType(ctx),
@@ -100,8 +100,8 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 }
 
 std::shared_ptr<meta::Type> Binary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto lhs_type = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS type is NULL"));
-  auto rhs_type = raiseIfNull(rhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS type is NULL"));
+  auto lhs_type = raiseIfNull(lhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS type is NULL"));
+  auto rhs_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS type is NULL"));
 
   return meta::Type::alignTypes(lhs_type, rhs_type);
 }

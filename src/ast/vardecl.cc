@@ -65,24 +65,28 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
   if (type) {
     assertRaiseFromNode(isOrIsLastInBlock(type, AST_EXPR_TYPE),
       Error(ERROR_NOT_A_TYPE, type->span, "got a {}", typeToHumanReadableString(getOrGetLastInBlock(type)->type)), this);
+
+    payload = extendPayload(payload, Initializer::Payload::create(type->generateType(ctx, payload)));
   }
 
   auto meta_type = type ? type->generateType(ctx, payload) : meta::Type::inferFromNode(ctx, value);
 
-  payload = extendPayload(payload, Initializer::Payload::create(meta_type));
+  if (meta_type->isInteger()) {
+    payload = extendPayload(payload, Number::Payload::create(meta_type->getNumberBitWidth()));
+  }
 
   return global ? generateGlobal(ctx, meta_type, payload) : generateLocal(ctx, meta_type, payload);
 }
 
 std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  return type->generateType(ctx, {});
+  return type->generateType(ctx, payload);
 }
 
 llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload) {
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
   llvm::Value * init = value
-      ? value->generateValue(ctx, extendPayload(payload, Number::Payload::create(meta_type->getNumberBitWidth())))
+      ? value->generateValue(ctx, payload)
       : meta_type->getDefault(ctx);
 
   init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx), value ? value->span : span);
@@ -116,7 +120,7 @@ llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_pt
 llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload) {
   auto llvm_type = meta_type->getLLVMType(ctx);
   auto constant  = (llvm::Constant *)(value
-      ? value->generateConstant(ctx, extendPayload(payload, Number::Payload::create(meta_type->getNumberBitWidth())))
+      ? value->generateConstant(ctx, payload)
       : meta_type->getDefault(ctx));
 
   ctx.globalContext.globals[name->name()] = meta_type;

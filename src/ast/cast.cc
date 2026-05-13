@@ -29,9 +29,9 @@ std::string Cast::toString(Node * grandparent, Node * parent, int indent, bool n
 llvm::Value * Cast::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
-  return castIfNotSame(ctx, expr->generateValue(ctx, {}), type->generateType(ctx, {})->getLLVMType(ctx), span);
+  return castIfNotSame(ctx, expr->generateValue(ctx, payload), type->generateType(ctx, payload)->getLLVMType(ctx), span);
 }
 
 std::shared_ptr<xcc::meta::Type> Cast::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  return type->generateType(ctx, {});
+  return type->generateType(ctx, payload);
 }

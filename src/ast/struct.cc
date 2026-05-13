@@ -85,7 +85,7 @@ std::shared_ptr<meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::Mod
   meta::Type::registerCustomType(name->name(), type);
 
   for (auto & field : fields) {
-    type->addMember(field->name->name(), field->generateType(ctx, {}));
+    type->addMember(field->name->name(), field->generateType(ctx, payload));
   }
 
   return type;

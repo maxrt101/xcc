@@ -28,7 +28,7 @@ std::string Subscript::toString(Node * grandparent, Node * parent, int indent, b
 }
 
 llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto base_type   = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
+  auto base_type   = raiseIfNull(lhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
   auto element_ptr = generateValueWithoutLoad(ctx, payload);
 
   return ctx.ir_builder->CreateLoad(base_type->getBaseType()->getLLVMType(ctx), element_ptr, "element");
@@ -37,14 +37,14 @@ llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList 
 llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
-  auto base_type  = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
-  auto index_type = raiseIfNull(rhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
+  auto base_type  = raiseIfNull(lhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
+  auto index_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
 
   assertRaiseFromNode(base_type->isPointer() || base_type->isArray(), Error(ERROR_TYPE_NOT_SUBSCRIPTABLE, lhs->span, "'{}'", base_type->toString()), this);
   assertRaiseFromNode(index_type->isInteger(), Error(ERROR_TYPE_NOT_VALID_SUBSCRIPT, rhs->span, "'{}'", index_type->toString()), this);
 
-  auto base_ptr_val = raiseIfNull(lhs->generateValueWithoutLoad(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL"));
-  auto index        = raiseIfNull(rhs->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span,"RHS Value is NULL"));
+  auto base_ptr_val = raiseIfNull(lhs->generateValueWithoutLoad(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL"));
+  auto index        = raiseIfNull(rhs->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span,"RHS Value is NULL"));
 
   auto element_type_llvm = base_type->getBaseType()->getLLVMType(ctx);
 
@@ -68,7 +68,7 @@ llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, P
 }
 
 std::shared_ptr<xcc::meta::Type> Subscript::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto base_type = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
+  auto base_type = raiseIfNull(lhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
   return base_type->getBaseType();
 }
 

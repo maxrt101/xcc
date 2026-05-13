@@ -98,7 +98,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 
   ctx.globalContext.setCurrentFunction(decl->name->name());
 
-  auto last_val = body->generateValue(ctx, {});
+  auto last_val = body->generateValue(ctx, payload);
 
   // Pop function scope
   ctx.popScope();

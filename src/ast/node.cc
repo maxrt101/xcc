@@ -131,6 +131,18 @@ Node::PayloadList Node::extendPayload(PayloadList list, std::shared_ptr<Payload>
   return list;
 }
 
+Node::PayloadList Node::excludePayload(PayloadList list, NodeType type) {
+  PayloadList result;
+
+  for (auto& payload : list) {
+    if (payload->type != type) {
+      result.push_back(payload);
+    }
+  }
+
+  return result;
+}
+
 void Node::addAttribute(const Attribute& attr) {
   attributes.push_back(attr);
 }

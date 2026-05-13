@@ -34,7 +34,7 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList pay
       type = fn->returnType;
     }
 
-    val = value->generateValue(ctx, extendPayload(payload, Initializer::Payload::create(type)));
+    val = value->generateValue(ctx, extendPayload(excludePayload(payload, AST_INIT), Initializer::Payload::create(type)));
 
     if (type) {
       val = castIfNotSame(ctx, val, type->getLLVMType(ctx), value->span);
@@ -52,7 +52,7 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
 std::shared_ptr<xcc::meta::Type> Return::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   if (value) {
-    return value->generateType(ctx, {});
+    return value->generateType(ctx, payload);
   }
 
   return meta::Type::createVoid();
