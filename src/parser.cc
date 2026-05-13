@@ -177,7 +177,8 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
   std::shared_ptr<ast::Node> size;
 
   if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
-    size = parseExpr();
+    // Allow 0-sized arrays
+    size = check(TOKEN_RIGHT_SQUARE_BRACE) ? ast::Number::createInteger(previous().span, 0) : parseExpr();
 
     if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
       Error(ERROR_TYPE_ARRAY_NO_CLOSING_BRACE, previous().span.pointPastLast()).raise();
@@ -599,6 +600,7 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
       return ast::Empty::create();
     }
 
+    // TODO: Check if needed
     // if (!module.stack.empty()) {
     //   throw ParserException(current().line, "There can be only one file-scoped module in the file");
     // }
@@ -819,10 +821,10 @@ std::shared_ptr<ast::Node> Parser::parseUnary() {
 std::shared_ptr<ast::Node> Parser::parseSubscript() {
   auto lhs = parseRvalue();
 
-  if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+  while (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
     auto rhs = parseExpr();
     assertRaise(checkAdvance(TOKEN_RIGHT_SQUARE_BRACE), Error(ERROR_SUBSCRIPT_MISSING_CLOSING_BRACE, rhs->span.pointPastLast()));
-    return ast::Subscript::create(lhs->span + rhs->span, lhs, rhs);
+    lhs = ast::Subscript::create(lhs->span + rhs->span, lhs, rhs);
   }
 
   return lhs;
@@ -892,10 +894,15 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
     return expr;
   }
 
-  return parseLvalueAndCall();
+  if (check(TOKEN_LEFT_SQUARE_BRACE)) {
+    // Array initializer
+    return parseInitializer();
+  }
+
+  return parseLvalueOrCallOrInitializer();
 }
 
-std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
+std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {
   auto span = current().span;
 
   if (!check(TOKEN_IDENTIFIER) && !check(TOKEN_SELF)) {
@@ -943,6 +950,7 @@ std::shared_ptr<ast::Node> Parser::parseLvalueAndCall() {
   }
 
   if (check(TOKEN_LEFT_BRACE)) {
+    // Struct initializer
     return parseInitializer(id);
   }
 
@@ -989,6 +997,16 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
 
 std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identifier> typeName) {
   std::vector<ast::Initializer::Value> values;
+  std::shared_ptr<ast::Node>           type;
+
+  if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+    type = parseType();
+    if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
+      Error(ERROR_INIT_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
+    }
+  } else {
+    type = ast::Type::create(typeName->span, typeName);
+  }
 
   auto span = previous().span;
 
@@ -1020,9 +1038,7 @@ std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identif
   }
 
   return ast::Initializer::create(
-    span + previous().span,
-    ast::Type::create(typeName->span, typeName),
-    values
+    span + previous().span, type, values
   );
 }
 
@@ -1102,7 +1118,7 @@ IncludedModule Parser::includeModuleFromPath(
 
   logger.info("Found module '{}' at {}", name, result.path);
 
-  // try {
+  try {
     auto lexer  = Lexer(file);
     auto tokens = lexer.tokenize();
     auto parser = Parser(file, tokens, true);
@@ -1125,9 +1141,9 @@ IncludedModule Parser::includeModuleFromPath(
 
     // Copy list of already included modules over to current parser
     module.included.merge(parser.module.included);
-  // } catch (CompilationException& ex) {
-  //   ex.error.note(span, "During inclusion of module '{}' ({})", name, path).raise();
-  // }
+  } catch (CompilationException& ex) {
+    ex.error.note(span, "During inclusion of module '{}' ({})", name, path).raise();
+  }
 
   return result;
 }

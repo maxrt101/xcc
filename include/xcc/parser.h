@@ -205,9 +205,9 @@ private:
   std::shared_ptr<ast::Node> parseSubscript();
   std::shared_ptr<ast::Node> parseNumber();
   std::shared_ptr<ast::Node> parseRvalue();
-  std::shared_ptr<ast::Node> parseLvalueAndCall();
+  std::shared_ptr<ast::Node> parseLvalueOrCallOrInitializer();
   std::shared_ptr<ast::Node> parseCall(std::shared_ptr<ast::Node> callee);
-  std::shared_ptr<ast::Node> parseInitializer(std::shared_ptr<ast::Identifier> typeName);
+  std::shared_ptr<ast::Node> parseInitializer(std::shared_ptr<ast::Identifier> typeName = nullptr);
 
   /**
    * Parse an attribute list, that can precede any top-level declaration, e.g. `[a, b(c)]`
