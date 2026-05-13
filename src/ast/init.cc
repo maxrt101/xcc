@@ -132,9 +132,35 @@ std::shared_ptr<xcc::meta::Type> Initializer::generateTypeForValueWithoutLoad(co
 void Initializer::fillStruct(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca) {
   auto * structTy = llvm::cast<llvm::StructType>(t->getLLVMType(ctx));;
 
+  // Zero-initialize the whole thing to have a determined state for uninitialized fields
   ctx.ir_builder->CreateStore(llvm::ConstantAggregateZero::get(structTy), alloca);
 
   for (auto& value : values) {
+    /* Allow for struct initializers to skip field name, if it is initialized with a variable of the same name. E.g:
+     * ```
+     * struct Test {
+     *   x: i32;
+     *   y: i32;
+     * }
+     *
+     * var x = 10;
+     * var y = 10;
+     *
+     * var test = Test { x, y };
+     * ```
+     *
+     * The last line will (thanks to the next 3 lines) be parsed as:
+     * ```
+     * var test = Test { x: x, y: y };
+     * ```
+     *
+     * This is just to remove boilerplate
+     */
+    if (!value.name && value.value->is(AST_EXPR_IDENTIFIER) && t->hasMember(value.value->as<Identifier>()->value)) {
+      value.name = value.value;
+    }
+
+    // Struct initializers must name every field
     assertRaise(value.name && value.name->is(AST_EXPR_IDENTIFIER),
       Error(ERROR_INIT_EXPECTED_NAMED_VALUE, value.name ? value.name->span : value.value->span, ""));
 
