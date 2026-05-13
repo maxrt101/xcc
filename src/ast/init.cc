@@ -3,11 +3,11 @@
 
 using namespace xcc::ast;
 
-Initializer::Initializer(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values)
-  : Node(AST_INIT, span), value_type(std::move(value_type)), values(std::move(values)) {}
+Initializer::Initializer(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces)
+  : Node(AST_INIT, span), value_type(std::move(value_type)), values(std::move(values)), has_square_braces(has_square_braces) {}
 
-std::shared_ptr<Initializer> Initializer::create(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values) {
-  return std::make_shared<Initializer>(span, std::move(value_type), std::move(values));
+std::shared_ptr<Initializer> Initializer::create(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces) {
+  return std::make_shared<Initializer>(span, std::move(value_type), std::move(values), has_square_braces);
 }
 
 std::shared_ptr<Node> Initializer::clone() {
@@ -17,7 +17,7 @@ std::shared_ptr<Node> Initializer::clone() {
     values.push_back({value.name->clone(), value.value->clone()});
   }
 
-  return withAttrs(create(span, value_type->clone(), values));
+  return withAttrs(create(span, value_type->clone(), values, has_square_braces));
 }
 
 void Initializer::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -115,7 +115,9 @@ std::shared_ptr<xcc::meta::Type> Initializer::generateType(codegen::ModuleContex
       // If type is an array, but has size=0, update it
       t = meta::Type::createArray(t->getElementType(), values.size());
     }
+  }
 
+  if (!t->isStruct() || has_square_braces) {
     // Implicitly wrap the type in an array, because '[i32] {}' -> type 'i32', should be 'i32[]'
     t = meta::Type::createArray(t, values.size());
   }

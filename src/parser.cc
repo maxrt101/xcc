@@ -1006,8 +1006,10 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
 std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identifier> typeName) {
   std::vector<ast::Initializer::Value> values;
   std::shared_ptr<ast::Node>           type;
+  bool                                 has_square_braces = false;
 
   if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+    has_square_braces = true;
     type = parseType();
     if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
       Error(ERROR_INIT_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
@@ -1046,7 +1048,7 @@ std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identif
   }
 
   return ast::Initializer::create(
-    span + previous().span, type, values
+    span + previous().span, type, values, has_square_braces
   );
 }
 
