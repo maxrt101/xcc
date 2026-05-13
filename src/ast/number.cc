@@ -51,6 +51,10 @@ llvm::Value * Number::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 }
 
 llvm::Value * Number::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
+  return generateConstant(ctx, payload);
+}
+
+llvm::Constant * Number::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
   int bits = 64;

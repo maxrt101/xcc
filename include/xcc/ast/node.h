@@ -340,8 +340,8 @@ public:
    * Part of codegen API. Implemented when node has a relation to variables/expressions that can
    * evaluate to a value
    *
-   * @param ctx Module Context, holds a lot of state, needed to work with llvm APIs
-   * @param payload custom payload
+   * @param ctx     Module Context, holds a lot of state, needed to work with llvm APIs
+   * @param payload Custom payload
    */
   virtual llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload);
 
@@ -356,9 +356,20 @@ public:
    * evaluate to a memory location
    *
    * @param ctx Module Context, holds a lot of state, needed to work with llvm APIs
-   * @param payload custom payload
+   * @param payload Custom payload
    */
   virtual llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload);
+
+  /**
+   * Generates llvm::Constant from node
+   *
+   * Part of codegen API. Implemented when node's value can be evaluated at compile time for
+   * global variable initialization
+   *
+   * @param ctx     Module Context, holds a lot of state, needed to work with llvm APIs
+   * @param payload Custom payload
+   */
+  virtual llvm::Constant * generateConstant(codegen::ModuleContext& ctx, PayloadList payload);
 
   /**
    * Generates (meta) type that llvm::Value return from generateValue will have
@@ -366,8 +377,8 @@ public:
    * Part of codegen API. Implemented when node has a relation to variables/expressions that can
    * evaluate to a value with a type
    *
-   * @param ctx Module Context, holds a lot of state, needed to work with llvm APIs
-   * @param payload custom payload
+   * @param ctx     Module Context, holds a lot of state, needed to work with llvm APIs
+   * @param payload Custom payload
    */
   virtual std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload);
 
@@ -377,8 +388,8 @@ public:
    * Part of codegen API. Implemented when node has a relation to variables/expressions that can
    * evaluate to a pointer to a value with a type
    *
-   * @param ctx Module Context, holds a lot of state, needed to work with llvm APIs
-   * @param payload custom payload
+   * @param ctx     Module Context, holds a lot of state, needed to work with llvm APIs
+   * @param payload Custom payload
    */
   virtual std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload);
 

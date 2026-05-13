@@ -53,19 +53,18 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
   }
 
   if (ctx.globalContext.hasGlobal(id)) {
-    auto global = ctx.globalContext.getGlobal(ctx, id);
+    auto global    = ctx.globalContext.getGlobal(ctx, id);
+    auto meta_type = ctx.globalContext.getGlobalType(id);
 
-    if (ctx.globalContext.getGlobalType(id)->isPointer()) {
-      auto alloca = ctx.ir_builder->CreateAlloca(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), nullptr);
-      ctx.ir_builder->CreateStore(global, alloca);
-      return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), alloca);
-    }
-
-    if (ctx.globalContext.getGlobalType(id)->isArray()) {
+    if (meta_type->isArray()) {
       return global;
     }
 
-    return ctx.ir_builder->CreateLoad(ctx.globalContext.getGlobalType(id)->getLLVMType(ctx), global);
+    return ctx.ir_builder->CreateLoad(
+      meta_type->getLLVMType(ctx),
+      global,
+      id.c_str()
+    );
   }
 
   if (auto * fn = ctx.getFunction(id)) {

@@ -111,17 +111,16 @@ llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_pt
 }
 
 llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type) {
-  // FIXME: Check if can convert to constant
-
-  auto constant = (llvm::Constant *)(value
-      ? value->generateValueWithoutLoad(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
+  auto llvm_type = meta_type->getLLVMType(ctx);
+  auto constant  = (llvm::Constant *)(value
+      ? value->generateConstant(ctx, {Number::Payload::create(meta_type->getNumberBitWidth())})
       : meta_type->getDefault(ctx));
 
   ctx.globalContext.globals[name->name()] = meta_type;
 
   [[maybe_unused]] auto global = new llvm::GlobalVariable(
       *ctx.globalContext.globalModule->llvm.module,
-      constant->getType(),
+      llvm_type,
       false,
       llvm::GlobalValue::ExternalLinkage,
       constant,
@@ -129,7 +128,9 @@ llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_p
   );
 
   auto extern_global = llvm::cast<llvm::GlobalVariable>(
-    ctx.llvm.module->getOrInsertGlobal(name->name(), meta_type->getLLVMType(ctx)));
+    ctx.llvm.module->getOrInsertGlobal(name->name(), llvm_type));
+
+  extern_global->print(llvm::outs());
 
   auto di_global = ctx.globalContext.di_builder->createTempGlobalVariableFwdDecl(
     ctx.currentDIScope(),

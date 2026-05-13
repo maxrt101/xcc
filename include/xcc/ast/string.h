@@ -7,6 +7,12 @@
 namespace xcc::ast {
 
 class String : public Node {
+private:
+  struct GlobalString {
+    std::string            name;
+    llvm::GlobalVariable * global;
+  };
+
 public:
   std::string value;
 
@@ -22,7 +28,11 @@ public:
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
-  std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
+  llvm::Constant * generateConstant(codegen::ModuleContext& ctx, PayloadList payload) override;
+  std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
+
+private:
+  GlobalString getOrCreateGlobalString(codegen::ModuleContext& ctx);
 };
 
 } /* namespace xcc::ast */

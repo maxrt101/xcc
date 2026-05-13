@@ -23,29 +23,14 @@ std::string String::toString(Node * grandparent, Node * parent, int indent, bool
 llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
-  auto hash = std::hash<std::string>{}(value);
-  auto name = ".str." + std::to_string(hash);
+  auto str = getOrCreateGlobalString(ctx);
 
-  llvm::Constant * constant = llvm::ConstantDataArray::getString(*ctx.globalContext.globalModule->llvm.ctx, value, true);
+  llvm::Constant * zero = ctx.ir_builder->getInt32(0);
 
-  if (!constant->isConstantUsed()) {
-    [[maybe_unused]] auto global = new llvm::GlobalVariable(
-        *ctx.globalContext.globalModule->llvm.module,
-        constant->getType(),
-        true,
-        llvm::GlobalValue::ExternalLinkage,
-        constant,
-        name
-    );
-  }
-
-  auto extern_global = llvm::cast<llvm::GlobalVariable>(
-      ctx.llvm.module->getOrInsertGlobal(name, llvm::Type::getInt32Ty(*ctx.llvm.ctx)));
-
-  auto zero = ctx.ir_builder->getInt32(0);
-
-  return ctx.ir_builder->CreateInBoundsGEP(
-      extern_global->getValueType(), extern_global, {zero, zero}, "str_ptr"
+  return llvm::ConstantExpr::getInBoundsGetElementPtr(
+      str.global->getValueType(),
+      str.global,
+      llvm::ArrayRef<llvm::Constant*> {zero, zero}
   );
 }
 
@@ -53,6 +38,38 @@ llvm::Value * String::generateValueWithoutLoad(codegen::ModuleContext& ctx, Payl
   return llvm::ConstantDataArray::getString(*ctx.globalContext.globalModule->llvm.ctx, value, true);
 }
 
+llvm::Constant * String::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
+  auto str = getOrCreateGlobalString(ctx);
+
+  llvm::Type *     array_type = str.global->getValueType();
+  llvm::Constant * zero       = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx.llvm.ctx), 0);
+
+  return llvm::ConstantExpr::getInBoundsGetElementPtr(array_type, str.global, llvm::ArrayRef<llvm::Constant*> {zero, zero});
+}
+
 std::shared_ptr<xcc::meta::Type> String::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   return meta::Type::createPointer(meta::Type::createI8());
+}
+
+String::GlobalString String::getOrCreateGlobalString(codegen::ModuleContext& ctx) {
+  auto hash = std::hash<std::string>{}(value);
+  auto name = ".str." + std::to_string(hash);
+
+  if (auto * existing = ctx.llvm.module->getNamedGlobal(name)) {
+    return {name, existing};
+  }
+
+  llvm::Constant * str_const = llvm::ConstantDataArray::getString(*ctx.llvm.ctx, value, true);
+
+  return {
+    name,
+    new llvm::GlobalVariable(
+      *ctx.llvm.module,
+      str_const->getType(),
+      true,
+      llvm::GlobalValue::ExternalLinkage,
+      str_const,
+      name
+    )
+  };
 }

@@ -28,7 +28,7 @@ std::string Subscript::toString(Node * grandparent, Node * parent, int indent, b
 }
 
 llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto base_type = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
+  auto base_type   = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
   auto element_ptr = generateValueWithoutLoad(ctx, payload);
 
   return ctx.ir_builder->CreateLoad(base_type->getBaseType()->getLLVMType(ctx), element_ptr, "element");
@@ -37,16 +37,34 @@ llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList 
 llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
-  auto base_type = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
+  auto base_type  = raiseIfNull(lhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
   auto index_type = raiseIfNull(rhs->generateType(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
 
   assertRaiseFromNode(base_type->isPointer() || base_type->isArray(), Error(ERROR_TYPE_NOT_SUBSCRIPTABLE, lhs->span, "'{}'", base_type->toString()), this);
   assertRaiseFromNode(index_type->isInteger(), Error(ERROR_TYPE_NOT_VALID_SUBSCRIPT, rhs->span, "'{}'", index_type->toString()), this);
 
-  auto base_ptr = raiseIfNull(lhs->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL"));
-  auto index = raiseIfNull(rhs->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span,"RHS Value is NULL"));
+  auto base_ptr_val = raiseIfNull(lhs->generateValueWithoutLoad(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL"));
+  auto index        = raiseIfNull(rhs->generateValue(ctx, {}), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span,"RHS Value is NULL"));
 
-  return ctx.ir_builder->CreateGEP(base_type->getBaseType()->getLLVMType(ctx), base_ptr, index, "element_ptr");
+  auto element_type_llvm = base_type->getBaseType()->getLLVMType(ctx);
+
+  if (base_type->isPointer()) {
+    // For pointers, we must load the address stored in the alloca first
+    // base_ptr_val is T**, we want T*
+    auto* actual_address = ctx.ir_builder->CreateLoad(base_type->getLLVMType(ctx), base_ptr_val, "ptr_load");
+
+    // GEP for pointers usually takes a single index
+    return ctx.ir_builder->CreateInBoundsGEP(element_type_llvm, actual_address, index, "element_ptr");
+  }
+
+  // For arrays, the alloca is the base address
+  // We need the 0-index to step into the array type
+  std::vector<llvm::Value*> indices = {
+    ctx.ir_builder->getInt32(0),
+    index
+  };
+
+  return ctx.ir_builder->CreateInBoundsGEP(base_type->getLLVMType(ctx), base_ptr_val, indices, "element_ptr");
 }
 
 std::shared_ptr<xcc::meta::Type> Subscript::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
