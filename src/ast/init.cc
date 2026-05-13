@@ -30,7 +30,17 @@ void Initializer::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 }
 
 std::string Initializer::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res = attributesToString(indent, newline) + value_type->toString(parent, this, indent, false) + " {";
+  std::string res = attributesToString(indent, newline);
+
+  bool not_normal = value_type->as<Type>()->kind != Type::NORMAL;
+
+  if (not_normal) res += "[";
+
+  res += value_type->toString(parent, this, indent, false);
+
+  if (not_normal) res += "]";
+
+  res += " {";
 
   for (size_t i = 0; i < values.size(); ++i) {
     if (values[i].name) {
@@ -109,8 +119,6 @@ std::shared_ptr<xcc::meta::Type> Initializer::generateType(codegen::ModuleContex
     // Implicitly wrap the type in an array, because '[i32] {}' -> type 'i32', should be 'i32[]'
     t = meta::Type::createArray(t, values.size());
   }
-
-  printf("Initializer::generateType: '%s'\n", t->toString().c_str());
 
   return t;
 }
