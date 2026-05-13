@@ -92,7 +92,11 @@ fn main() -> i32 {
  - [X] Built-ins (sizeof, offsetof, typeof)  
  - [ ] Procedural attributes  
  - [X] Conditional imports  
- - [ ] Compound struct initialization  
+ - [X] Compound struct initialization  
+ - [X] Array initialization  
+ - [ ] Global importable constants  
+ - [ ] Tuples  
+ - [ ] Enums (int & tagged)  
  - [ ] Destructors (or something like `defer`)  
  - [ ] Lambdas (closures)
  - [ ] The rest of gcc/clang attributes (alias, section & packed are done)  
