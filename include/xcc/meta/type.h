@@ -153,6 +153,11 @@ public:
   [[nodiscard]] bool isVariadic() const;
 
   /**
+   * If type is an array - get element count
+   */
+  [[nodiscard]] size_t getElementCount() const;
+
+  /**
    * Generate LLVM type from a valid meta type, needs ModuleContext
    */
   [[nodiscard]] llvm::Type * getLLVMType(codegen::ModuleContext& ctx) const;

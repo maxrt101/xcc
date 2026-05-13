@@ -463,7 +463,15 @@ std::shared_ptr<Type> Type::getArgumentType(size_t i) const {
 }
 
 bool Type::isVariadic() const {
+  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
+
   return fn.isVariadic;
+}
+
+size_t Type::getElementCount() const {
+  assertThrow(isArray(), std::runtime_error("Type is not an array"));
+
+  return arr.size;
 }
 
 llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
