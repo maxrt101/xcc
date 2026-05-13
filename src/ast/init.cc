@@ -46,6 +46,13 @@ std::string Initializer::toString(Node * grandparent, Node * parent, int indent,
 }
 
 llvm::Value * Initializer::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  auto alloca = generateValueWithoutLoad(ctx, payload);
+  auto t      = generateType(ctx, payload);
+
+  return ctx.ir_builder->CreateLoad(t->getLLVMType(ctx), alloca);
+}
+
+llvm::Value * Initializer::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
   auto t = generateType(ctx, payload);
@@ -59,17 +66,57 @@ llvm::Value * Initializer::generateValue(codegen::ModuleContext& ctx, PayloadLis
     // TODO: Raise error
   }
 
-  return ctx.ir_builder->CreateLoad(t->getLLVMType(ctx), alloca);
+  return alloca;
+}
+
+llvm::Constant * Initializer::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
+  auto t         = generateType(ctx, payload);
+  auto llvm_type = t->getLLVMType(ctx);
+
+  if (t->isStruct()) {
+    std::vector<llvm::Constant *> fields;
+
+    for (auto& val : values) {
+      fields.push_back(val.value->generateConstant(ctx, payload));
+    }
+
+    return llvm::ConstantStruct::get(llvm::cast<llvm::StructType>(llvm_type), fields);
+  }
+
+  if (t->isArray()) {
+    std::vector<llvm::Constant *> elements;
+
+    for (auto& val : values) {
+      elements.push_back(val.value->generateConstant(ctx, payload));
+    }
+
+    return llvm::ConstantArray::get(llvm::cast<llvm::ArrayType>(llvm_type), elements);
+  }
+
+  return llvm::cast<llvm::Constant>(generateValue(ctx, payload));
 }
 
 std::shared_ptr<xcc::meta::Type> Initializer::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   auto t = value_type->generateType(ctx, payload);
 
+  // If initializer is not for a struct, it must be for an array
   if (!t->isStruct()) {
+    if (t->isArray() && !t->getElementCount()) {
+      // If type is an array, but has size=0, update it
+      t = meta::Type::createArray(t->getElementType(), values.size());
+    }
+
+    // Implicitly wrap the type in an array, because '[i32] {}' -> type 'i32', should be 'i32[]'
     t = meta::Type::createArray(t, values.size());
   }
 
+  printf("Initializer::generateType: '%s'\n", t->toString().c_str());
+
   return t;
+}
+
+std::shared_ptr<xcc::meta::Type> Initializer::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
+  return meta::Type::createPointer(generateType(ctx, payload));
 }
 
 void Initializer::fillStruct(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca) {
@@ -95,12 +142,12 @@ void Initializer::fillArray(codegen::ModuleContext& ctx, std::shared_ptr<meta::T
   auto * arrayTy = t->getLLVMArrayType(ctx);
 
   for (size_t i = 0; i < values.size(); ++i) {
-    std::vector<llvm::Value*> indices = {
+    std::vector<llvm::Value *> indices = {
       ctx.ir_builder->getInt32(0), // Offset from the base pointer
       ctx.ir_builder->getInt32(i)  // Index of the child element
     };
     auto * elementPtr = ctx.ir_builder->CreateInBoundsGEP(arrayTy, alloca, indices);
-    auto * val = values[i].value->generateValue(ctx, {});
+    auto * val = castIfNotSame(ctx, values[i].value->generateValue(ctx, {}), arrayTy->getElementType(), values[i].value->span);
     ctx.ir_builder->CreateStore(val, elementPtr);
   }
 }
