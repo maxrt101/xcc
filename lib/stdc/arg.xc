@@ -35,6 +35,6 @@ macro va_arg(ap, t) {
       ap.overflow_arg_area += 8;
     }
 
-    result;
+    result
   }
 }
