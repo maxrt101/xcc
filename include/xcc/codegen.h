@@ -223,7 +223,7 @@ private:
    * generated out-of-line because it is dependent on sequential evaluation.
    * For example, let's consider this:
    * ```
-   * var b = { var a: i32 = 30; a += 12; a; }
+   * var b = { var a: i32 = 30; a += 12; a }
    * ```
    *
    * When generating IR for this statement, the compiler needs to know the type for `b`,
@@ -350,6 +350,7 @@ public:
   /** Set current IR debug location from SourceSpan */
   void setDebugLocation(SourceSpan span, llvm::DIScope * scope = nullptr);
 
+  /** Creates an AllocaInst at the start of current InsertBlock */
   llvm::AllocaInst * createEntryBlockAlloca(llvm::Type * type, const std::string& name) const;
 };
 
