@@ -6,6 +6,12 @@ type FILE = void;
 type off_t = usize;
 type pos_t = usize;
 
+const SEEK_SET: u32 = 0;
+const SEEK_CUR: u32 = 1;
+const SEEK_END: u32 = 2;
+
+const EOF: i32 = -1;
+
 # The fopen() function opens the file whose name is the string
 # pointed to by path and associates a stream with it.
 # The argument mode points to a string beginning with one of the
@@ -111,7 +117,6 @@ fn fsetpos(file: FILE*, pos: pos_t*) -> u32;
 # @param origin Specified from where to seek
 # @returns 0 on success
 #
-# TODO: origin values: SEEK_SET, SEEK_CUR, SEEK_END
 [alias(fseek)]
 fn fseek(file: FILE*, offset: u32, origin: u32) -> u32;
 
@@ -183,7 +188,6 @@ fn rename(old: u8*, new: u8*);
 #
 # @param file Valid file handle
 # @returns char on success, EOF otherwise
-# TODO: Add EOF const
 #
 [alias(fgetc)]
 fn fgetc(file: FILE*) -> i32;
