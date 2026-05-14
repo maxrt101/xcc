@@ -94,7 +94,7 @@ fn main() -> i32 {
  - [X] Conditional imports  
  - [X] Compound struct initialization  
  - [X] Array initialization  
- - [ ] Global importable constants  
+ - [X] Global importable constants  
  - [ ] Tuples  
  - [ ] Enums (int & tagged)  
  - [ ] Destructors (or something like `defer`)  
