@@ -3,6 +3,15 @@
 
 using namespace xcc::ast;
 
+Block::Payload::Payload(std::shared_ptr<meta::Type> type)
+  : Node::Payload(AST_BLOCK), type(std::move(type)) {}
+
+std::shared_ptr<Node::Payload> Block::Payload::create(std::shared_ptr<meta::Type> type) {
+  return std::dynamic_pointer_cast<Node::Payload>(
+      std::make_shared<Block::Payload>(std::move(type))
+  );
+}
+
 Block::Block(SourceSpan span, std::vector<std::shared_ptr<Node>> body)
   : Node(AST_BLOCK, span), body(std::move(body)) {}
 
@@ -57,9 +66,17 @@ llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payl
 
   llvm::Value * val = nullptr;
 
-  for (auto& node : body) {
-    val = node->generateValue(ctx, payload);
+  for (size_t i = 0; i < body.size() - 1; ++i) {
+    body[i]->generateValue(ctx, payload);
   }
+
+  if (auto p = selectPayloadFirst(payload)) {
+    // If type hint was passed for AST_BLOCK, repackage it for AST_INIT
+    auto t = p->as<Payload>()->type;
+    payload = extendPayload(excludePayload(payload, AST_BLOCK), Initializer::Payload::create(t));
+  }
+
+  val = body.back()->generateValue(ctx, payload);
 
   ctx.popScope();
 
@@ -79,6 +96,12 @@ std::shared_ptr<xcc::meta::Type> Block::generateType(codegen::ModuleContext& ctx
   }
 
   auto phantoms = ctx.phantomScope(variables);
+
+  if (auto p = selectPayloadFirst(payload)) {
+    // If type hint was passed for AST_BLOCK, repackage it for AST_INIT
+    auto t = p->as<Payload>()->type;
+    payload = extendPayload(excludePayload(payload, AST_BLOCK), Initializer::Payload::create(t));
+  }
 
   return body.back()->generateType(ctx, payload);
 }
