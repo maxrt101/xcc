@@ -72,6 +72,35 @@ llvm::Value * Unary::generateValueWithoutLoad(codegen::ModuleContext& ctx, Paylo
   Error(ERROR_UNKNOWN_UNARY_OP_OR_TYPE, operation.span, "op='{}'({}) type={}", operation.value, Token::typeToString(operation.type), std::to_string((int)rhs_type->getTag())).raiseFromNode(this);
 }
 
+llvm::Constant * Unary::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
+  auto rhs_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
+
+  auto val = rhs->generateConstant(ctx, payload);
+  auto s   = llvm::dyn_cast<llvm::ConstantInt>(val);
+  auto t   = llvm::IntegerType::get(*ctx.llvm.ctx, rhs_type->getNumberBitWidth());
+
+  assertRaiseFromNode(s, Error(ERROR_UNARY_RHS_NOT_CONSTANT, rhs->span), this);
+
+  switch (operation.type) {
+    case TOKEN_NOT: {
+      return llvm::ConstantInt::get(t, !s->getValue());
+    }
+
+    case TOKEN_MINUS: {
+      return llvm::ConstantInt::get(t, -s->getValue());
+    }
+
+    case TOKEN_TILDA: {
+      return llvm::ConstantInt::get(t, ~s->getValue());
+    }
+
+    default:
+      break;
+  }
+
+  Error(ERROR_UNKNOWN_UNARY_OP_OR_TYPE, operation.span, "op='{}'({}) type={}", operation.value, Token::typeToString(operation.type), std::to_string((int)rhs_type->getTag())).raiseFromNode(this);
+}
+
 std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   /* If dereferencing - should return TypeForValueWithoutLoad */
   return operation.type == TOKEN_STAR
