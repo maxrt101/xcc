@@ -96,7 +96,47 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     return binop->handler(ctx, lhs_val, rhs_val, binop->twine);
   }
 
-  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op={} type={}", operation.toString(), common_type->toString()).raiseFromNode(this);
+  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op={} type={}", operation.toString(), common_type->toString())
+    .raiseFromNode(this);
+}
+
+llvm::Constant * Binary::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
+  auto lhs_type = raiseIfNull(lhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "LHS Type is NULL"));
+  auto rhs_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
+
+  assertRaiseFromNode(lhs_type->isInteger() && rhs_type->isInteger(),
+    Error(ERROR_UNIMPLEMENTED, span, "Only integers are supported for constant binary expressions"), this);
+
+  auto meta_type = meta::Type::alignTypes(lhs_type, rhs_type);
+  auto t         = meta_type->getLLVMType(ctx);
+
+  auto l_val = lhs->generateConstant(ctx, payload);
+  auto l     = llvm::dyn_cast<llvm::ConstantInt>(l_val);
+
+  auto r_val = rhs->generateConstant(ctx, payload);
+  auto r     = llvm::dyn_cast<llvm::ConstantInt>(r_val);
+
+  switch (operation.type) {
+    case TOKEN_PLUS:           return llvm::ConstantInt::get(t, l->getValue() + r->getValue());
+    case TOKEN_MINUS:          return llvm::ConstantInt::get(t, l->getValue() - r->getValue());
+    case TOKEN_STAR:           return llvm::ConstantInt::get(t, l->getValue() * r->getValue());
+    case TOKEN_SLASH:          return llvm::ConstantInt::get(t, l->getValue().sdiv(r->getValue()));
+    case TOKEN_EQUALS_EQUALS:  return llvm::ConstantInt::get(t, l->getValue() == r->getValue());
+    case TOKEN_NOT_EQUALS:     return llvm::ConstantInt::get(t, l->getValue() != r->getValue());
+    case TOKEN_GREATER_EQUALS: return llvm::ConstantInt::get(t, l->getValue().sgt(r->getValue()));
+    case TOKEN_GREATER:        return llvm::ConstantInt::get(t, l->getValue().sge(r->getValue()));
+    case TOKEN_LESS_EQUALS:    return llvm::ConstantInt::get(t, l->getValue().sle(r->getValue()));
+    case TOKEN_LESS:           return llvm::ConstantInt::get(t, l->getValue().slt(r->getValue()));
+    case TOKEN_AND:            return llvm::ConstantInt::get(t, l->getValue().getBoolValue() && r->getValue().getBoolValue());
+    case TOKEN_OR:             return llvm::ConstantInt::get(t, l->getValue().getBoolValue() || r->getValue().getBoolValue());
+    case TOKEN_AMP:            return llvm::ConstantInt::get(t, l->getValue() & r->getValue());
+    case TOKEN_VERTICAL_LINE:  return llvm::ConstantInt::get(t, l->getValue() | r->getValue());
+    default:
+    break;
+  }
+
+  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op={} type={}", operation.toString(), meta_type->toString())
+    .raiseFromNode(this);
 }
 
 std::shared_ptr<meta::Type> Binary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
