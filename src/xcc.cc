@@ -53,6 +53,8 @@ static void processModAliases(
         id = node->as<Struct>()->name;
       } else if (node->is(AST_TYPE_DECL)) {
         id = Node::cast<Identifier>(node->as<TypeDecl>()->name);
+      } else if (node->is(AST_CONST_DECL)) {
+        id = node->as<ConstDecl>()->name;
       } else if (node->is(AST_MACRO)) {
         id = node->as<Macro>()->name;
       } else {

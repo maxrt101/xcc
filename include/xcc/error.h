@@ -142,6 +142,7 @@ enum ErrorId {
   ERROR_CANT_INFER_TYPE                   = 116,
   ERROR_CONST_MISSING_KEYWORD             = 117,
   ERROR_CONSTDECL_MISSING_SEMICOLON       = 118,
+  ERROR_UNARY_RHS_NOT_CONSTANT            = 119,
 
   ERROR_MAX,
 };

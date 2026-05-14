@@ -173,7 +173,7 @@ private:
   /**
    * Parses a value declaration, e.g. `a: b = c`
    */
-  std::shared_ptr<ast::TypedIdentifier> parseValueDecl();
+  std::shared_ptr<ast::TypedIdentifier> parseValueDecl(const std::string& err_msg, bool scoped = false);
 
   // Statements
   std::shared_ptr<ast::Node> parseFunction(bool isMethod);

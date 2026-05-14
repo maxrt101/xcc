@@ -221,10 +221,10 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
   return type;
 }
 
-std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl() {
+std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl(const std::string& err_msg, bool scoped) {
   auto span = current().span;
 
-  std::shared_ptr<ast::Identifier> name = parseIdentifier("for variable name");
+  std::shared_ptr<ast::Identifier> name = scoped ? parseIdentifierWithCurrentScope(err_msg) : parseIdentifier(err_msg);
   std::shared_ptr<ast::Node> type;
   std::shared_ptr<ast::Node> value;
 
@@ -285,7 +285,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
         break;
       }
 
-      args.push_back(parseValueDecl());
+      args.push_back(parseValueDecl("for function argument name"));
     } while (checkAdvance(TOKEN_COMMA));
   }
 
@@ -360,7 +360,7 @@ std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
     Error(ERROR_VAR_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto valdecl = parseValueDecl();
+  auto valdecl = parseValueDecl("for variable name");
 
   return ast::VarDecl::create(span + previous().span, valdecl->name, valdecl->value_type, valdecl->value, global);
 }
@@ -372,7 +372,7 @@ std::shared_ptr<ast::Node> Parser::parseConst() {
     Error(ERROR_CONST_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto valdecl = parseValueDecl();
+  auto valdecl = parseValueDecl("for constant name", true);
 
   return ast::ConstDecl::create(span + previous().span, valdecl->name, valdecl->value_type, valdecl->value);
 }
@@ -406,7 +406,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
     if (check(TOKEN_FN)) {
       methods.push_back(parseFunction(true));
     } else {
-      fields.push_back(parseValueDecl());
+      fields.push_back(parseValueDecl("for struct field name"));
     }
 
     shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_SEMICOLON);
@@ -1211,7 +1211,7 @@ std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_p
   auto result = ast::Block::create({}, {});
 
   for (auto & node : body->body) {
-    if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL, ast::AST_MACRO)) {
+    if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL, ast::AST_MACRO, ast::AST_CONST_DECL)) {
       result->body.push_back(node);
     } else if (node->is(ast::AST_MOD)) {
       auto mod = node->as<ast::Module>();
