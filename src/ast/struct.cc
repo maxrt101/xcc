@@ -55,7 +55,7 @@ std::string Struct::toString(Node * grandparent, Node * parent, int indent, bool
 
   for (auto& method : methods) {
     res += newline ? getIndent(indent + 1) : " ";
-    res += method->toString(parent, this, indent, newline);
+    res += method->toString(parent, this, indent + 1, newline);
     res += newline ? "\n" : " ";
   }
 

@@ -214,7 +214,7 @@ llvm::Value * Node::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
 }
 
 llvm::Constant * Node::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
-  Error(ERROR_NOT_CONSTANT, span, "").raiseFromNode(this);
+  Error(ERROR_NOT_CONSTANT, span).raiseFromNode(this);
 }
 
 llvm::Value * Node::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {

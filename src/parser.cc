@@ -341,7 +341,7 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
       //                         ^
       // But (should) disallow any other missing semicolons
       if (!previous().is(TOKEN_RIGHT_BRACE) && !current().is(TOKEN_RIGHT_BRACE)) {
-        Error(ERROR_BLOCK_MISSING_SEMICOLON, current().span, "").raise();
+        Error(ERROR_BLOCK_MISSING_SEMICOLON, current().span).raise();
       }
     }
   }

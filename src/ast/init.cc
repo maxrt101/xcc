@@ -123,7 +123,7 @@ std::shared_ptr<xcc::meta::Type> Initializer::generateType(codegen::ModuleContex
       return p->as<Initializer::Payload>()->type;
     }
 
-    Error(ERROR_CANT_INFER_TYPE, span, "").raiseFromNode(this);
+    Error(ERROR_CANT_INFER_TYPE, span).raiseFromNode(this);
   }
 
   auto t = value_type->generateType(ctx, payload);
@@ -181,7 +181,7 @@ void Initializer::fillStruct(codegen::ModuleContext& ctx, std::shared_ptr<meta::
 
     // Struct initializers must name every field
     assertRaise(value.name && value.name->is(AST_EXPR_IDENTIFIER),
-      Error(ERROR_INIT_EXPECTED_NAMED_VALUE, value.name ? value.name->span : value.value->span, ""));
+      Error(ERROR_INIT_EXPECTED_NAMED_VALUE, value.name ? value.name->span : value.value->span));
 
     uint32_t fieldIdx = t->getMemberIndex(value.name->as<Identifier>()->value);
 
