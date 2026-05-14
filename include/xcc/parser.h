@@ -179,6 +179,7 @@ private:
   std::shared_ptr<ast::Node> parseFunction(bool isMethod);
   std::shared_ptr<ast::Block> parseBlock(bool parseTopLevel = false);
   std::shared_ptr<ast::Node> parseVar(bool global);
+  std::shared_ptr<ast::Node> parseConst();
   std::shared_ptr<ast::Node> parseStruct(const ast::Node::AttributeList& attrs);
   std::shared_ptr<ast::Node> parseIf();
   std::shared_ptr<ast::Node> parseFor();

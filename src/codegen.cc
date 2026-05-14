@@ -197,6 +197,18 @@ std::string GlobalContext::aliased(const std::string& name) {
   return res;
 }
 
+void GlobalContext::addConst(const std::string& name, std::shared_ptr<ast::ConstDecl> constant) {
+  consts[name] = std::move(constant);
+}
+
+std::shared_ptr<ast::ConstDecl> GlobalContext::getConst(const std::string& name) const {
+  if (consts.contains(name)) {
+    return consts.at(name);
+  }
+
+  return nullptr;
+}
+
 void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   if (!globalModule->llvm.ctx || !globalModule->llvm.module) {
     globalModule = ModuleContext::create(*this, "<global>");

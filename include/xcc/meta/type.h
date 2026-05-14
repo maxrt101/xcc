@@ -211,10 +211,9 @@ public:
   int getNumberBitWidth() const;
 
   /**
-   * Generates llvm::Value * (specifically llvm::Constant *) containing default
-   * value for a valid meta type
+   * Generates llvm::Constant * containing default value for a valid meta type
    */
-  llvm::Value * getDefault(codegen::ModuleContext& ctx) const;
+  llvm::Constant * getDefault(codegen::ModuleContext& ctx) const;
 
   /**
    * Check if type's tag matches provided one

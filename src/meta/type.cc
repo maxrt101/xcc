@@ -397,8 +397,9 @@ int Type::getNumberBitWidth() const {
     case TypeTag::I64:
     case TypeTag::U64:
     case TypeTag::F64:
+    case TypeTag::ISIZE: // FIXME: Hardcoded bit width for isize/usize
+    case TypeTag::USIZE:
       return 64;
-    // TODO: ISIZE/USIZE
     case TypeTag::PTR:
     case TypeTag::FUNCTION:
     case TypeTag::STRUCT:
@@ -480,7 +481,7 @@ size_t Type::getElementCount() const {
   return arr.size;
 }
 
-llvm::Value * Type::getDefault(codegen::ModuleContext& ctx) const {
+llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
   switch (tag) {
     case TypeTag::BOOL:
     case TypeTag::U8:

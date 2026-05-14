@@ -111,6 +111,8 @@ static void processAliases(
  * Find and process all `type` and `struct` declarations, for types to be available
  * during macro expansion phase
  *
+ * FIXME: What if a constant is of a custom type? (`struct A { x: i32; }; const a: A;`)
+ *
  * @param globalContext Global Context
  * @param root          Root AST Node
  */
@@ -125,6 +127,28 @@ static void registerCustomTypes(
 
     return nullptr;
   }, {ast::AST_MACRO, ast::AST_EXPR_MACRO_CALL});
+}
+
+/**
+ * Process all constants, for them to be available during macro expansion phase
+ *
+ * FIXME: What if a structure's field is dependant on a constant? (`const N = 4; struct A { x: i32[N]; }`)
+ *
+ * @param globalContext Global Context
+ * @param root          Root AST node
+ */
+static void registerConstants(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::shared_ptr<ast::Block>& root
+) {
+  root->visit([&globalContext](auto node) -> std::shared_ptr<ast::Node> {
+    if (node->is(ast::AST_CONST_DECL)) {
+      auto constant = ast::Node::cast<ast::ConstDecl>(node);
+      globalContext->addConst(constant->name->name(), constant);
+    }
+
+    return nullptr;
+  }, {ast::AST_MACRO});
 }
 
 /**
@@ -341,6 +365,9 @@ static void compileBlock(
       compileFunction(globalContext, node);
     } else if (node->is(ast::AST_VAR_DECL)) {
       node->generateValue(*globalContext->globalModule, {});
+    } else if (node->is(ast::AST_CONST_DECL)) {
+      auto constant = ast::Node::cast<ast::ConstDecl>(node);
+      globalContext->addConst(constant->name->name(), constant);
     } else if (node->is(ast::AST_STRUCT)) {
       node->generateType(*globalContext->globalModule, {});
       for (auto& method : node->as<ast::Struct>()->methods) {
@@ -439,6 +466,7 @@ CompilationResult xcc::compile(
   processAttributes(ast);
   processAliases(globalContext, ast, true);
   registerCustomTypes(globalContext, ast);
+  registerConstants(globalContext, ast);
   registerMacros(globalContext, ast);
   processMacros(mctx, ast);
 

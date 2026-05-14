@@ -524,5 +524,14 @@
       ],
       "retcode": 0
     }
+  },
+  {
+    "id": 54,
+    "name": "Constants",
+    "file": "54.xc",
+    "expect": {
+      "stdout": ["N=4\n", "arr=4 3 2 0\n", "size=16\n"],
+      "retcode": 0
+    }
   }
 ]

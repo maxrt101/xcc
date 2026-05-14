@@ -85,6 +85,9 @@ public:
   /* Aliases for imported functions that are brought into scope */
   std::unordered_map<std::string, std::string> aliases;
 
+  /* Constants */
+  std::unordered_map<std::string, std::shared_ptr<ast::ConstDecl>> consts;
+
 public:
   GlobalContext(util::Target target);
   ~GlobalContext() = default;
@@ -191,6 +194,12 @@ public:
 
   /** Recursively search for `name` in alias map, returning 'true' name, or `name` if not found */
   std::string aliased(const std::string& name);
+
+  /** Add constant declaration to global const pool */
+  void addConst(const std::string& name, std::shared_ptr<ast::ConstDecl> constant);
+
+  /** Get constant from global const pool */
+  std::shared_ptr<ast::ConstDecl> getConst(const std::string& name) const;
 
   /**
    * Run provided expression using JIT

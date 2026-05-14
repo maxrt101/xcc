@@ -109,23 +109,16 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
   auto baseType = getBaseType(ctx, payload);
 
   if (kind == ARRAY) {
-    assertRaiseFromNode(
-      isOrIsLastInBlock(array.size, AST_EXPR_NUMBER),
-      Error(ERROR_TYPE_ARRAY_SIZE_NOT_NUMBER, array.size->span, "{} is not a number",
-        typeToHumanReadableString(array.size->type)),
-      this
-    );
+    auto n = array.size->generateConstant(ctx, payload);
 
-    auto n = array.size->as<Number>();
+    if (auto s = llvm::dyn_cast<llvm::ConstantInt>(n)) {
+      return meta::Type::createArray(baseType, s->getValue().getZExtValue());
+    }
 
-    assertRaiseFromNode(
-      n->tag == Number::INTEGER,
-      Error(ERROR_TYPE_ARRAY_SIZE_NOT_NUMBER, array.size->span, "'{}' is not an integer",
-        array.size->toString(nullptr, nullptr, 0, false)),
-      this
-    );
-
-    return meta::Type::createArray(baseType, n->value.integer);
+    Error(ERROR_TYPE_ARRAY_SIZE_NOT_NUMBER, array.size->span,
+      "'{}' does not evaluate to a constant integer",
+      array.size->toString(nullptr, nullptr, 0, false)
+    ).raiseFromNode(this);
   }
 
   return kind == POINTER ? meta::Type::createPointer(baseType) : baseType;

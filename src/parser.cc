@@ -365,6 +365,18 @@ std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
   return ast::VarDecl::create(span + previous().span, valdecl->name, valdecl->value_type, valdecl->value, global);
 }
 
+std::shared_ptr<ast::Node> Parser::parseConst() {
+  auto span = current().span;
+
+  if (!checkAdvance(TOKEN_CONST)) {
+    Error(ERROR_CONST_MISSING_KEYWORD, current().span).raise();
+  }
+
+  auto valdecl = parseValueDecl();
+
+  return ast::ConstDecl::create(span + previous().span, valdecl->name, valdecl->value_type, valdecl->value);
+}
+
 std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& attrs) {
   auto span = current().span;
 
@@ -1239,6 +1251,14 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
       Error(ERROR_VARDECL_MISSING_SEMICOLON, previous().span.pointPastLast()).raise();
     }
     return var;
+  }
+
+  if (check(TOKEN_CONST)) {
+    auto constant = parseConst();
+    if (!checkAdvance(TOKEN_SEMICOLON)) {
+      Error(ERROR_VARDECL_MISSING_SEMICOLON, previous().span.pointPastLast()).raise();
+    }
+    return constant;
   }
 
   if (check(TOKEN_STRUCT)) {

@@ -67,6 +67,10 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
     );
   }
 
+  if (auto constant = ctx.globalContext.getConst(id)) {
+    return constant->generateConstant(ctx, payload);
+  }
+
   if (auto * fn = ctx.getFunction(id)) {
     return fn;
   }
@@ -85,11 +89,25 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, 
     return ctx.globalContext.getGlobal(ctx, id);
   }
 
+  if (auto constant = ctx.globalContext.getConst(id)) {
+    return constant->generateConstant(ctx, payload);
+  }
+
   if (auto * fn = ctx.getFunction(id)) {
     return fn;
   }
 
   Error(ERROR_UNDECLARED_VALUE, span, "'{}'", id).raiseFromNode(this);
+}
+
+llvm::Constant * Identifier::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
+  auto id = ctx.globalContext.aliased(name());
+
+  if (auto constant = ctx.globalContext.getConst(id)) {
+    return constant->generateConstant(ctx, payload);
+  }
+
+  Error(ERROR_NOT_CONSTANT, span, "'{}'", id).raiseFromNode(this);
 }
 
 std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -109,6 +127,10 @@ std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(cod
 
   if (ctx.globalContext.hasGlobal(id)) {
     return ctx.globalContext.getGlobalType(id);
+  }
+
+  if (auto constant = ctx.globalContext.getConst(id)) {
+    return constant->generateType(ctx, payload);
   }
 
   if (auto meta_fn = ctx.globalContext.getMetaFunction(id)) {

@@ -69,7 +69,7 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
     payload = extendPayload(payload, Initializer::Payload::create(type->generateType(ctx, payload)));
   }
 
-  auto meta_type = type ? type->generateType(ctx, payload) : meta::Type::inferFromNode(ctx, value);
+  auto meta_type = generateType(ctx, payload);
 
   if (meta_type->isInteger()) {
     payload = extendPayload(payload, Number::Payload::create(meta_type->getNumberBitWidth()));
@@ -79,7 +79,10 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
 }
 
 std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
-  return type->generateType(ctx, payload);
+  // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
+  assertRaiseFromNode(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span), this);
+
+  return type ? type->generateType(ctx, payload) : meta::Type::inferFromNode(ctx, value);
 }
 
 llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload) {
@@ -119,9 +122,11 @@ llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_pt
 
 llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload) {
   auto llvm_type = meta_type->getLLVMType(ctx);
-  auto constant  = (llvm::Constant *)(value
+  auto constant  = (llvm::Constant *)(
+    value
       ? value->generateConstant(ctx, payload)
-      : meta_type->getDefault(ctx));
+      : meta_type->getDefault(ctx)
+  );
 
   ctx.globalContext.globals[name->name()] = meta_type;
 

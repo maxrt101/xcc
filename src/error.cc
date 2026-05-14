@@ -29,7 +29,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_FN_MISSING_SEMICOLON,              "Missing ';' after function declaration"),
   DESC(ERROR_BLOCK_MISSING_OPENING_BRACE,       "Missing '{' at the start of block"),
   DESC(ERROR_BLOCK_MISSING_CLOSING_BRACE,       "Missing '}' at the end of block"),
-  DESC(ERROR_VAR_MISSING_KEYWORD,               "Missing 'vat' at the start of variable declaration"),
+  DESC(ERROR_VAR_MISSING_KEYWORD,               "Missing 'var' at the start of variable declaration"),
   DESC(ERROR_STRUCT_MISSING_KEYWORD,            "Missing 'struct' at the start of struct declaration"),
   DESC(ERROR_STRUCT_MISSING_OPENING_BRACE,      "Missing '{' at the start of struct body declaration"),
   DESC(ERROR_STRUCT_MISSING_CLOSING_BRACE,      "Missing '{' at the end of struct body declaration"),
@@ -71,7 +71,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_ATTR_MISSING_OPENING_BRACKET,      "Expected '[' at the beginning of attribute list"),
   DESC(ERROR_ATTR_MISSING_CLOSING_BRACKET,      "Expected ']' after attribute list"),
   DESC(ERROR_ATTR_MISSING_CLOSING_PAREN,        "Expected ')' after attribute parameters"),
-  DESC(ERROR_VARDECL_MISSING_SEMICOLON,         "Expected ';' variable declaration in global scope"),
+  DESC(ERROR_VARDECL_MISSING_SEMICOLON,         "Expected ';' after variable declaration in global scope"),
   DESC(ERROR_TOP_LEVEL_UNEXPECTED_TOKEN,        "Unexpected token at top-level scope"),
   DESC(ERROR_LLVM_ERROR,                        "LLVM Error"),
   DESC(ERROR_UNKNOWN_GLOBAL_VARIABLE,           "Unknown global variable"),
@@ -130,6 +130,8 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_INIT_MISSING_CLOSING_SQUARE_BRACE, "Expected a ']' after type in initializer expression"),
   DESC(ERROR_NOT_CONSTANT,                      "Provided value is not a constant expression"),
   DESC(ERROR_CANT_INFER_TYPE,                   "Can't infer type for expression"),
+  DESC(ERROR_CONST_MISSING_KEYWORD,             "Missing 'const' at the start of constant declaration"),
+  DESC(ERROR_CONSTDECL_MISSING_SEMICOLON,       "Expected ';' after constant declaration"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
