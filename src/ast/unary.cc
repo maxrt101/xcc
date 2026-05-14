@@ -82,18 +82,9 @@ llvm::Constant * Unary::generateConstant(codegen::ModuleContext& ctx, PayloadLis
   assertRaiseFromNode(s, Error(ERROR_UNARY_RHS_NOT_CONSTANT, rhs->span), this);
 
   switch (operation.type) {
-    case TOKEN_NOT: {
-      return llvm::ConstantInt::get(t, !s->getValue());
-    }
-
-    case TOKEN_MINUS: {
-      return llvm::ConstantInt::get(t, -s->getValue());
-    }
-
-    case TOKEN_TILDA: {
-      return llvm::ConstantInt::get(t, ~s->getValue());
-    }
-
+    case TOKEN_NOT:   return llvm::ConstantInt::get(t, !s->getValue());
+    case TOKEN_MINUS: return llvm::ConstantInt::get(t, -s->getValue());
+    case TOKEN_TILDA: return llvm::ConstantInt::get(t, ~s->getValue());
     default:
       break;
   }
