@@ -199,13 +199,23 @@ void Initializer::fillArray(codegen::ModuleContext& ctx, std::shared_ptr<meta::T
   // Hint for nested initializers
   payload = extendPayload(excludePayload(payload, AST_INIT), Initializer::Payload::create(t->getElementType()));
 
-  for (size_t i = 0; i < values.size(); ++i) {
-    std::vector<llvm::Value *> indices = {
-      ctx.ir_builder->getInt32(0), // Offset from the base pointer
-      ctx.ir_builder->getInt32(i)  // Index of the child element
-    };
+  size_t i = 0;
+
+  for (; i < values.size(); ++i) {
+    // Offset from the base pointer + Index of the child element
+    std::vector<llvm::Value *> indices = {ctx.ir_builder->getInt32(0), ctx.ir_builder->getInt32(i)};
     auto * elementPtr = ctx.ir_builder->CreateInBoundsGEP(arrayTy, alloca, indices);
     auto * val = castIfNotSame(ctx, values[i].value->generateValue(ctx, payload), arrayTy->getElementType(), values[i].value->span);
     ctx.ir_builder->CreateStore(val, elementPtr);
+  }
+
+  // Fill the rest with zeros
+  // TODO: Can llvm::ConstantAggregateZero be used for partial initialization?
+  if (i != t->getElementCount()) {
+    for (size_t j = i; j < t->getElementCount(); ++j) {
+      std::vector<llvm::Value *> indices = {ctx.ir_builder->getInt32(0), ctx.ir_builder->getInt32(j)};
+      auto * elementPtr = ctx.ir_builder->CreateInBoundsGEP(arrayTy, alloca, indices);
+      ctx.ir_builder->CreateStore(t->getElementType()->getDefault(ctx), elementPtr);
+    }
   }
 }
