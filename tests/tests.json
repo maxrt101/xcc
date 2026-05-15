@@ -533,5 +533,17 @@
       "stdout": ["N=4\n", "arr=4 3 2 0\n", "size=16\n"],
       "retcode": 0
     }
+  },
+  {
+    "id": 55,
+    "name": "Tuples",
+    "file": "55.xc",
+    "expect": {
+      "stdout": [
+        "t0=\\{42: i32, tuple: u8\\*\\}\n",
+        "t1=\\{69: i32, test2: u8\\*\\}\n"
+      ],
+      "retcode": 0
+    }
   }
 ]
