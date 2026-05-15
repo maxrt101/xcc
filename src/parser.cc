@@ -140,6 +140,20 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
 
   auto span = current().span;
 
+  if (!name && checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+    std::vector<std::shared_ptr<ast::Node>> members;
+
+    do {
+      members.push_back(parseType());
+    } while (checkAdvance(TOKEN_COMMA));
+
+    if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
+      Error(ERROR_FN_TYPE_MISSING_CLOSING_PAREN, current().span).raise();
+    }
+
+    return ast::Type::createTuple(span + previous().span, members);
+  }
+
   if (!name && checkAdvance(TOKEN_FN)) {
     if (!checkAdvance(TOKEN_LEFT_PAREN)) {
       Error(ERROR_FN_TYPE_MISSING_OPENING_PAREN, current().span).raise();
@@ -1018,6 +1032,7 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
 std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identifier> typeName) {
   std::vector<ast::Initializer::Value> values;
   std::shared_ptr<ast::Node>           type;
+  auto                                 span = current().span;
   bool                                 has_square_braces = false;
 
   if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
@@ -1026,6 +1041,23 @@ std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identif
     // Allow empty type '[] {...}' for inferance
     if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
       type = parseType();
+
+      // Parse tuples. Don't use parseType() for this, as it expects '[' not to be consumed
+      // and '[]' for initializer type are required to be there, so we can't know if contents
+      // of '[...]' are a tuple, or a normal type
+      if (check(TOKEN_COMMA)) {
+        // If set to true - will wrap type into an array in ast::Initializer::generateType
+        has_square_braces = false;
+
+        type = ast::Type::createTuple(span, {type});
+
+        while (checkAdvance(TOKEN_COMMA)) {
+          type->as<ast::Type>()->tuple.members.push_back(parseType());
+        }
+
+        type->span += previous().span;
+      }
+
       if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
         Error(ERROR_INIT_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
       }
@@ -1034,7 +1066,7 @@ std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identif
     type = ast::Type::create(typeName->span, typeName);
   }
 
-  auto span = previous().span;
+  span = previous().span;
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
     Error(ERROR_INIT_MISSING_OPENING_BRACE, current().span).raise();

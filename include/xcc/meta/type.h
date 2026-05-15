@@ -37,6 +37,7 @@ enum class TypeTag {
   ARRAY,    /** Array type */
   PTR,      /** Generic/Opaque pointer type */
   FUNCTION, /** Function type */
+  TUPLE,    /** Tuple type. Basically an anonymous struct */
   STRUCT,   /** Type tag for user-defined types */
 };
 
@@ -73,6 +74,11 @@ private:
     std::vector<std::shared_ptr<Type>> args;
     bool                               isVariadic;
   } fn;
+
+  /** For TypeTag::TUPLE */
+  struct {
+    std::vector<std::shared_ptr<Type>> members;
+  } tuple;
 
   /** For TypeTag::STRUCT */
   struct {
@@ -163,6 +169,16 @@ public:
   [[nodiscard]] size_t getElementCount() const;
 
   /**
+   * If type is a tuple - get member count
+   */
+  [[nodiscard]] size_t getTupleMemberCount() const;
+
+  /**
+   * If type is a tuple - get member type by index
+   */
+  [[nodiscard]] std::shared_ptr<Type> getTupleMemberType(size_t i) const;
+
+  /**
    * Generate LLVM type from a valid meta type, needs ModuleContext
    */
   [[nodiscard]] llvm::Type * getLLVMType(codegen::ModuleContext& ctx) const;
@@ -206,6 +222,7 @@ public:
   [[nodiscard]] bool isArray() const;
   [[nodiscard]] bool isPointer() const;
   [[nodiscard]] bool isFunction() const;
+  [[nodiscard]] bool isTuple() const;
   [[nodiscard]] bool isStruct() const;
 
   int getNumberBitWidth() const;
@@ -269,6 +286,7 @@ public:
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
   static std::shared_ptr<Type> createFunction(
     std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);
+  static std::shared_ptr<Type> createTuple(std::vector<std::shared_ptr<Type>> members);
   static std::shared_ptr<Type> createStruct(std::string name, StructMembers members, bool packed = false);
 
   /**

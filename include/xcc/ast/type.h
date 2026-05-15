@@ -14,6 +14,7 @@ public:
     POINTER,
     ARRAY,
     FUNCTION,
+    TUPLE,
   };
 
   Kind kind;
@@ -30,6 +31,10 @@ public:
     bool                               isVariadic;
   } fn;
 
+  struct {
+    std::vector<std::shared_ptr<Node>> members;
+  } tuple;
+
 public:
   Type(SourceSpan span, Kind kind, std::shared_ptr<Node> name);
   ~Type() override = default;
@@ -38,6 +43,7 @@ public:
   static std::shared_ptr<Type> createPointer(SourceSpan span, std::shared_ptr<Node> name);
   static std::shared_ptr<Type> createArray(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> size);
   static std::shared_ptr<Type> createFunction(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic = false);
+  static std::shared_ptr<Type> createTuple(SourceSpan span, std::vector<std::shared_ptr<Node>> members);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

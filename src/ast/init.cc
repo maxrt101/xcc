@@ -83,6 +83,8 @@ llvm::Value * Initializer::generateValueWithoutLoad(codegen::ModuleContext& ctx,
     fillStruct(ctx, t, alloca, payload);
   } else if (t->isArray()) {
     fillArray(ctx, t, alloca, payload);
+  } else if (t->isTuple()) {
+    fillTuple(ctx, t, alloca, payload);
   } else {
     // TODO: Raise error
   }
@@ -94,24 +96,16 @@ llvm::Constant * Initializer::generateConstant(codegen::ModuleContext& ctx, Payl
   auto t         = generateType(ctx, payload);
   auto llvm_type = t->getLLVMType(ctx);
 
-  if (t->isStruct()) {
-    std::vector<llvm::Constant *> fields;
+  if (t->isStruct() || t->isArray() || t->isTuple()) {
+    std::vector<llvm::Constant *> members;
 
     for (auto& val : values) {
-      fields.push_back(val.value->generateConstant(ctx, payload));
+      members.push_back(val.value->generateConstant(ctx, payload));
     }
 
-    return llvm::ConstantStruct::get(llvm::cast<llvm::StructType>(llvm_type), fields);
-  }
-
-  if (t->isArray()) {
-    std::vector<llvm::Constant *> elements;
-
-    for (auto& val : values) {
-      elements.push_back(val.value->generateConstant(ctx, payload));
-    }
-
-    return llvm::ConstantArray::get(llvm::cast<llvm::ArrayType>(llvm_type), elements);
+    return t->isArray()
+      ? llvm::ConstantArray::get(llvm::cast<llvm::ArrayType>(llvm_type), members)
+      : llvm::ConstantStruct::get(llvm::cast<llvm::StructType>(llvm_type), members);
   }
 
   return llvm::cast<llvm::Constant>(generateValue(ctx, payload));
@@ -146,6 +140,25 @@ std::shared_ptr<xcc::meta::Type> Initializer::generateType(codegen::ModuleContex
 
 std::shared_ptr<xcc::meta::Type> Initializer::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   return meta::Type::createPointer(generateType(ctx, payload));
+}
+
+void Initializer::fillTuple(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca, PayloadList payload) {
+  auto * structTy = llvm::cast<llvm::StructType>(t->getLLVMType(ctx));;
+
+  // Zero-initialize the whole thing to have a determined state for uninitialized fields
+  ctx.ir_builder->CreateStore(llvm::ConstantAggregateZero::get(structTy), alloca);
+
+  assertRaiseFromNode(values.size() == t->getTupleMemberCount(),
+    Error(ERROR_TUPLE_MISSING_FIELDS, span,
+      "tuple '{}' has {} elements, initializer got {}", t->toString(), t->getTupleMemberCount(), values.size()), this);
+
+  for (size_t i = 0; i < values.size(); ++i) {
+    auto * fieldPtr = ctx.ir_builder->CreateStructGEP(structTy, alloca, i);
+
+    auto * val = values[i].value->generateValue(ctx, payload);
+
+    ctx.ir_builder->CreateStore(val, fieldPtr);
+  }
 }
 
 void Initializer::fillStruct(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca, PayloadList payload) {

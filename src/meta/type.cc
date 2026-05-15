@@ -3,10 +3,80 @@
 #include "xcc/exceptions.h"
 #include "xcc/util/string.h"
 
+using namespace xcc;
 using namespace xcc::meta;
 
 // TODO: Should be scoped per-module (or per-file)!
 std::unordered_map<std::string, std::shared_ptr<Type>> Type::customTypes;
+
+/**
+ * Helper to create DIDerivedType (struct member)
+ *
+ * @param ctx      ModuleContext
+ * @param llvmType llvm::Type of composite (parent/struct) type
+ * @param index    Member index
+ * @param name     Member name
+ * @param type     Member meta type
+ */
+static llvm::DIDerivedType * createDIDerivedType(
+  codegen::ModuleContext& ctx,
+  llvm::Type *            llvmType,
+  size_t                  index,
+  const std::string&      name,
+  std::shared_ptr<Type>   type
+) {
+  auto& dl = ctx.llvm.module->getDataLayout();
+
+  uint64_t memberSize  = dl.getTypeAllocSizeInBits(type->getLLVMType(ctx));
+  uint32_t memberAlign = dl.getABITypeAlign(type->getLLVMType(ctx)).value() * 8;
+
+  // Calculate bit offset using DataLayout
+  uint64_t offsetInBits = dl.getStructLayout(llvm::cast<llvm::StructType>(llvmType))->getElementOffsetInBits(index);
+
+  return ctx.globalContext.di_builder->createMemberType(
+      ctx.currentDIScope(),
+      name,
+      ctx.globalContext.di_compile_unit->getFile(),
+      0,
+      memberSize,
+      memberAlign,
+      offsetInBits,
+      llvm::DINode::FlagZero,
+      type->getDIType(ctx)
+  );
+}
+
+/**
+ * Helper to create DICompositeType (struct type)
+ *
+ * @param ctx      Module Context
+ * @param llvmType llvm::Type of composite (struct) type
+ * @param name     Struct name
+ * @param members  Struct members metadata
+ */
+static llvm::DICompositeType * createDICompositeType(
+  codegen::ModuleContext&            ctx,
+  llvm::Type *                       llvmType,
+  const std::string&                 name,
+  const std::vector<llvm::Metadata*> members
+) {
+  auto& dl = ctx.llvm.module->getDataLayout();
+
+  uint64_t structSize  = dl.getTypeAllocSizeInBits(llvmType);
+  uint32_t structAlign = dl.getABITypeAlign(llvmType).value() * 8;
+
+  return ctx.globalContext.di_builder->createStructType(
+      ctx.currentDIScope(),
+      name,
+      ctx.globalContext.getCurrentDIFile(),
+      0,
+      structSize,
+      structAlign,
+      llvm::DINode::FlagZero,
+      nullptr,
+      ctx.globalContext.di_builder->getOrCreateArray(members)
+  );
+}
 
 Type::Type(TypeTag tag) : tag(tag) {}
 
@@ -131,6 +201,16 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     case TypeTag::FUNCTION:
       return llvm::PointerType::getUnqual(getLLVMFunctionType(ctx));
 
+    case TypeTag::TUPLE: {
+      std::vector<llvm::Type*> elements;
+
+      for (auto & member : tuple.members) {
+        elements.push_back(member->getLLVMType(ctx));
+      }
+
+      return llvm::StructType::get(*ctx.llvm.ctx, elements, false);
+    }
+
     case TypeTag::STRUCT: {
       std::vector<llvm::Type*> elements;
 
@@ -208,52 +288,30 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
       return ctx.globalContext.di_builder->createPointerType(getDISubroutineType(ctx), ptrSize, ptrAlign);
     }
 
-    case TypeTag::STRUCT: {
-      auto& dl = ctx.llvm.module->getDataLayout();
+    case TypeTag::TUPLE: {
       auto * llvmType = getLLVMType(ctx);
 
       std::vector<llvm::Metadata*> members;
 
-      uint64_t structSize  = dl.getTypeAllocSizeInBits(llvmType);
-      uint32_t structAlign = dl.getABITypeAlign(llvmType).value() * 8;
-
-      for (size_t i = 0; i < _struct.members.size(); ++i) {
-        auto& member        = _struct.members[i];
-        auto memberName     = member.first;
-        auto memberMetaType = member.second;
-
-        uint64_t memberSize  = dl.getTypeAllocSizeInBits(memberMetaType->getLLVMType(ctx));
-        uint32_t memberAlign = dl.getABITypeAlign(memberMetaType->getLLVMType(ctx)).value() * 8;
-
-        // Calculate bit offset using DataLayout
-        uint64_t offsetInBits = dl.getStructLayout(llvm::cast<llvm::StructType>(llvmType))->getElementOffsetInBits(i);
-
-        auto * memberDI = ctx.globalContext.di_builder->createMemberType(
-            ctx.currentDIScope(),
-            memberName,
-            ctx.globalContext.di_compile_unit->getFile(),
-            0,
-            memberSize,
-            memberAlign,
-            offsetInBits,
-            llvm::DINode::FlagZero,
-            memberMetaType->getDIType(ctx)
-        );
-
-        members.push_back(memberDI);
+      for (size_t i = 0; i < tuple.members.size(); ++i) {
+        auto& member = tuple.members[i];
+        members.push_back(createDIDerivedType(ctx, llvmType, i, std::to_string(i), member));
       }
 
-      return ctx.globalContext.di_builder->createStructType(
-          ctx.currentDIScope(),
-          _struct.name,
-          ctx.globalContext.getCurrentDIFile(),
-          0,
-          structSize,
-          structAlign,
-          llvm::DINode::FlagZero,
-          nullptr,
-          ctx.globalContext.di_builder->getOrCreateArray(members)
-      );
+      return createDICompositeType(ctx, llvmType, toString(), members);
+    }
+
+    case TypeTag::STRUCT: {
+      auto * llvmType = getLLVMType(ctx);
+
+      std::vector<llvm::Metadata*> members;
+
+      for (size_t i = 0; i < _struct.members.size(); ++i) {
+        auto& member = _struct.members[i];
+        members.push_back(createDIDerivedType(ctx, llvmType, i, member.first, member.second));
+      }
+
+      return createDICompositeType(ctx, llvmType, _struct.name, members);
     }
 
     default:
@@ -314,6 +372,18 @@ std::string Type::toString() const {
       }
 
       return result + "): " + fn.returnType->toString();
+    }
+    case TypeTag::TUPLE: {
+      std::string result = "[";
+
+      for (size_t i = 0; i < tuple.members.size(); ++i) {
+        result += tuple.members[i]->toString();
+        if (i + 1 < tuple.members.size()) {
+          result += ", ";
+        }
+      }
+
+      return result + "]";
     }
     case TypeTag::STRUCT: {
       std::string result;
@@ -376,6 +446,10 @@ bool Type::isFunction() const {
   return is(TypeTag::FUNCTION);
 }
 
+bool Type::isTuple() const {
+  return is(TypeTag::TUPLE);
+}
+
 bool Type::isStruct() const {
   return is(TypeTag::STRUCT);
 }
@@ -402,6 +476,7 @@ int Type::getNumberBitWidth() const {
       return 64;
     case TypeTag::PTR:
     case TypeTag::FUNCTION:
+    case TypeTag::TUPLE:
     case TypeTag::STRUCT:
     case TypeTag::VOID:
     default:
@@ -464,7 +539,7 @@ size_t Type::getArgumentCount() const {
 
 std::shared_ptr<Type> Type::getArgumentType(size_t i) const {
   assertThrow(isFunction(), std::runtime_error("Type is not a function"));
-  assertThrow(i < fn.args.size(), std::runtime_error("Out of bound argument type request"));
+  assertThrow(i < fn.args.size(), std::runtime_error("Out of bounds function argument type request"));
 
   return fn.args[i];
 }
@@ -479,6 +554,19 @@ size_t Type::getElementCount() const {
   assertThrow(isArray(), std::runtime_error("Type is not an array"));
 
   return arr.size;
+}
+
+size_t Type::getTupleMemberCount() const {
+  assertThrow(isTuple(), std::runtime_error("Type is not a tuple"));
+
+  return tuple.members.size();
+}
+
+std::shared_ptr<Type> Type::getTupleMemberType(size_t i) const {
+  assertThrow(isTuple(), std::runtime_error("Type is not a tuple"));
+  assertThrow(i < tuple.members.size(), std::runtime_error("Out of bounds tuple member type request"));
+
+  return tuple.members[i];
 }
 
 llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
@@ -509,6 +597,16 @@ llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
 
     case TypeTag::FUNCTION: {
       return llvm::Constant::getNullValue(getLLVMType(ctx));
+    }
+
+    case TypeTag::TUPLE: {
+      std::vector<llvm::Constant *> initializers;
+
+      for (auto & member : tuple.members) {
+        initializers.push_back((llvm::Constant *) member->getDefault(ctx));
+      }
+
+      return llvm::ConstantStruct::get((llvm::StructType *) getLLVMType(ctx), initializers);
     }
 
     case TypeTag::STRUCT: {
@@ -559,6 +657,16 @@ std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
       }
 
       return ast::Type::createFunction(span, fn.returnType->toAst(), args, fn.isVariadic);
+    }
+
+    case TypeTag::TUPLE: {
+      std::vector<std::shared_ptr<ast::Node>> members;
+
+      for (auto& member : tuple.members) {
+        members.push_back(member->toAst());
+      }
+
+      return ast::Type::createTuple(span, members);
     }
 
     case TypeTag::STRUCT: {
@@ -712,6 +820,12 @@ std::shared_ptr<Type> Type::createFunction(
   type->fn.returnType = returnType;
   type->fn.args       = args;
   type->fn.isVariadic = isVariadic;
+  return type;
+}
+
+std::shared_ptr<Type> Type::createTuple(std::vector<std::shared_ptr<Type>> members) {
+  auto type = create(TypeTag::TUPLE);
+  type->tuple.members = std::move(members);
   return type;
 }
 

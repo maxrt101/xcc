@@ -32,6 +32,12 @@ std::shared_ptr<Type> Type::createFunction(SourceSpan span, std::shared_ptr<Node
   return t;
 }
 
+std::shared_ptr<Type> Type::createTuple(SourceSpan span, std::vector<std::shared_ptr<Node>> members) {
+  auto t = std::make_shared<Type>(span, TUPLE, nullptr);
+  t->tuple.members = members;
+  return t;
+}
+
 std::shared_ptr<Node> Type::clone() {
   switch (kind) {
     case POINTER:
@@ -68,6 +74,20 @@ void Type::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
 std::string Type::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   std::string res = attributesToString(0, false);
 
+  if (kind == TUPLE) {
+    res = "[";
+
+    for (size_t i = 0; i < tuple.members.size(); ++i) {
+      res += tuple.members[i]->toString(parent, this, indent, false);
+
+      if (i + 1 < tuple.members.size()) {
+        res += ", ";
+      }
+    }
+
+    return res + "]";
+  }
+
   if (kind == FUNCTION) {
     res = "fn (";
 
@@ -96,6 +116,16 @@ std::string Type::toString(Node * grandparent, Node * parent, int indent, bool n
 }
 
 std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+  if (kind == TUPLE) {
+    std::vector<std::shared_ptr<meta::Type>> members;
+
+    for (auto& arg : this->tuple.members) {
+      members.push_back(arg->generateType(ctx, payload));
+    }
+
+    return meta::Type::createTuple(members);
+  }
+
   if (kind == FUNCTION) {
     std::vector<std::shared_ptr<meta::Type>> args;
 
