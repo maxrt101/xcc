@@ -160,6 +160,10 @@ void FnDef::processAttributes(codegen::ModuleContext& ctx, PayloadList payload, 
     fn->addFnAttr(llvm::Attribute::Naked);
   }
 
+  if (hasAttribute("returns_twice")) {
+    fn->addFnAttr(llvm::Attribute::ReturnsTwice);
+  }
+
   if (hasAttribute("constructor")) {
     auto attr = getAttribute("constructor");
 
