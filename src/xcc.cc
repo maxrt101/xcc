@@ -264,7 +264,7 @@ static void processMacros(
       assertRaise(macro != nullptr, Error(ERROR_UNKNOWN_MACRO, call->name->span, "'{}'", name));
 
       if (macro->variadic) {
-        assertRaise(macro->args.size() < call->args.size(), Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->span, "'{}'", name));
+        assertRaise(macro->args.size() <= call->args.size(), Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->span, "'{}'", name));
       } else {
         assertRaise(macro->args.size() == call->args.size(), Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->span, "'{}'", name));
       }
