@@ -4,6 +4,8 @@
 #include "xcc/exceptions.h"
 #include "xcc/util/log.h"
 
+#include <llvm/Transforms/Utils/ModuleUtils.h>
+
 using namespace xcc;
 using namespace xcc::ast;
 
@@ -67,52 +69,13 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 
   ctx.ir_builder->SetInsertPoint(basic_block);
 
-  // Create a separate scope for function arguments
-  ctx.pushScope(span, di_fn);
-
-  for (auto& arg : fn->args()) {
-    auto arg_name = std::string(arg.getName());
-    auto span = decl->getArgument(arg_name)->span;
-    ctx.addLocal(arg_name, meta::TypedValue::create(ctx, fn, span, meta_fn->args[arg_name], arg_name));
-
-    llvm::DILocalVariable * di_param = ctx.globalContext.di_builder->createParameterVariable(
-      di_fn,
-      arg_name,
-      arg.getArgNo() + 1,
-      ctx.globalContext.getCurrentDIFile(),
-      span.start().line,
-      meta_fn->args[arg_name]->getDIType(ctx),
-      true
-    );
-
-    ctx.globalContext.di_builder->insertDeclare(
-      ctx.getLocalValue(arg_name),
-      di_param,
-      ctx.globalContext.di_builder->createExpression(),
-      span.start().getDILocation(ctx, di_fn),
-      ctx.ir_builder->GetInsertBlock()
-    );
-
-    ctx.ir_builder->CreateStore(&arg, ctx.getLocalValue(arg_name));
+  if (hasAttribute("naked")) {
+    generateNakedFunction(ctx, payload, meta_fn, fn, di_fn);
+  } else {
+    generateNormalFunction(ctx, payload, meta_fn, fn, di_fn);
   }
 
-  ctx.globalContext.setCurrentFunction(decl->name->name());
-
-  auto last_val = body->generateValue(ctx, extendPayload(payload, Block::Payload::create(meta_fn->returnType)));
-
-  // Pop function scope
-  ctx.popScope();
-
-  if (!body->body.back()->is(AST_RETURN)) {
-    if (meta_fn->returnType->isVoid()) {
-      ctx.ir_builder->CreateRetVoid();
-    } else {
-      last_val = codegen::castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx), body->body.back()->span);
-      ctx.ir_builder->CreateRet(last_val);
-    }
-  }
-
-  processAttributes(fn);
+  processAttributes(ctx, payload, fn);
 
   ctx.globalContext.clearCurrentFunction();
 
@@ -136,7 +99,7 @@ std::shared_ptr<meta::Type> FnDef::generateType(codegen::ModuleContext& ctx, Pay
   return decl->generateType(ctx, payload);
 }
 
-void FnDef::processAttributes(llvm::Function * fn) {
+void FnDef::processAttributes(codegen::ModuleContext& ctx, PayloadList payload, llvm::Function * fn) {
   if (hasAttribute("section")) {
     auto attr = getAttribute("section");
 
@@ -191,5 +154,98 @@ void FnDef::processAttributes(llvm::Function * fn) {
 
   if (hasAttribute("weak")) {
     fn->setLinkage(decl->isExtern ? llvm::Function::ExternalWeakLinkage : llvm::Function::WeakAnyLinkage);
+  }
+
+  if (hasAttribute("naked")) {
+    fn->addFnAttr(llvm::Attribute::Naked);
+  }
+
+  if (hasAttribute("constructor")) {
+    auto attr = getAttribute("constructor");
+
+    assertRaise(attr.args.size() == 1,
+      Error(ERROR_ATTR_ARG_COUNT_MISMATCH, span, "Attribute 'constructor' expected 1 arg, got {}", attr.args.size()));
+
+    auto prio = llvm::dyn_cast<llvm::ConstantInt>(attr.args[0]->generateConstant(ctx, payload));
+
+    assertRaise(prio, Error(ERROR_NOT_CONSTANT, attr.args[0]->span,
+      "Attribute 'constructor' must receive a constant expression as an argument"));
+
+    llvm::appendToGlobalCtors(*ctx.llvm.module, fn, prio->getValue().getLimitedValue());
+  }
+}
+
+void FnDef::generateNakedFunction(
+    codegen::ModuleContext&                ctx,
+    PayloadList                            payload,
+    const std::shared_ptr<meta::Function>& meta_fn,
+    llvm::Function *                       fn,
+    llvm::DISubprogram *                   di_fn
+) {
+  ctx.pushScope(span, di_fn);
+
+  ctx.globalContext.setCurrentFunction(decl->name->name());
+
+  for (auto& node : body->body) {
+    assertRaiseFromNode(node->is(AST_ASM), Error(ERROR_NOT_ASM_IN_NAKED_FN, node->span), this);
+
+    node->generateValue(ctx, payload);
+  }
+
+  ctx.ir_builder->CreateUnreachable();
+
+  ctx.popScope();
+}
+
+void FnDef::generateNormalFunction(
+    codegen::ModuleContext&                ctx,
+    PayloadList                            payload,
+    const std::shared_ptr<meta::Function>& meta_fn,
+    llvm::Function *                       fn,
+    llvm::DISubprogram *                   di_fn
+) {
+  // Create a separate scope for function arguments
+  ctx.pushScope(span, di_fn);
+
+  for (auto& arg : fn->args()) {
+    auto arg_name = std::string(arg.getName());
+    auto span = decl->getArgument(arg_name)->span;
+    ctx.addLocal(arg_name, meta::TypedValue::create(ctx, fn, span, meta_fn->args[arg_name], arg_name));
+
+    llvm::DILocalVariable * di_param = ctx.globalContext.di_builder->createParameterVariable(
+      di_fn,
+      arg_name,
+      arg.getArgNo() + 1,
+      ctx.globalContext.getCurrentDIFile(),
+      span.start().line,
+      meta_fn->args[arg_name]->getDIType(ctx),
+      true
+    );
+
+    ctx.globalContext.di_builder->insertDeclare(
+      ctx.getLocalValue(arg_name),
+      di_param,
+      ctx.globalContext.di_builder->createExpression(),
+      span.start().getDILocation(ctx, di_fn),
+      ctx.ir_builder->GetInsertBlock()
+    );
+
+    ctx.ir_builder->CreateStore(&arg, ctx.getLocalValue(arg_name));
+  }
+
+  ctx.globalContext.setCurrentFunction(decl->name->name());
+
+  auto last_val = body->generateValue(ctx, extendPayload(payload, Block::Payload::create(meta_fn->returnType)));
+
+  // Pop function scope
+  ctx.popScope();
+
+  if (!body->body.back()->is(AST_RETURN)) {
+    if (meta_fn->returnType->isVoid()) {
+      ctx.ir_builder->CreateRetVoid();
+    } else {
+      last_val = castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx), body->body.back()->span);
+      ctx.ir_builder->CreateRet(last_val);
+    }
   }
 }

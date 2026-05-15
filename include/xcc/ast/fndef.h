@@ -25,7 +25,24 @@ public:
 
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
 
-  void processAttributes(llvm::Function * fn);
+private:
+  void processAttributes(codegen::ModuleContext& ctx, PayloadList payload, llvm::Function * fn);
+
+  void generateNakedFunction(
+    codegen::ModuleContext&         ctx,
+    PayloadList                     payload,
+    const std::shared_ptr<meta::Function>& meta_fn,
+    llvm::Function *                fn,
+    llvm::DISubprogram *            di_fn
+  );
+
+  void generateNormalFunction(
+    codegen::ModuleContext&         ctx,
+    PayloadList                     payload,
+    const std::shared_ptr<meta::Function>& meta_fn,
+    llvm::Function *                fn,
+    llvm::DISubprogram *            di_fn
+  );
 };
 
 } /* namespace xcc::ast */

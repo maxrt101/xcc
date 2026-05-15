@@ -133,6 +133,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_CONST_MISSING_KEYWORD,             "Missing 'const' at the start of constant declaration"),
   DESC(ERROR_CONSTDECL_MISSING_SEMICOLON,       "Expected ';' after constant declaration"),
   DESC(ERROR_UNARY_RHS_NOT_CONSTANT,            "Unary expression is not constant"),
+  DESC(ERROR_NOT_ASM_IN_NAKED_FN,               "Naked functions can only have asm! statements in body"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
