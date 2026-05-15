@@ -18,10 +18,10 @@ namespace xcc::ast {
 class Macro : public Node {
 public:
   struct NativeContext {
-    codegen::GlobalContext&                                global;
-    std::unordered_map<std::string, std::shared_ptr<Node>> vardecls;
-    std::unordered_map<std::string, std::shared_ptr<Node>> fndecls;
-    std::unordered_map<std::string, std::shared_ptr<Node>> args;
+    codegen::GlobalContext&                                    global;
+    std::vector<std::pair<std::string, std::shared_ptr<Node>>> vardecls;
+    std::vector<std::pair<std::string, std::shared_ptr<Node>>> fndecls;
+    std::vector<std::pair<std::string, std::shared_ptr<Node>>> args;
   };
 
   using NativeFn = std::function<std::shared_ptr<Node>(NativeContext&, std::shared_ptr<MacroCall>&)>;

@@ -2,6 +2,7 @@
 #include "xcc/ast.h"
 #include "xcc/codegen.h"
 #include "xcc/util/log.h"
+#include "xcc/util/util.h"
 
 #define __GET_NUM_VAL(__n) \
   (__n->tag == Number::FLOATING ? __n->value.floating : __n->value.integer)
@@ -67,6 +68,20 @@ using namespace xcc::ast;
 static auto logger = util::log::Logger("MACROS");
 
 static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::ModuleContext& mod, std::shared_ptr<Node> node) {
+  auto phantoms = ctx.global.globalModule->phantomScope({});
+
+  for (auto & var : ctx.vardecls) {
+    phantoms.add(var.first, var.second->generateType(*ctx.global.globalModule, {}));
+  }
+
+  for (auto & arg : ctx.args) {
+    phantoms.add(arg.first, arg.second->generateType(*ctx.global.globalModule, {}));
+  }
+
+  for (auto & fn : ctx.fndecls) {
+    phantoms.add(fn.first, fn.second->generateType(*ctx.global.globalModule, {}));
+  }
+
   // Try to generate type using standard method
   try {
     return node->generateType(mod, {});
@@ -85,21 +100,6 @@ static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::
     return meta::Type::fromTypeName(ctx.global, id, node->span);
   } catch (CompilationException& e) {
     // ignore
-  }
-
-  // Try to look up a variable in traversed by macro resolver vardecls
-  if (ctx.vardecls.contains(id)) {
-    return ctx.vardecls[id]->generateType(mod, {});
-  }
-
-  // Try to look up a variable in traversed by macro resolver fndecls
-  if (ctx.fndecls.contains(id)) {
-    return ctx.fndecls[id]->generateType(mod, {});
-  }
-
-  // Try to look up a arg in traversed by macro resolver fndecl
-  if (ctx.args.contains(id)) {
-    return ctx.args[id]->generateType(mod, {});
   }
 
    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, node->span, "Cannot evaluate expression's type").raise();
@@ -139,29 +139,23 @@ static std::shared_ptr<Node> xcc_macro_cat(Macro::NativeContext& ctx, std::share
 }
 
 static std::shared_ptr<Node> xcc_macro_sizeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  auto mod = ctx.global.createModule("<eval>");
+  std::shared_ptr<meta::Type> type = evalType(ctx, *ctx.global.globalModule, call->args[0]);
 
-  std::shared_ptr<meta::Type> type = evalType(ctx, *mod, call->args[0]);
-
-  auto dl   = mod->llvm.module->getDataLayout();
-  auto size = dl.getTypeAllocSize(type->getLLVMType(*mod));
+  auto dl   = ctx.global.globalModule->llvm.module->getDataLayout();
+  auto size = dl.getTypeAllocSize(type->getLLVMType(*ctx.global.globalModule));
 
   return Number::createInteger(call->span, size);
 }
 
 static std::shared_ptr<Node> xcc_macro_typeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  auto mod  = ctx.global.createModule("<eval>");
-
-  std::shared_ptr<meta::Type> type = evalType(ctx, *mod, call->args[0]);
+  std::shared_ptr<meta::Type> type = evalType(ctx, *ctx.global.globalModule, call->args[0]);
 
   return type->toAst(call->span);
 }
 
 static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  auto mod  = ctx.global.createModule("<eval>");
-
-  std::shared_ptr<meta::Type> type1 = evalType(ctx, *mod, call->args[0]);
-  std::shared_ptr<meta::Type> type2 = evalType(ctx, *mod, call->args[1]);
+  std::shared_ptr<meta::Type> type1 = evalType(ctx, *ctx.global.globalModule, call->args[0]);
+  std::shared_ptr<meta::Type> type2 = evalType(ctx, *ctx.global.globalModule, call->args[1]);
 
   return Number::createInteger(call->span, *type1 == *type2 ? 1 : 0);
 }

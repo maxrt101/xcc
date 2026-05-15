@@ -4,6 +4,8 @@
 
 #include <llvm/IR/LegacyPassManager.h>
 
+#include "xcc/util/util.h"
+
 using namespace xcc;
 
 static auto logger = xcc::util::log::Logger("XCC");
@@ -153,6 +155,27 @@ static void registerConstants(
   }, {ast::AST_MACRO});
 }
 
+static void registerFunctions(
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::shared_ptr<ast::Block>& root
+) {
+  root->visit([&globalContext](auto node) -> std::shared_ptr<ast::Node> {
+    ast::FnDecl * decl = nullptr;
+
+    if (node->is(ast::AST_FUNCTION_DECL)) {
+      decl = node->template as<ast::FnDecl>();
+    } else if (node->is(ast::AST_FUNCTION_DEF)) {
+      decl = node->template as<ast::FnDef>()->decl.get();
+    }
+
+    if (decl) {
+      decl->generateFunction(*globalContext->globalModule, {});
+    }
+
+    return nullptr;
+  }, {ast::AST_MACRO});
+}
+
 /**
  * Register all available macros
  *
@@ -239,20 +262,24 @@ static void processMacros(
 ) {
   root->visit([&ctx](auto node) -> std::shared_ptr<ast::Node> {
     if (node->is(ast::AST_VAR_DECL)) {
-      ctx.vardecls[node->template as<ast::VarDecl>()->name->name()] = node;
+      // Save variable declarations. Old ones will get overwritten.
+      // There is a side effect - variable declarations will be
+      // accessible by macros outside lexical scope
+      ctx.vardecls.push_back({node->template as<ast::VarDecl>()->name->name(), node});
     }
 
     if (node->is(ast::AST_FUNCTION_DECL)) {
       auto fndecl = node->template as<ast::FnDecl>();
 
-      ctx.fndecls[fndecl->name->name()] = node;
+      ctx.fndecls.push_back({fndecl->name->name(), node});
 
       // Save argument declarations. Old ones will get overwritten.
-      // There is a side effect - arguments will be accessible outside of function definition
+      // There is a side effect - argument declarations will be
+      // accessible by macros outside of function definition
       // TODO: Maybe tried a combined approach - if node is fndef - run recursively, saving
       //       args into a stack, if not - process by visit()
       for (auto& arg : fndecl->args) {
-        ctx.args[arg->name->name()] = arg;
+        ctx.args.push_back({arg->name->name(), arg});
       }
     }
 
@@ -270,6 +297,10 @@ static void processMacros(
       }
 
       if (macro->native) {
+        for (auto& var : ctx.vardecls) {
+
+        }
+
         auto res = macro->fn(ctx, call);
 
         // Attach expansion markers & set span to call site
@@ -290,7 +321,7 @@ static void processMacros(
         // Include current macro's args into expansion of inner macros
         ast::Macro::NativeContext mctx = ctx;
         for (size_t i = 0; i < macro->args.size(); ++i) {
-          mctx.args[macro->args[i]->template as<ast::Identifier>()->name()] = call->args[i];
+          mctx.args.push_back({macro->args[i]->template as<ast::Identifier>()->name(), call->args[i]});
         }
 
         processMacros(mctx, body);
@@ -469,6 +500,7 @@ CompilationResult xcc::compile(
   processAliases(globalContext, ast, true);
   registerCustomTypes(globalContext, ast);
   registerConstants(globalContext, ast);
+  registerFunctions(globalContext, ast);
   registerMacros(globalContext, ast);
   processMacros(mctx, ast);
 

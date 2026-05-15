@@ -315,6 +315,11 @@ ModuleContext::PhantomScope::~PhantomScope() {
   }
 }
 
+void ModuleContext::PhantomScope::add(const std::string& name, std::shared_ptr<meta::Type> type) {
+  names.push_back(name);
+  module.phantomLocals[name] = type;
+}
+
 void ModuleContext::Scope::clear(ModuleContext& ctx) {
   if (cleared) return;
 

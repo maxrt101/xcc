@@ -254,6 +254,8 @@ private:
   public:
     PhantomScope(ModuleContext& module, const PhantomsList& vars);
     ~PhantomScope();
+
+    void add(const std::string& name, std::shared_ptr<meta::Type> type);
   };
 
   /**
@@ -317,7 +319,7 @@ public:
   /** Try to get function from current module, if fails - try to get from global module */
   llvm::Function * getFunction(const std::string& name);
 
-  /** Creates a RAII PhantomScope, provided with a list of variables and their types */
+  /** Creates a RAII Ph[antomScope, provided with a list of variables and their types */
   PhantomScope phantomScope(const PhantomsList& vars);
 
   /** Returns true if phantom variable with provided name exists */
