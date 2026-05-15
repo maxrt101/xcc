@@ -65,7 +65,7 @@ static std::string formArgTypeList(const std::vector<NodeType>& arg_types) {
 
 void Node::Attribute::validateArgsStrict(const std::vector<NodeType>& arg_types) {
   assertRaise(args.size() == arg_types.size(),
-    Error(ERROR_ATTR_ARG_COUNT_MISMATCH, span, "Attribute '{}' expected {} args, got {}", name, args.size(), arg_types.size()));
+    Error(ERROR_ATTR_ARG_COUNT_MISMATCH, span, "Attribute '{}' expected {} args, got {}", name, arg_types.size(), args.size()));
 
   for (size_t i = 0; i < arg_types.size(); ++i) {
     assertRaise(args[i]->is(arg_types[i]),
