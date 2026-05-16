@@ -67,21 +67,7 @@ using namespace xcc::ast;
 
 static auto logger = util::log::Logger("MACROS");
 
-static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::ModuleContext& mod, std::shared_ptr<Node> node) {
-  auto phantoms = ctx.global.globalModule->phantomScope({});
-
-  for (auto & var : ctx.vardecls) {
-    phantoms.add(var.first, var.second->generateType(*ctx.global.globalModule, {}));
-  }
-
-  for (auto & arg : ctx.args) {
-    phantoms.add(arg.first, arg.second->generateType(*ctx.global.globalModule, {}));
-  }
-
-  for (auto & fn : ctx.fndecls) {
-    phantoms.add(fn.first, fn.second->generateType(*ctx.global.globalModule, {}));
-  }
-
+static std::shared_ptr<meta::Type> evalType(codegen::GlobalContext& global, codegen::ModuleContext& mod, std::shared_ptr<Node> node) {
   // Try to generate type using standard method
   try {
     return node->generateType(mod, {});
@@ -97,7 +83,7 @@ static std::shared_ptr<meta::Type> evalType(Macro::NativeContext& ctx, codegen::
   auto id = node->as<Identifier>()->name();
 
   try {
-    return meta::Type::fromTypeName(ctx.global, id, node->span);
+    return meta::Type::fromTypeName(global, id, node->span);
   } catch (CompilationException& e) {
     // ignore
   }
@@ -134,41 +120,41 @@ static std::shared_ptr<Macro> createNativeMacro(std::string name, std::vector<st
   return Macro::createNative(Identifier::create(SourceSpan::builtin(), name), id_args, fn, variadic);
 }
 
-static std::shared_ptr<Node> xcc_macro_cat(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+static std::shared_ptr<Node> xcc_macro_cat(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   return Identifier::create(call->span, getStr(call->args[0]) + getStr(call->args[1]));
 }
 
-static std::shared_ptr<Node> xcc_macro_sizeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  std::shared_ptr<meta::Type> type = evalType(ctx, *ctx.global.globalModule, call->args[0]);
+static std::shared_ptr<Node> xcc_macro_sizeof(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  std::shared_ptr<meta::Type> type = evalType(global, *global.globalModule, call->args[0]);
 
-  auto dl   = ctx.global.globalModule->llvm.module->getDataLayout();
-  auto size = dl.getTypeAllocSize(type->getLLVMType(*ctx.global.globalModule));
+  auto dl   = global.globalModule->llvm.module->getDataLayout();
+  auto size = dl.getTypeAllocSize(type->getLLVMType(*global.globalModule));
 
   return Number::createInteger(call->span, size);
 }
 
-static std::shared_ptr<Node> xcc_macro_typeof(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  std::shared_ptr<meta::Type> type = evalType(ctx, *ctx.global.globalModule, call->args[0]);
+static std::shared_ptr<Node> xcc_macro_typeof(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  std::shared_ptr<meta::Type> type = evalType(global, *global.globalModule, call->args[0]);
 
   return type->toAst(call->span);
 }
 
-static std::shared_ptr<Node> xcc_macro_is_same(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
-  std::shared_ptr<meta::Type> type1 = evalType(ctx, *ctx.global.globalModule, call->args[0]);
-  std::shared_ptr<meta::Type> type2 = evalType(ctx, *ctx.global.globalModule, call->args[1]);
+static std::shared_ptr<Node> xcc_macro_is_same(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  std::shared_ptr<meta::Type> type1 = evalType(global, *global.globalModule, call->args[0]);
+  std::shared_ptr<meta::Type> type2 = evalType(global, *global.globalModule, call->args[1]);
 
   return Number::createInteger(call->span, *type1 == *type2 ? 1 : 0);
 }
 
-static std::shared_ptr<Node> xcc_macro_str(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+static std::shared_ptr<Node> xcc_macro_str(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   return String::create(call->span, call->args[0]->toString(nullptr, call.get(), 0, false));
 }
 
-static std::shared_ptr<Node> xcc_macro_strf(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+static std::shared_ptr<Node> xcc_macro_strf(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   return String::create(call->span, call->args[0]->toString(nullptr, call.get(), 0, true));
 }
 
-static std::shared_ptr<Node> xcc_macro_int(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+static std::shared_ptr<Node> xcc_macro_int(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
       Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "int! expects a string as an argument"));
 
@@ -183,7 +169,7 @@ static std::shared_ptr<Node> xcc_macro_int(Macro::NativeContext& ctx, std::share
   return Number::createInteger(call->span, std::stol(res.value, nullptr, res.base));
 }
 
-static std::shared_ptr<Node> xcc_macro_cond(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+static std::shared_ptr<Node> xcc_macro_cond(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER),
       Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "cond! expects a number as first argument"));
 
@@ -195,7 +181,7 @@ static std::shared_ptr<Node> xcc_macro_cond(Macro::NativeContext& ctx, std::shar
   return (cond->value.integer ? call->args[1] : call->args[2])->clone();
 }
 
-static std::shared_ptr<Node> xcc_macro_repeat(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+static std::shared_ptr<Node> xcc_macro_repeat(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER),
       Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "repeat! expects a number as first argument"));
   assertRaise(isOrIsLastInBlock(call->args[1], AST_EXPR_IDENTIFIER),
@@ -218,7 +204,7 @@ static std::shared_ptr<Node> xcc_macro_repeat(Macro::NativeContext& ctx, std::sh
   return block;
 }
 
-static std::shared_ptr<Node> xcc_macro_asm(Macro::NativeContext& ctx, std::shared_ptr<MacroCall>& call) {
+static std::shared_ptr<Node> xcc_macro_asm(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
     Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "asm! expects a string as first argument"));
   assertRaise(isOrIsLastInBlock(call->args[1], AST_EXPR_STRING),
