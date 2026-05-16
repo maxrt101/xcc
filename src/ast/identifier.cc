@@ -137,5 +137,16 @@ std::shared_ptr<xcc::meta::Type> Identifier::generateTypeForValueWithoutLoad(cod
     return meta_fn->decl->generateType(ctx, payload);
   }
 
+  // TODO: Is needed?
+#if 0
+  try {
+    if (auto t = meta::Type::fromTypeName(ctx.globalContext, name(), span)) {
+      return t;
+    }
+  } catch (CompilationException&) {
+    // Ignore
+  }
+#endif
+
   Error(ERROR_UNDECLARED_VALUE, span, "'{}'", id).raiseFromNode(this);
 }
