@@ -153,6 +153,8 @@ void Initializer::fillTuple(codegen::ModuleContext& ctx, std::shared_ptr<meta::T
       "tuple '{}' has {} elements, initializer got {}", t->toString(), t->getTupleMemberCount(), values.size()), this);
 
   for (size_t i = 0; i < values.size(); ++i) {
+    payload = extendPayload(excludePayload(payload, AST_INIT), Initializer::Payload::create(t->getTupleMemberType(i)));
+
     auto * fieldPtr = ctx.ir_builder->CreateStructGEP(structTy, alloca, i);
 
     auto * val = values[i].value->generateValue(ctx, payload);
