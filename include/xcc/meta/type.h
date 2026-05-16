@@ -139,6 +139,11 @@ public:
   [[nodiscard]] std::shared_ptr<Type> getMemberType(const std::string& name) const;
 
   /**
+   * If type is a struct - get member name by `index`
+   */
+  [[nodiscard]] std::string getMemberName(size_t index) const;
+
+  /**
    * Add member to a struct
    */
   void addMember(const std::string& name, const std::shared_ptr<Type>& type);

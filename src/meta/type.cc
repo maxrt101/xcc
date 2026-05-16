@@ -519,6 +519,13 @@ std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
   Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").raise();
 }
 
+std::string Type::getMemberName(size_t index) const {
+  assertThrow(isStruct(), std::runtime_error("Type is not a struct"));
+  assertThrow(index < _struct.members.size(), std::runtime_error("Out of bounds struct member name request"));
+
+  return _struct.members[index].first;
+}
+
 void Type::addMember(const std::string& name, const std::shared_ptr<Type>& type) {
   assertThrow(isStruct(), std::runtime_error("Type is not a struct"));
 
