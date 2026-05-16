@@ -95,7 +95,8 @@ fn main() -> i32 {
  - [X] Compound struct initialization  
  - [X] Array initialization  
  - [X] Global importable constants  
- - [ ] Tuples  
+ - [X] Tuples  
+ - [X] Tuple/struct/array decomposition 
  - [ ] Enums (int & tagged)  
  - [ ] Destructors (or something like `defer`)  
  - [ ] Lambdas (closures)
