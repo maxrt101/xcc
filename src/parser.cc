@@ -367,11 +367,46 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
   return ast::Block::create(span + previous().span, nodes);
 }
 
+std::shared_ptr<ast::Decomposition> Parser::parseDecompositionList() {
+  auto span = current().span;
+
+  if (!checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+    Error(ERROR_DECOMPOSITION_MISSING_OPENING_SQUARE_BRACE, current().span).raise();
+  }
+
+  std::vector<std::shared_ptr<ast::Node>> pieces;
+
+  do {
+    pieces.push_back(check(TOKEN_LEFT_SQUARE_BRACE)
+      ? ast::Node::cast(parseDecompositionList())
+      : ast::Node::cast(parseIdentifier("for decomposition"))
+    );
+  } while (checkAdvance(TOKEN_COMMA));
+
+  if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
+    Error(ERROR_DECOMPOSITION_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
+  }
+
+  return ast::Decomposition::create(span + previous().span, pieces);
+}
+
 std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
   auto span = current().span;
 
   if (!checkAdvance(TOKEN_VAR)) {
     Error(ERROR_VAR_MISSING_KEYWORD, current().span).raise();
+  }
+
+  if (check(TOKEN_LEFT_SQUARE_BRACE)) {
+    auto decomposition = parseDecompositionList();
+
+    if (!checkAdvance(TOKEN_EQUALS)) {
+      Error(ERROR_DECOMPOSITION_MISSING_EQUALS, previous().span.pointPastLast()).raise();
+    }
+
+    decomposition->value = parseExpr();
+
+    return decomposition;
   }
 
   auto valdecl = parseValueDecl("for variable name");

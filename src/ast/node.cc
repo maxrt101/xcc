@@ -43,6 +43,7 @@ static const std::unordered_map<NodeType, NodeString> s_type_map {
     DESC(AST_MACRO,                 "macro declaration"),
     DESC(AST_VAR_DECL,              "variable declaration"),
     DESC(AST_CONST_DECL,            "constant declaration"),
+    DESC(AST_DECOMPOSITION_DECL,    "value decomposition declaration"),
     DESC(AST_WHILE,                 "while statement"),
     DESC(AST_ASM,                   "inline assembly block"),
 };

@@ -45,6 +45,7 @@ enum NodeType {
   AST_BLOCK,                  // { expr; ... }
   AST_VAR_DECL,               // var name [: type] [= value]
   AST_CONST_DECL,             // const name [: type] [= value]
+  AST_DECOMPOSITION_DECL,     // var [id, id, _] = expr
   AST_FUNCTION_DECL,          // fn name([id: type, ...])[: type];
   AST_FUNCTION_DEF,           // function-decl { body }
   AST_TYPE_DECL,              // type id = type_expr

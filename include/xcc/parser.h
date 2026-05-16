@@ -175,6 +175,8 @@ private:
    */
   std::shared_ptr<ast::TypedIdentifier> parseValueDecl(const std::string& err_msg, bool scoped = false);
 
+  std::shared_ptr<ast::Decomposition> parseDecompositionList();
+
   // Statements
   std::shared_ptr<ast::Node> parseFunction(bool isMethod);
   std::shared_ptr<ast::Block> parseBlock(bool parseTopLevel = false);
