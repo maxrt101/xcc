@@ -303,21 +303,19 @@ void GlobalContext::runFunction(const std::string& name) {
 }
 
 ModuleContext::PhantomScope::PhantomScope(ModuleContext& module, const PhantomsList& vars) : module(module) {
+  module.phantomScopes.emplace_back();
+
   for (auto& [name, type] : vars) {
-    names.push_back(name);
-    module.phantomLocals[name] = type;
+    module.phantomScopes.back()[name] = type;
   }
 }
 
 ModuleContext::PhantomScope::~PhantomScope() {
-  for (auto& name : names) {
-    module.phantomLocals.erase(name);
-  }
+  module.phantomScopes.pop_back();
 }
 
 void ModuleContext::PhantomScope::add(const std::string& name, std::shared_ptr<meta::Type> type) {
-  names.push_back(name);
-  module.phantomLocals[name] = type;
+  module.phantomScopes.back()[name] = std::move(type);
 }
 
 void ModuleContext::Scope::clear(ModuleContext& ctx) {
@@ -390,11 +388,23 @@ ModuleContext::PhantomScope ModuleContext::phantomScope(const PhantomsList& vars
 }
 
 bool ModuleContext::hasPhantom(const std::string& name) {
-  return phantomLocals.contains(name);
+  for (auto scope = phantomScopes.rbegin(); scope != phantomScopes.rend(); ++scope) {
+    if (scope->contains(name)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 std::shared_ptr<meta::Type> ModuleContext::getPhantomType(const std::string& name) {
-  return phantomLocals[name];
+  for (auto scope = phantomScopes.rbegin(); scope != phantomScopes.rend(); ++scope) {
+    if (scope->contains(name)) {
+      return scope->at(name);
+    }
+  }
+
+  return nullptr;
 }
 
 bool ModuleContext::hasLocal(const std::string& name) {

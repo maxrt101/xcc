@@ -224,7 +224,6 @@ public:
   /** Map of scoped phantom variables, used as an initializer to PhantomScope */
   using PhantomsList = std::unordered_map<std::string, std::shared_ptr<meta::Type>>;
 
-private:
   /**
    * Holds 'phantom' variables
    *
@@ -248,8 +247,7 @@ private:
    * map, and successfully generate a type for `b`.
    */
   class PhantomScope {
-    ModuleContext&           module;
-    std::vector<std::string> names;
+    ModuleContext&                                               module;
 
   public:
     PhantomScope(ModuleContext& module, const PhantomsList& vars);
@@ -296,7 +294,7 @@ public:
   std::vector<Scope> scopes;
 
   /* Phantom named values (variables/args), that need to be in AST generator's scope without being generated */
-  std::map<std::string, std::shared_ptr<meta::Type>> phantomLocals;
+  std::vector<std::unordered_map<std::string, std::shared_ptr<meta::Type>>> phantomScopes;
 
 #if USE_OPTIMIZATION
   /* Optimization Contexts */
