@@ -545,5 +545,22 @@
       ],
       "retcode": 0
     }
+  },
+  {
+    "id": 56,
+    "name": "Decomposition",
+    "file": "56.xc",
+    "expect": {
+      "stdout": [
+        "t0 69 test2\n",
+        "t1 69 42 test2\n",
+        "t 42 69\n",
+        "t2 11 22 33\n",
+        "a0 1 2 3\n",
+        "a1 81 72\n",
+        "m0 0 1 2 3\n"
+      ],
+      "retcode": 0
+    }
   }
 ]
