@@ -116,6 +116,7 @@ static void processAliases(
  * during macro expansion phase
  *
  * FIXME: What if a constant is of a custom type? (`struct A { x: i32; }; const a: A;`)
+ *        Or custom type is dependant on a macro? (`struct A { x: cat!(int, _t); }`)
  *
  * @param globalContext Global Context
  * @param root          Root AST Node
@@ -155,6 +156,12 @@ static void registerConstants(
   }, {ast::AST_MACRO});
 }
 
+/**
+ * Register all function declarations/definitions
+ *
+ * @param globalContext Global Context
+ * @param root          Root AST Node
+ */
 static void registerFunctions(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
   const std::shared_ptr<ast::Block>& root
