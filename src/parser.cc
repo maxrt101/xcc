@@ -1017,9 +1017,16 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
 
   if (checkAdvance(TOKEN_LEFT_PAREN)) {
     auto expr = parseExpr();
+
     if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
       Error(ERROR_EXPR_MISSING_CLOSING_PAREN, previous().span.pointPastLast()).raise();
     }
+
+    // Allow for `(expr).method()` syntax
+    if (checkAnyOf(TOKEN_DOT, TOKEN_RIGHT_ARROW)) {
+      return parseMemberAccessOrLvalue(expr);
+    }
+
     return expr;
   }
 
@@ -1052,10 +1059,12 @@ std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {
   return ast::Node::cast<ast::Node>(id);
 }
 
-std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue() {
+std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue(std::shared_ptr<ast::Node> id) {
   auto span = current().span;
 
-  auto id = parseScopedIdentifier("for identifier");
+  if (!id) {
+    id = parseScopedIdentifier("for lvalue");
+  }
 
   if (check(TOKEN_DOT) || check(TOKEN_RIGHT_ARROW)) {
     std::vector<MemberAccessContext> nodes = {{id, current().is(TOKEN_RIGHT_ARROW)}};

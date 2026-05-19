@@ -3,11 +3,18 @@ use stdc::printf;
 struct Test {
   x: i32;
   y: i32;
+
+  fn and(self) -> i32 {
+    return self->x & self->y;
+  }
 }
 
 fn main() -> i32 {
   var t = Test { x: 42, y: 155 };
   printf("t={%d, %d}\n", t.x, t.y);
+  printf("t.and=%d\n", t.and());
+
+  printf("Test.and=%d\n", (Test { x: 42, y: 155 }).and());
 
   var a = [i32] { 1, 2, 3, 4 };
   printf("a={%d, %d, %d, %d}\n", a[0], a[1], a[2], a[3]);
