@@ -530,7 +530,12 @@
     "name": "Constants",
     "file": "54.xc",
     "expect": {
-      "stdout": ["N=4\n", "arr=4 3 2 0\n", "size=16\n"],
+      "stdout": [
+        "N=4\n",
+        "arr=4 3 2 0\n",
+        "size=16\n",
+        "test::N=18 4\n"
+      ],
       "retcode": 0
     }
   },
@@ -559,6 +564,19 @@
         "a0 1 2 3\n",
         "a1 81 72\n",
         "m0 0 1 2 3\n"
+      ],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 57,
+    "name": "Enums",
+    "file": "57.xc",
+    "expect": {
+      "stdout": [
+        "TestEnum: 0 1 5 6 7 12 13\n",
+        "ModEnum: 0 1 5 6 7 12 13\n",
+        "F=12\n"
       ],
       "retcode": 0
     }
