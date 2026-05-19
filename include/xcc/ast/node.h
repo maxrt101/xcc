@@ -50,6 +50,7 @@ enum NodeType {
   AST_FUNCTION_DEF,           // function-decl { body }
   AST_TYPE_DECL,              // type id = type_expr
   AST_STRUCT,                 // struct name { field: type [= init], ... }
+  AST_ENUM,                   // enum name : type { field [= value], ... }
   AST_IF,                     // if (cond) then else
   AST_FOR,                    // for (init; cond; inc) body | for (typed_id in expr) body
   AST_WHILE,                  // while (cond) body
@@ -476,6 +477,11 @@ protected:
     }
   }
 };
+
+/**
+ * Shortcut for vector of Nodes
+ */
+using NodeList = std::vector<std::shared_ptr<Node>>;
 
 /**
  * Empty AST node. May be used as a placeholder in the tree

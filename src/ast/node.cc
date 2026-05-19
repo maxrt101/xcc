@@ -35,6 +35,7 @@ static const std::unordered_map<NodeType, NodeString> s_type_map {
     DESC(AST_INIT,                  "initializer expression"),
     DESC(AST_EXPR_STRING,           "string literal"),
     DESC(AST_STRUCT,                "struct declaration"),
+    DESC(AST_ENUM,                  "enum declaration"),
     DESC(AST_EXPR_SUBSCRIPT,        "subscript"),
     DESC(AST_EXPR_TYPE,             "type"),
     DESC(AST_EXPR_TYPED_IDENTIFIER, "typed identifier"),
