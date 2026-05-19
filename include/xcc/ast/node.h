@@ -11,6 +11,7 @@
 
 namespace xcc::codegen {
 class ModuleContext;
+class GlobalContext;
 }
 
 namespace xcc::meta {
@@ -291,7 +292,7 @@ public:
    * @param name Attribute name
    * @return @c true if attribute with specified name is present
    */
-  bool hasAttribute(const std::string& name) const;
+  [[nodiscard]] bool hasAttribute(const std::string& name) const;
 
   /**
    * Get attribute by name
@@ -301,7 +302,7 @@ public:
    * @param name Attribute name
    * @return Attribute reference
    */
-  Attribute& getAttribute(const std::string& name);
+  [[nodiscard]] Attribute& getAttribute(const std::string& name);
 
   /**
    * Get attribute by name
@@ -311,17 +312,17 @@ public:
    * @param name Attribute name
    * @return Const attribute reference
    */
-  const Attribute& getAttribute(const std::string& name) const;
+  [[nodiscard]] const Attribute& getAttribute(const std::string& name) const;
 
   /**
    * Get all attributes where Attribute::name == `name` as references
    */
-  std::vector<std::reference_wrapper<Attribute>> getAttributes(const std::string& name);
+  [[nodiscard]] std::vector<std::reference_wrapper<Attribute>> getAttributes(const std::string& name);
 
   /**
    * Get all attributes where Attribute::name == `name` as const references
    */
-  std::vector<std::reference_wrapper<const Attribute>> getAttributes(const std::string& name) const;
+  [[nodiscard]] std::vector<std::reference_wrapper<const Attribute>> getAttributes(const std::string& name) const;
 
   /**
    * Perform a clone (deep copy) of current node;
@@ -333,7 +334,7 @@ public:
   /**
    * Visitor implementation
    */
-  virtual void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) = 0;
+  virtual void visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) = 0;
 
   /**
    * Recursively convert tree to string
@@ -465,10 +466,15 @@ protected:
   }
 
   template <typename T>
-  void callVisitor(std::shared_ptr<T>& node, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  void callVisitor(
+    std::unique_ptr<codegen::GlobalContext>& globalContext,
+    std::shared_ptr<T>&                      node,
+    Visitor                                  visitor,
+    std::vector<NodeType>                    ignoreSubtree
+  ) {
     if (!node || node->isAnyOf(ignoreSubtree)) return;
 
-    node->visit(visitor, ignoreSubtree);
+    node->visit(globalContext, visitor, ignoreSubtree);
 
     auto res = visitor(cast<Node>(node));
 
@@ -494,7 +500,7 @@ public:
   static std::shared_ptr<Empty> create();
 
   std::shared_ptr<Node> clone() override;
-  void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
+  void visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 };
 
