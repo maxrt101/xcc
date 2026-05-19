@@ -963,8 +963,6 @@ std::shared_ptr<ast::Node> Parser::parseNumber() {
   std::string value = previous().value;
   auto        span  = previous().span;
 
-  logger.warn("parseNumber: '{}'", value);
-
   if (value.find('.') != std::string::npos) {
     return ast::Number::createFloating(span, std::stod(value));
   }
@@ -1034,15 +1032,35 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {
-  auto span = current().span;
-
   if (!check(TOKEN_IDENTIFIER) && !check(TOKEN_SELF)) {
     Error(ERROR_LVALUE_UNEXPECTED_TOKEN, current().span, "'{}' ({})", current().value, Token::typeToString(current().type)).raise();
   }
 
-  /* Parse Member Access */
-  if (checkNext(TOKEN_DOT) || checkNext(TOKEN_RIGHT_ARROW)) {
-    std::vector<MemberAccessContext> nodes;
+  /* Parse Member Access Or Plain Identifier */
+  auto id = parseMemberAccessOrLvalue();
+
+  if (check(TOKEN_LEFT_PAREN) || (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN))) {
+    /* Function or Macro Call */
+    return parseCall(id);
+  }
+
+  if (check(TOKEN_LEFT_BRACE) && id->is(ast::AST_EXPR_IDENTIFIER)) {
+    /* Struct initializer */
+    return parseInitializer(ast::Node::cast<ast::Identifier>(id));
+  }
+
+  return ast::Node::cast<ast::Node>(id);
+}
+
+std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue() {
+  auto span = current().span;
+
+  auto id = parseScopedIdentifier("for identifier");
+
+  if (check(TOKEN_DOT) || check(TOKEN_RIGHT_ARROW)) {
+    std::vector<MemberAccessContext> nodes = {{id, current().is(TOKEN_RIGHT_ARROW)}};
+
+    advance();
 
     do {
       if (!checkAnyOf(TOKEN_IDENTIFIER, TOKEN_SELF)) {
@@ -1073,19 +1091,7 @@ std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {
     return memberAccess;
   }
 
-  auto id = parseScopedIdentifier("for function name (or not?)");
-
-  if (check(TOKEN_LEFT_PAREN) || (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN))) {
-    /* Function or Macro Call */
-    return parseCall(id);
-  }
-
-  if (check(TOKEN_LEFT_BRACE)) {
-    // Struct initializer
-    return parseInitializer(id);
-  }
-
-  return ast::Node::cast<ast::Node>(id);
+  return id;
 }
 
 std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) {
