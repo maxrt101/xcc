@@ -141,7 +141,7 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
   auto span = current().span;
 
   if (!name && checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
-    std::vector<std::shared_ptr<ast::Node>> members;
+    ast::NodeList members;
 
     do {
       members.push_back(parseType());
@@ -159,7 +159,7 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
       Error(ERROR_FN_TYPE_MISSING_OPENING_PAREN, current().span).raise();
     }
 
-    std::vector<std::shared_ptr<ast::Node>> args;
+    ast::NodeList args;
     bool isVariadic = false;
 
     do {
@@ -343,7 +343,7 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
     Error(ERROR_BLOCK_MISSING_OPENING_BRACE, current().span).raise();
   }
 
-  std::vector<std::shared_ptr<ast::Node>> nodes;
+  ast::NodeList nodes;
 
   while (true) {
     if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
@@ -374,7 +374,7 @@ std::shared_ptr<ast::Decomposition> Parser::parseDecompositionList() {
     Error(ERROR_DECOMPOSITION_MISSING_OPENING_SQUARE_BRACE, current().span).raise();
   }
 
-  std::vector<std::shared_ptr<ast::Node>> pieces;
+  ast::NodeList pieces;
 
   do {
     pieces.push_back(check(TOKEN_LEFT_SQUARE_BRACE)
@@ -440,7 +440,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
   }
 
   std::vector<std::shared_ptr<ast::TypedIdentifier>> fields;
-  std::vector<std::shared_ptr<ast::Node>> methods;
+  ast::NodeList methods;
 
   // important: don't use name(), as it will prepend the same prefix as parseScopedIdentified in parseFunction
   structStack.push_back(name->value);
@@ -468,6 +468,66 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
   }
 
   return ast::Struct::create(span + previous().span, name, fields, methods);
+}
+
+std::shared_ptr<ast::Node> Parser::parseEnum(const ast::Node::AttributeList& attrs) {
+  auto                       span = current().span;
+  std::shared_ptr<ast::Node> type;
+  ast::Enum::FieldList       fields;
+  ast::NodeList              methods;
+
+  if (!checkAdvance(TOKEN_ENUM)) {
+    Error(ERROR_ENUM_MISSING_KEYWORD, current().span).raise();
+  }
+
+  auto name = parseIdentifierWithCurrentScope("for enum name");
+
+  if (checkAdvance(TOKEN_COLON)) {
+    type = parseType();
+  } else {
+    // Default enum type is i32. It's easier to create it here,
+    // than to add nullptr checks all over ast::Enum methods
+    type = ast::Type::create(name->span, ast::Identifier::create(name->span, "i32"));
+  }
+
+  if (!checkAdvance(TOKEN_LEFT_BRACE)) {
+    Error(ERROR_ENUM_MISSING_OPENING_BRACE, current().span).raise();
+  }
+
+  // Reuse struct stack for enums
+  // important: don't use name(), as it will prepend the same prefix as parseScopedIdentified in parseFunction
+  structStack.push_back(name->value);
+
+  bool shouldContinue = true;
+
+  do {
+    if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
+      break;
+    }
+
+    if (check(TOKEN_FN)) {
+      methods.push_back(parseFunction(true));
+    } else {
+      std::shared_ptr<ast::Identifier> field_name = parseIdentifierWithCurrentScope("for enum field name");
+      std::shared_ptr<ast::Node>       field_value = nullptr;
+
+      if (checkAdvance(TOKEN_EQUALS)) {
+        field_value = parseExpr();
+      }
+
+      fields.emplace_back(field_name, field_value);
+    }
+
+    shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_COMMA);
+  } while (shouldContinue);
+
+  structStack.pop_back();
+
+  if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
+    Error(ERROR_ENUM_MISSING_CLOSING_BRACE, current().span).raise();
+  }
+
+  return ast::Enum::create(span + previous().span, name, type, fields, methods);
 }
 
 std::shared_ptr<ast::Node> Parser::parseIf() {
@@ -903,6 +963,8 @@ std::shared_ptr<ast::Node> Parser::parseNumber() {
   std::string value = previous().value;
   auto        span  = previous().span;
 
+  logger.warn("parseNumber: '{}'", value);
+
   if (value.find('.') != std::string::npos) {
     return ast::Number::createFloating(span, std::stod(value));
   }
@@ -1027,7 +1089,7 @@ std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) {
-  std::vector<std::shared_ptr<ast::Node>> args;
+  ast::NodeList args;
 
   bool isMacro = false;
 
@@ -1151,7 +1213,7 @@ ast::Node::AttributeList Parser::parseAttributeList() {
 
     auto name = parseIdentifier("for attribute name");
 
-    std::vector<std::shared_ptr<ast::Node>> args;
+    ast::NodeList args;
 
     if (checkAdvance(TOKEN_LEFT_PAREN)) {
       do {
@@ -1330,6 +1392,10 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
 
   if (check(TOKEN_STRUCT)) {
     return parseStruct(attrs);
+  }
+
+  if (check(TOKEN_ENUM)) {
+    return parseEnum(attrs);
   }
 
   if (check(TOKEN_USE)) {

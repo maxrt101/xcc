@@ -62,7 +62,7 @@ private:
   const std::vector<Token>& tokens;       /** Token stream */
   size_t                    current_idx;  /** Index into `tokens` */
   std::vector<std::string>  structStack;  /** Stack of currently parsing struct definitions */
-  bool                      isModule;
+  bool                      isModule;     /** Set to @c true if currently parsing a module */
 
   struct {
     std::vector<std::string> searchPaths; /** List of module search paths */
@@ -175,6 +175,10 @@ private:
    */
   std::shared_ptr<ast::TypedIdentifier> parseValueDecl(const std::string& err_msg, bool scoped = false);
 
+  /**
+   * Parse value decomposition (`[a, b]` part of `var [a, b] = c;`)
+   * Parses recursively, as decompositions can be nested (`[a, [c, d]]`)
+   */
   std::shared_ptr<ast::Decomposition> parseDecompositionList();
 
   // Statements
@@ -183,6 +187,7 @@ private:
   std::shared_ptr<ast::Node> parseVar(bool global);
   std::shared_ptr<ast::Node> parseConst();
   std::shared_ptr<ast::Node> parseStruct(const ast::Node::AttributeList& attrs);
+  std::shared_ptr<ast::Node> parseEnum(const ast::Node::AttributeList& attrs);
   std::shared_ptr<ast::Node> parseIf();
   std::shared_ptr<ast::Node> parseFor();
   std::shared_ptr<ast::Node> parseWhile();
