@@ -26,12 +26,12 @@ std::shared_ptr<Node> MacroCall::clone() {
   ));
 }
 
-void MacroCall::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void MacroCall::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   for (auto& arg : args) {
-    callVisitor(arg, visitor, ignoreSubtree);
+    callVisitor(globalContext, arg, visitor, ignoreSubtree);
   }
 
-  callVisitor(name, visitor, ignoreSubtree);
+  callVisitor(globalContext, name, visitor, ignoreSubtree);
 }
 
 std::string MacroCall::toString(Node * grandparent, Node * parent, int indent, bool newline) {

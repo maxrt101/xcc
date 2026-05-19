@@ -18,10 +18,10 @@ std::shared_ptr<Node> TypedIdentifier::clone() {
   ));
 }
 
-void TypedIdentifier::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(name, visitor, ignoreSubtree);
-  callVisitor(value_type, visitor, ignoreSubtree);
-  callVisitor(value, visitor, ignoreSubtree);
+void TypedIdentifier::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, name, visitor, ignoreSubtree);
+  callVisitor(globalContext, value_type, visitor, ignoreSubtree);
+  callVisitor(globalContext, value, visitor, ignoreSubtree);
 }
 
 std::string TypedIdentifier::toString(Node * grandparent, Node * parent, int indent, bool newline) {

@@ -1,4 +1,5 @@
 #include "xcc/ast/mod.h"
+#include "xcc/codegen.h"
 #include "xcc/exceptions.h"
 #include "xcc/ast/identifier.h"
 #include <format>
@@ -16,9 +17,11 @@ std::shared_ptr<Node> Module::clone() {
   return withAttrs(create(span, name->clone(), body ? cast<Block>(body->clone()) : nullptr));
 }
 
-void Module::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(name, visitor, ignoreSubtree);
-  callVisitor(body, visitor, ignoreSubtree);
+void Module::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  globalContext->pushModule(getName());
+  callVisitor(globalContext, name, visitor, ignoreSubtree);
+  callVisitor(globalContext, body, visitor, ignoreSubtree);
+  globalContext->popModule();
 }
 
 std::string Module::toString(Node * grandparent, Node * parent, int indent, bool newline) {

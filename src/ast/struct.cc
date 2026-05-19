@@ -27,15 +27,15 @@ std::shared_ptr<Node> Struct::clone() {
   return withAttrs(create(span, cast<Identifier>(name->clone()), cloneVector(fields), cloneVector(methods)));
 }
 
-void Struct::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(name, visitor, ignoreSubtree);
+void Struct::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, name, visitor, ignoreSubtree);
 
   for (auto& node : fields) {
-    callVisitor(node, visitor, ignoreSubtree);
+    callVisitor(globalContext, node, visitor, ignoreSubtree);
   }
 
   for (auto& node : methods) {
-    callVisitor(node, visitor, ignoreSubtree);
+    callVisitor(globalContext, node, visitor, ignoreSubtree);
   }
 }
 

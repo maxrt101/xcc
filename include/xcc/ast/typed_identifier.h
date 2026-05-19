@@ -22,7 +22,7 @@ public:
   static std::shared_ptr<TypedIdentifier> create(SourceSpan span, std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value = nullptr);
 
   std::shared_ptr<Node> clone() override;
-  void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
+  void visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   std::shared_ptr<xcc::meta::Type> generateType(codegen::ModuleContext &ctx, PayloadList payload) override;

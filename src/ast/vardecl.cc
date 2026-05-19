@@ -36,10 +36,10 @@ std::shared_ptr<Node> VarDecl::clone() {
   ));
 }
 
-void VarDecl::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(name, visitor, ignoreSubtree);
-  callVisitor(type, visitor, ignoreSubtree);
-  callVisitor(value, visitor, ignoreSubtree);
+void VarDecl::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, name, visitor, ignoreSubtree);
+  callVisitor(globalContext, type, visitor, ignoreSubtree);
+  callVisitor(globalContext, value, visitor, ignoreSubtree);
 }
 
 std::string VarDecl::toString(Node * grandparent, Node * parent, int indent, bool newline) {
@@ -101,7 +101,7 @@ llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_pt
       name->name(),
       ctx.globalContext.getCurrentDIFile(),
       span.start().line,
-      meta_type->getDIType(ctx),
+      (meta_type->isEnum() ? meta_type->getEnumElementType() : meta_type)->getDIType(ctx),
       true
     );
 
@@ -150,7 +150,7 @@ llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_p
     name->name(),
     ctx.globalContext.getCurrentDIFile(),
     span.start().line,
-    meta_type->getDIType(ctx),
+    (meta_type->isEnum() ? meta_type->getEnumElementType() : meta_type)->getDIType(ctx),
     true
   );
 

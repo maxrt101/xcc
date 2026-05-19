@@ -52,21 +52,21 @@ std::shared_ptr<Node> Type::clone() {
   }
 }
 
-void Type::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Type::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   switch (kind) {
     case FUNCTION:
-      callVisitor(fn.returnType, visitor, ignoreSubtree);
+      callVisitor(globalContext, fn.returnType, visitor, ignoreSubtree);
       for (auto& node : fn.args) {
-        callVisitor(node, visitor, ignoreSubtree);
+        callVisitor(globalContext, node, visitor, ignoreSubtree);
       }
       break;
     case ARRAY:
-      callVisitor(array.size, visitor, ignoreSubtree);
+      callVisitor(globalContext, array.size, visitor, ignoreSubtree);
       [[fallthrough]];
     case NORMAL:
     case POINTER:
     default:
-      callVisitor(name, visitor, ignoreSubtree);
+      callVisitor(globalContext, name, visitor, ignoreSubtree);
       break;
   }
 }

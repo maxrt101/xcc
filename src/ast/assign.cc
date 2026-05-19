@@ -29,9 +29,9 @@ std::shared_ptr<Node> Assign::clone() {
   return withAttrs(create(span, kind, lhs->clone(), rhs->clone()));
 }
 
-void Assign::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(lhs, visitor, ignoreSubtree);
-  callVisitor(rhs, visitor, ignoreSubtree);
+void Assign::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, lhs, visitor, ignoreSubtree);
+  callVisitor(globalContext, rhs, visitor, ignoreSubtree);
 }
 
 std::string Assign::toString(Node * grandparent, Node * parent, int indent, bool newline) {

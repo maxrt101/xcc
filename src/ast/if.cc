@@ -17,10 +17,10 @@ std::shared_ptr<Node> If::clone() {
   return withAttrs(create(span, condition->clone(), then_branch->clone(), else_branch ? else_branch->clone() : nullptr));
 }
 
-void If::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(condition, visitor, ignoreSubtree);
-  callVisitor(then_branch, visitor, ignoreSubtree);
-  callVisitor(else_branch, visitor, ignoreSubtree);
+void If::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, condition, visitor, ignoreSubtree);
+  callVisitor(globalContext, then_branch, visitor, ignoreSubtree);
+  callVisitor(globalContext, else_branch, visitor, ignoreSubtree);
 }
 
 std::string If::toString(Node * grandparent, Node * parent, int indent, bool newline) {

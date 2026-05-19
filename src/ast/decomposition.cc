@@ -23,12 +23,12 @@ std::shared_ptr<Node> Decomposition::clone() {
   return withAttrs(create(span, cloneVector(pieces), value->clone()));
 }
 
-void Decomposition::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Decomposition::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   for (auto& piece : pieces) {
-    callVisitor(piece, visitor, ignoreSubtree);
+    callVisitor(globalContext, piece, visitor, ignoreSubtree);
   }
 
-  callVisitor(value, visitor, ignoreSubtree);
+  callVisitor(globalContext, value, visitor, ignoreSubtree);
 }
 
 std::string Decomposition::toString(Node * grandparent, Node * parent, int indent, bool newline) {

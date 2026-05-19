@@ -40,7 +40,7 @@ std::shared_ptr<Node> Number::clone() {
   Error(ERROR_INVALID_NUMBER_LITERAL, span).raiseFromNode(this);
 }
 
-void Number::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
+void Number::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string Number::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   return attributesToString(0, false) + (tag == INTEGER ? std::format("{}", value.integer) : std::format("{}", value.floating));

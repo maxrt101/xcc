@@ -21,11 +21,11 @@ std::shared_ptr<Node> For::clone() {
   ));
 }
 
-void For::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(init, visitor, ignoreSubtree);
-  callVisitor(cond, visitor, ignoreSubtree);
-  callVisitor(step, visitor, ignoreSubtree);
-  callVisitor(body, visitor, ignoreSubtree);
+void For::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, init, visitor, ignoreSubtree);
+  callVisitor(globalContext, cond, visitor, ignoreSubtree);
+  callVisitor(globalContext, step, visitor, ignoreSubtree);
+  callVisitor(globalContext, body, visitor, ignoreSubtree);
 }
 
 std::string For::toString(Node * grandparent, Node * parent, int indent, bool newline) {

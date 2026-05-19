@@ -23,9 +23,9 @@ std::shared_ptr<Node> Asm::clone() {
   return withAttrs(create(span, code->clone(), constraints->clone(), cloneVector(args)));
 }
 
-void Asm::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(code, visitor, ignoreSubtree);
-  callVisitor(constraints, visitor, ignoreSubtree);
+void Asm::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, code, visitor, ignoreSubtree);
+  callVisitor(globalContext, constraints, visitor, ignoreSubtree);
 }
 
 std::string Asm::toString(Node * grandparent, Node * parent, int indent, bool newline) {

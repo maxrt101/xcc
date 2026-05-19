@@ -32,7 +32,7 @@ std::shared_ptr<Node> Identifier::clone() {
   return withAttrs(create(span, value, scope));
 }
 
-void Identifier::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
+void Identifier::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string Identifier::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   std::string res = attributesToString(0, false);
@@ -220,7 +220,7 @@ std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen:
     assertRaiseFromNode(_enum->hasEnumElement(value),
       Error(ERROR_ENUM_NO_MEMBER, span, "'{}' in enum '{}'", value, scope.back()), this);
 
-    return _enum->getBaseType();
+    return _enum;
   }
 
   // Check const with module prefixed id (e.g. `module::Enum` for `Enum::Value`,
@@ -231,7 +231,7 @@ std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen:
     assertRaiseFromNode(_enum->hasEnumElement(value),
       Error(ERROR_ENUM_NO_MEMBER, span, "'{}' in enum '{}'", value, scope.back()), this);
 
-    return _enum->getBaseType();
+    return _enum;
   }
 
   // TODO: Is needed?

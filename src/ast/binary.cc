@@ -46,9 +46,9 @@ std::shared_ptr<Node> Binary::clone() {
   return withAttrs(create(span, operation, lhs->clone(), rhs->clone()));
 }
 
-void Binary::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(lhs, visitor, ignoreSubtree);
-  callVisitor(rhs, visitor, ignoreSubtree);
+void Binary::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, lhs, visitor, ignoreSubtree);
+  callVisitor(globalContext, rhs, visitor, ignoreSubtree);
 }
 
 std::string Binary::toString(Node * grandparent, Node * parent, int indent, bool newline) {
@@ -70,6 +70,10 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   // Pointer comparisons are actually converted to integer
   if (common_type->isPointer()) {
     common_type = meta::Type::createU64();
+  }
+
+  if (common_type->isEnum()) {
+    common_type = common_type->getEnumElementType();
   }
 
   auto lhs_val = castIfNotSame(
@@ -96,13 +100,16 @@ llvm::Value * Binary::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     return binop->handler(ctx, lhs_val, rhs_val, binop->twine);
   }
 
-  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op={} type={}", operation.toString(), common_type->toString())
+  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op='{}' type='{}'", operation.toString(), common_type->toString())
     .raiseFromNode(this);
 }
 
 llvm::Constant * Binary::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
   auto lhs_type = raiseIfNull(lhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "LHS Type is NULL"));
   auto rhs_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
+
+  if (lhs_type->isEnum()) lhs_type = lhs_type->getEnumElementType();
+  if (rhs_type->isEnum()) rhs_type = rhs_type->getEnumElementType();
 
   assertRaiseFromNode(lhs_type->isInteger() && rhs_type->isInteger(),
     Error(ERROR_UNIMPLEMENTED, span, "Only integers are supported for constant binary expressions"), this);
@@ -135,7 +142,7 @@ llvm::Constant * Binary::generateConstant(codegen::ModuleContext& ctx, PayloadLi
     break;
   }
 
-  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op={} type={}", operation.toString(), meta_type->toString())
+  Error(ERROR_UNKNOWN_BIN_OP_OR_TYPE, operation.span, "op='{}' type='{}'", operation.toString(), meta_type->toString())
     .raiseFromNode(this);
 }
 
