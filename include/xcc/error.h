@@ -153,8 +153,22 @@ enum ErrorId {
   ERROR_DECOMPOSITION_MISSING_CLOSING_SQUARE_BRACE = 127,
   ERROR_DECOMPOSITION_MISSING_EQUALS               = 128,
   ERROR_INTERNAL_OUT_OF_BOUNDS                     = 129,
+  ERROR_UNINITIALIZABLE_TYPE                       = 130,
+  ERROR_ENUM_MISSING_KEYWORD                       = 131,
+  ERROR_ENUM_MISSING_OPENING_BRACE                 = 132,
+  ERROR_ENUM_MISSING_CLOSING_BRACE                 = 133,
+  ERROR_ENUM_NO_MEMBER                             = 134,
 
   ERROR_MAX,
+};
+
+/**
+ * Compiler warning codes
+ */
+enum WarningId {
+  WARNING_RESERVED = 0,
+
+  WARNING_MAX,
 };
 
 /**
@@ -168,6 +182,19 @@ struct ErrorDescription {
 
 private:
   static const std::unordered_map<ErrorId, ErrorDescription> descs;
+};
+
+/**
+ * Warning Description. For now contains only the warning message
+ */
+struct WarningDescription {
+  WarningId     id;
+  std::string name;
+
+  static const WarningDescription& get(WarningId id);
+
+private:
+  static const std::unordered_map<WarningId, WarningDescription> descs;
 };
 
 /**
@@ -247,6 +274,56 @@ struct Note {
 
   [[nodiscard]] std::string toString() const;
 };
+
+/**
+ * Compiler warning
+ */
+struct Warning {
+  WarningId   id;
+  SourceSpan  span;
+  std::string message;
+
+  std::vector<Note> notes;
+
+  /** Default constructor */
+  Warning(WarningId id, SourceSpan span);
+
+  /** Constructor with custom message */
+  template <typename... Args>
+  Warning(WarningId id, SourceSpan span, std::string_view fmt, Args&&... args)
+    : id(id), span(span), message(std::vformat(fmt, std::make_format_args(args...))) {}
+
+  /** Append a Note to this Warning. Note will have no source span */
+  template <typename... Args>
+  Warning& note(std::string_view fmt, Args&&... args) {
+    notes.push_back(Note({}, fmt, std::forward<Args>(args)...));
+    return *this;
+  }
+
+  /** Append a Note to this Warning. With source span */
+  template <typename... Args>
+  Warning& note(SourceSpan span, std::string_view fmt, Args&&... args) {
+    notes.push_back(Note(span, fmt, std::forward<Args>(args)...));
+    return *this;
+  }
+
+  /**
+   * Converts Warning to a pretty string with span info, error code & description & notes
+   */
+  [[nodiscard]] std::string toString() const;
+
+  /**
+   * Emits this warning to stderr
+   */
+  void emit() const;
+
+  /**
+   * Emits this warning to stderr
+   * Checks for macro expansion tags, and appends notes if needed
+   */
+  void emitFromNode(const ast::Node * node) const;
+};
+
 
 /**
  * Compiler Error

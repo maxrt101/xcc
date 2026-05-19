@@ -143,6 +143,15 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_DECOMPOSITION_MISSING_CLOSING_SQUARE_BRACE, "Missing ']' after variable list in value decomposition"),
   DESC(ERROR_DECOMPOSITION_MISSING_EQUALS,               "Missing '=' after variable list in value decomposition"),
   DESC(ERROR_INTERNAL_OUT_OF_BOUNDS,                     "(INTERNAL) Out of bounds access"),
+  DESC(ERROR_UNINITIALIZABLE_TYPE,                       "Value of provided type cannot be initialized via an initializer expression"),
+  DESC(ERROR_ENUM_MISSING_KEYWORD,                       "Missing 'enum' at the start of enum declaration"),
+  DESC(ERROR_ENUM_MISSING_OPENING_BRACE,                 "Missing '{' at the start of enum declaration"),
+  DESC(ERROR_ENUM_MISSING_CLOSING_BRACE,                 "Missing '}' after enum declaration"),
+  DESC(ERROR_ENUM_NO_MEMBER,                             "No such enum member"),
+};
+
+const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {
+  DESC(WARNING_RESERVED, "Reserved warning"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
@@ -160,6 +169,10 @@ static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t l
 }
 
 const ErrorDescription& ErrorDescription::get(ErrorId id) {
+  return descs.at(id);
+}
+
+const WarningDescription& WarningDescription::get(WarningId id) {
   return descs.at(id);
 }
 
@@ -276,6 +289,41 @@ std::string Note::toString() const {
       ANSI_COLOR_FG_GREEN "note:" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n{}",
       message, span.toString()
     );
+}
+
+Warning::Warning(WarningId id, SourceSpan span) : id(id), span(span), message("") {}
+
+std::string Warning::toString() const {
+  std::string result = std::format(
+    "warn[" ANSI_COLOR_FG_YELLOW "W{:04}" ANSI_TEXT_RESET "]: " ANSI_TEXT_BOLD "{}{}" ANSI_TEXT_RESET "\n{}",
+    (size_t)id, WarningDescription::get(id).name,
+    message.empty() ? "" : ": " + message,
+    span.toString()
+  );
+
+  for (auto& note : notes) {
+    result += note.toString();
+  }
+
+  return result;
+}
+
+void Warning::emit() const {
+  auto str = toString();
+
+  fprintf(stderr, "%s", str.c_str());
+}
+
+void Warning::emitFromNode(const ast::Node * node) const {
+  auto warn = *this;
+
+  if (node && node->hasAttribute("__xcc_macro_expanded_from")) {
+    auto attr = node->getAttribute("__xcc_macro_expanded_from");
+    auto name = attr.args[0]->as<ast::Identifier>();
+    warn = warn.note(name->span, "Expanded from macro '{}'", name->name());
+  }
+
+  warn.emit();
 }
 
 Error::Error(ErrorId id, SourceSpan span) : id(id), span(span), message("") {}
