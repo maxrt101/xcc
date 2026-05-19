@@ -21,13 +21,24 @@ public:
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
-  std::string name() const;
+  /** Returns constructed name with scope + value (e.g. `module::Enum::Value`) */
+  [[nodiscard]] std::string name() const;
+
+  /** Returns scope prefix (e.g. `module::Enum`) */
+  [[nodiscard]] std::string prefix() const;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Constant * generateConstant(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
-  std::shared_ptr<xcc::meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
+  std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
+
+private:
+  /**
+   * If `prefix()` (or current module prefix + `prefix()`) matches a registered enum type,
+   * and `value` is a member of that enum - return constant value
+   */
+  llvm::Constant * checkGenerateEnum(codegen::ModuleContext& ctx, PayloadList payload);
 };
 
 } /* namespace xcc::ast */

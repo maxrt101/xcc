@@ -20,13 +20,13 @@ private:
 
 public:
   std::shared_ptr<Node>              callee;
-  std::vector<std::shared_ptr<Node>> args;
+  NodeList args;
 
 public:
-  Call(SourceSpan span, std::shared_ptr<Node> callee, std::vector<std::shared_ptr<Node>> args);
+  Call(SourceSpan span, std::shared_ptr<Node> callee, NodeList args);
   ~Call() override = default;
 
-  static std::shared_ptr<Call> create(SourceSpan span, std::shared_ptr<Node> callee, std::vector<std::shared_ptr<Node>> args);
+  static std::shared_ptr<Call> create(SourceSpan span, std::shared_ptr<Node> callee, NodeList args);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

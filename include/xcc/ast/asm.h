@@ -7,25 +7,25 @@ namespace xcc::ast {
 
 class Asm : public Node {
 public:
-  std::shared_ptr<Node>              code;
-  std::shared_ptr<Node>              constraints;
-  std::vector<std::shared_ptr<Node>> args;
+  std::shared_ptr<Node> code;
+  std::shared_ptr<Node> constraints;
+  NodeList              args;
 
 public:
   Asm(
-    SourceSpan                         span,
-    std::shared_ptr<Node>              code,
-    std::shared_ptr<Node>              constraints,
-    std::vector<std::shared_ptr<Node>> args
+    SourceSpan            span,
+    std::shared_ptr<Node> code,
+    std::shared_ptr<Node> constraints,
+    NodeList args
   );
 
   ~Asm() override = default;
 
   static std::shared_ptr<Asm> create(
-    SourceSpan                         span,
-    std::shared_ptr<Node>              code,
-    std::shared_ptr<Node>              constraints,
-    std::vector<std::shared_ptr<Node>> args
+    SourceSpan            span,
+    std::shared_ptr<Node> code,
+    std::shared_ptr<Node> constraints,
+    NodeList              args
   );
 
   std::shared_ptr<Node> clone() override;

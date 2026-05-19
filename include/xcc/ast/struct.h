@@ -13,14 +13,14 @@ class Struct : public Node, public std::enable_shared_from_this<Struct> {
 public:
   std::shared_ptr<Identifier>                   name;
   std::vector<std::shared_ptr<TypedIdentifier>> fields;
-  std::vector<std::shared_ptr<Node>>            methods;
+  NodeList                                      methods;
 
 public:
   explicit Struct(
       SourceSpan                                    span,
       std::shared_ptr<Identifier>                   name,
       std::vector<std::shared_ptr<TypedIdentifier>> fields = {},
-      std::vector<std::shared_ptr<Node>>            methods = {}
+      NodeList                                      methods = {}
   );
 
   ~Struct() override = default;
@@ -29,7 +29,7 @@ public:
       SourceSpan                                    span,
       std::shared_ptr<Identifier>                   name,
       std::vector<std::shared_ptr<TypedIdentifier>> fields = {},
-      std::vector<std::shared_ptr<Node>>            methods = {}
+      NodeList                                      methods = {}
   );
 
   std::shared_ptr<Node> clone() override;

@@ -6,22 +6,22 @@ namespace xcc::ast {
 
 class Decomposition : public Node {
 public:
-  std::vector<std::shared_ptr<Node>> pieces;
-  std::shared_ptr<Node>              value;
+  NodeList              pieces;
+  std::shared_ptr<Node> value;
 
 public:
   Decomposition(
-    SourceSpan                         span,
-    std::vector<std::shared_ptr<Node>> pieces,
-    std::shared_ptr<Node>              value = nullptr
+    SourceSpan            span,
+    NodeList              pieces,
+    std::shared_ptr<Node> value = nullptr
   );
 
   ~Decomposition() override = default;
 
   static std::shared_ptr<Decomposition> create(
-    SourceSpan                         span,
-    std::vector<std::shared_ptr<Node>> pieces,
-    std::shared_ptr<Node>              value = nullptr
+    SourceSpan            span,
+    NodeList              pieces,
+    std::shared_ptr<Node> value = nullptr
   );
 
   std::shared_ptr<Node> clone() override;
@@ -42,7 +42,7 @@ private:
     PayloadList                        payload,
     llvm::Value *                      base_val,
     std::shared_ptr<meta::Type>        base_type,
-    std::vector<std::shared_ptr<Node>> sub_pieces
+    NodeList sub_pieces
   );
 
   void decomposeNamedPiece(

@@ -8,7 +8,7 @@ Struct::Struct(
     SourceSpan                                    span,
     std::shared_ptr<Identifier>                   name,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
-    std::vector<std::shared_ptr<Node>>            methods
+    NodeList                                      methods
 ) : Node(AST_STRUCT, span),
     name(std::move(name)),
     fields(std::move(fields)),
@@ -18,7 +18,7 @@ std::shared_ptr<Struct> Struct::create(
     SourceSpan                                    span,
     std::shared_ptr<Identifier>                   name,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
-    std::vector<std::shared_ptr<Node>>            methods
+    NodeList                                      methods
 ) {
   return std::make_shared<Struct>(span, std::move(name), std::move(fields), std::move(methods));
 }

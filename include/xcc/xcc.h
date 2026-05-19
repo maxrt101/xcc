@@ -30,7 +30,7 @@ inline std::string getVersion() {
  */
 struct CompilationResult {
   struct {
-    std::vector<std::shared_ptr<ast::Node>> expr;
+    ast::NodeList expr;
   } nodes;
 };
 

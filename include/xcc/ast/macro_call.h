@@ -7,22 +7,22 @@ namespace xcc::ast {
 
 class MacroCall : public Node {
 public:
-  std::shared_ptr<Identifier>        name;
-  std::vector<std::shared_ptr<Node>> args;
+  std::shared_ptr<Identifier> name;
+  NodeList                    args;
 
 public:
   MacroCall(
-    SourceSpan                         span,
-    std::shared_ptr<Identifier>        name,
-    std::vector<std::shared_ptr<Node>> args
+    SourceSpan                  span,
+    std::shared_ptr<Identifier> name,
+    NodeList                    args
   );
 
   ~MacroCall() override = default;
 
   static std::shared_ptr<MacroCall> create(
-    SourceSpan                         span,
-    std::shared_ptr<Identifier>        name,
-    std::vector<std::shared_ptr<Node>> args
+    SourceSpan                  span,
+    std::shared_ptr<Identifier> name,
+    NodeList                    args
   );
 
   std::shared_ptr<Node> clone() override;

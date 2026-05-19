@@ -24,7 +24,7 @@ std::shared_ptr<Type> Type::createArray(SourceSpan span, std::shared_ptr<Node> n
   return t;
 }
 
-std::shared_ptr<Type> Type::createFunction(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic) {
+std::shared_ptr<Type> Type::createFunction(SourceSpan span, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic) {
   auto t = std::make_shared<Type>(span, FUNCTION, nullptr);
   t->fn.returnType = std::move(returnType);
   t->fn.args       = std::move(args);
@@ -32,7 +32,7 @@ std::shared_ptr<Type> Type::createFunction(SourceSpan span, std::shared_ptr<Node
   return t;
 }
 
-std::shared_ptr<Type> Type::createTuple(SourceSpan span, std::vector<std::shared_ptr<Node>> members) {
+std::shared_ptr<Type> Type::createTuple(SourceSpan span, NodeList members) {
   auto t = std::make_shared<Type>(span, TUPLE, nullptr);
   t->tuple.members = members;
   return t;

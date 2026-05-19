@@ -210,7 +210,7 @@ static std::shared_ptr<Node> xcc_macro_asm(codegen::GlobalContext& global, std::
   assertRaise(isOrIsLastInBlock(call->args[1], AST_EXPR_STRING),
     Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[1]->span, "asm! expects a string as second argument"));
 
-  std::vector<std::shared_ptr<Node>> args;
+  NodeList args;
 
   for (size_t i = 2; i < call->args.size(); ++i) {
     args.push_back(call->args[i]);

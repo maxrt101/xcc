@@ -5,10 +5,10 @@
 
 using namespace xcc::ast;
 
-Call::Call(SourceSpan span, std::shared_ptr<Node> callee, std::vector<std::shared_ptr<Node>> args)
+Call::Call(SourceSpan span, std::shared_ptr<Node> callee, NodeList args)
     : Node(AST_EXPR_CALL, span), callee(std::move(callee)), args(std::move(args)) {}
 
-std::shared_ptr<Call> Call::create(SourceSpan span, std::shared_ptr<Node> name, std::vector<std::shared_ptr<Node>> args) {
+std::shared_ptr<Call> Call::create(SourceSpan span, std::shared_ptr<Node> name, NodeList args) {
   return std::make_shared<Call>(span, std::move(name), std::move(args));
 }
 

@@ -86,7 +86,7 @@ llvm::Value * Initializer::generateValueWithoutLoad(codegen::ModuleContext& ctx,
   } else if (t->isTuple()) {
     fillTuple(ctx, t, alloca, payload);
   } else {
-    // TODO: Raise error
+    Error(ERROR_UNINITIALIZABLE_TYPE, span, "'{}'", t->toString()).raiseFromNode(this);
   }
 
   return alloca;

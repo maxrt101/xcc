@@ -6,15 +6,15 @@ using namespace xcc;
 using namespace xcc::ast;
 
 Decomposition::Decomposition(
-  SourceSpan                         span,
-  std::vector<std::shared_ptr<Node>> pieces,
-  std::shared_ptr<Node>              value
-) : Node(AST_DECOMPOSITION_DECL, span), pieces(pieces), value(value) {}
+  SourceSpan            span,
+  NodeList              pieces,
+  std::shared_ptr<Node> value
+) : Node(AST_DECOMPOSITION_DECL, span), pieces(std::move(pieces)), value(std::move(value)) {}
 
 std::shared_ptr<Decomposition> Decomposition::create(
-  SourceSpan                         span,
-  std::vector<std::shared_ptr<Node>> pieces,
-  std::shared_ptr<Node>              value
+  SourceSpan            span,
+  NodeList              pieces,
+  std::shared_ptr<Node> value
 ) {
   return std::make_shared<Decomposition>(span, std::move(pieces), std::move(value));
 }
@@ -64,7 +64,7 @@ void Decomposition::decomposeListPiece(
   PayloadList                        payload,
   llvm::Value *                      base_val,
   std::shared_ptr<meta::Type>        base_type,
-  std::vector<std::shared_ptr<Node>> sub_pieces
+  NodeList sub_pieces
 ) {
   for (size_t i = 0; i < sub_pieces.size(); ++i) {
     auto& piece = sub_pieces[i];
@@ -92,14 +92,14 @@ void Decomposition::decomposeListPiece(
       };
 
       auto * element_ptr = ctx.ir_builder->CreateInBoundsGEP(
-        base_type->getLLVMType(ctx), // The underlying array type
-        base_val,                    // The alloca pointer
+        base_type->getLLVMType(ctx), // Underlying array type
+        base_val,                    // Alloca pointer
         indices,
         "array_decomp_ptr"
       );
 
       val = ctx.ir_builder->CreateLoad(
-        val_type->getLLVMType(ctx),  // The inner element type
+        val_type->getLLVMType(ctx),  // Inner element type
         element_ptr,
         "decomposition_elem"
       );

@@ -12,10 +12,10 @@ std::shared_ptr<Node::Payload> Block::Payload::create(std::shared_ptr<meta::Type
   );
 }
 
-Block::Block(SourceSpan span, std::vector<std::shared_ptr<Node>> body)
+Block::Block(SourceSpan span, NodeList body)
   : Node(AST_BLOCK, span), body(std::move(body)) {}
 
-std::shared_ptr<Block> Block::create(SourceSpan span, std::vector<std::shared_ptr<Node>> body) {
+std::shared_ptr<Block> Block::create(SourceSpan span, NodeList body) {
   return std::make_shared<Block>(span, std::move(body));
 }
 

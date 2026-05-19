@@ -26,13 +26,13 @@ public:
   } array;
 
   struct {
-    std::shared_ptr<Node>              returnType;
-    std::vector<std::shared_ptr<Node>> args;
-    bool                               isVariadic;
+    std::shared_ptr<Node> returnType;
+    NodeList              args;
+    bool                  isVariadic;
   } fn;
 
   struct {
-    std::vector<std::shared_ptr<Node>> members;
+    NodeList members;
   } tuple;
 
 public:
@@ -42,8 +42,8 @@ public:
   static std::shared_ptr<Type> create(SourceSpan span, std::shared_ptr<Node> name);
   static std::shared_ptr<Type> createPointer(SourceSpan span, std::shared_ptr<Node> name);
   static std::shared_ptr<Type> createArray(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> size);
-  static std::shared_ptr<Type> createFunction(SourceSpan span, std::shared_ptr<Node> returnType, std::vector<std::shared_ptr<Node>> args, bool isVariadic = false);
-  static std::shared_ptr<Type> createTuple(SourceSpan span, std::vector<std::shared_ptr<Node>> members);
+  static std::shared_ptr<Type> createFunction(SourceSpan span, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic = false);
+  static std::shared_ptr<Type> createTuple(SourceSpan span, NodeList members);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

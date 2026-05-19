@@ -4,17 +4,17 @@
 using namespace xcc::ast;
 
 Asm::Asm(
-  SourceSpan                         span,
-  std::shared_ptr<Node>              code,
-  std::shared_ptr<Node>              constraints,
-  std::vector<std::shared_ptr<Node>> args
+  SourceSpan            span,
+  std::shared_ptr<Node> code,
+  std::shared_ptr<Node> constraints,
+  NodeList              args
 ) : Node(AST_ASM, span), code(std::move(code)), constraints(std::move(constraints)), args(std::move(args)) {}
 
 std::shared_ptr<Asm> Asm::create(
-  SourceSpan                         span,
-  std::shared_ptr<Node>              code,
-  std::shared_ptr<Node>              constraints,
-  std::vector<std::shared_ptr<Node>> args
+  SourceSpan            span,
+  std::shared_ptr<Node> code,
+  std::shared_ptr<Node> constraints,
+  NodeList              args
 ) {
   return std::make_shared<Asm>(span, std::move(code), std::move(constraints), std::move(args));
 }

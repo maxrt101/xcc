@@ -19,13 +19,13 @@ public:
   };
 
 public:
-  std::vector<std::shared_ptr<Node>> body;
+  NodeList body;
 
 public:
-  explicit Block(SourceSpan span, std::vector<std::shared_ptr<Node>> body);
+  explicit Block(SourceSpan span, NodeList body);
   ~Block() override = default;
 
-  static std::shared_ptr<Block> create(SourceSpan span, std::vector<std::shared_ptr<Node>> body);
+  static std::shared_ptr<Block> create(SourceSpan span, NodeList body);
 
   std::shared_ptr<Node> clone() override;
   void visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
