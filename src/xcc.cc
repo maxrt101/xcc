@@ -468,6 +468,11 @@ static void compileBlock(
       for (auto& method : node->as<ast::Struct>()->methods) {
         compileFunction(globalContext, method);
       }
+    } else if (node->is(ast::AST_ENUM)) {
+      node->generateType(*globalContext->globalModule, {});
+      for (auto& method : node->as<ast::Enum>()->methods) {
+        compileFunction(globalContext, method);
+      }
     } else if (node->is(ast::AST_MOD)) {
       auto mod = ast::Node::cast<ast::Module>(node);
 
