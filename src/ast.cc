@@ -1,5 +1,6 @@
 #include "xcc/ast.h"
 #include "xcc/util/log.h"
+#include "xcc/codegen.h"
 
 using namespace xcc;
 using namespace xcc::ast;
@@ -42,17 +43,21 @@ std::shared_ptr<Node> ast::getOrGetLastInBlock(std::shared_ptr<Node> node) {
 }
 
 void subtree::replaceIdentifierWithNode(const std::shared_ptr<Node>& node, const std::string& oldValue, std::shared_ptr<Node> newNode) {
-  node->visit([&](auto node) -> std::shared_ptr<Node> {
-  if (node->is(AST_EXPR_IDENTIFIER) && node->template as<Identifier>()->name() == oldValue) {
-    return newNode;
-  }
+  std::unique_ptr<codegen::GlobalContext> ctx = {nullptr};
 
-  return nullptr;
-}, {});
+  node->visit(ctx, [&](auto node) -> std::shared_ptr<Node> {
+    if (node->is(AST_EXPR_IDENTIFIER) && node->template as<Identifier>()->name() == oldValue) {
+      return newNode;
+    }
+
+    return nullptr;
+  }, {});
 }
 
 void subtree::replaceIdentifier(const std::shared_ptr<Node>& node, const std::string& oldValue, const std::string& newValue) {
-  node->visit([&](auto node) -> std::shared_ptr<Node> {
+  std::unique_ptr<codegen::GlobalContext> ctx = {nullptr};
+
+  node->visit(ctx, [&](auto node) -> std::shared_ptr<Node> {
     if (node->is(AST_EXPR_IDENTIFIER) && node->template as<Identifier>()->name() == oldValue) {
       return Identifier::create(node->span, newValue);
     }

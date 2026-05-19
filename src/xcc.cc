@@ -125,8 +125,8 @@ static void registerCustomTypes(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
   const std::shared_ptr<ast::Node>&        root
 ) {
-  root->visit([&globalContext](auto node) {
-    if (node->isAnyOf(ast::AST_STRUCT, ast::AST_TYPE_DECL)) {
+  root->visit(globalContext, [&globalContext](auto node) {
+    if (node->isAnyOf(ast::AST_STRUCT, ast::AST_TYPE_DECL, ast::AST_ENUM)) {
       node->generateType(*globalContext->globalModule, {});
     }
 
@@ -146,7 +146,7 @@ static void registerConstants(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
   const std::shared_ptr<ast::Block>& root
 ) {
-  root->visit([&globalContext](auto node) -> std::shared_ptr<ast::Node> {
+  root->visit(globalContext, [&globalContext](auto node) -> std::shared_ptr<ast::Node> {
     if (node->is(ast::AST_CONST_DECL)) {
       auto constant = ast::Node::cast<ast::ConstDecl>(node);
       globalContext->addConst(constant->name->name(), constant);
@@ -166,7 +166,7 @@ static void registerFunctions(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
   const std::shared_ptr<ast::Block>& root
 ) {
-  root->visit([&globalContext](auto node) -> std::shared_ptr<ast::Node> {
+  root->visit(globalContext, [&globalContext](auto node) -> std::shared_ptr<ast::Node> {
     ast::FnDecl * decl = nullptr;
 
     if (node->is(ast::AST_FUNCTION_DECL)) {
@@ -193,7 +193,7 @@ static void registerMacros(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
   const std::shared_ptr<ast::Block>&       root
 ) {
-  root->visit([&globalContext](auto node) {
+  root->visit(globalContext, [&globalContext](auto node) {
     if (node->is(ast::AST_MACRO)) {
       auto macro = ast::Node::cast<ast::Macro>(node);
 
@@ -212,11 +212,12 @@ static void registerMacros(
  * @param body  Macro body (cloned!)
  */
 static void processMacroCall(
-  const std::shared_ptr<ast::Macro>&     macro,
-  const std::shared_ptr<ast::MacroCall>& call,
-  const std::shared_ptr<ast::Node>&      body
+  std::unique_ptr<codegen::GlobalContext>& globalContext,
+  const std::shared_ptr<ast::Macro>&       macro,
+  const std::shared_ptr<ast::MacroCall>&   call,
+  const std::shared_ptr<ast::Node>&        body
 ) {
-  body->visit([macro, call](auto node) -> std::shared_ptr<ast::Node> {
+  body->visit(globalContext, [macro, call](auto node) -> std::shared_ptr<ast::Node> {
     if (node->is(ast::AST_EXPR_IDENTIFIER)) {
       auto arg = node->template as<ast::Identifier>()->name();
 
@@ -243,11 +244,17 @@ static void processMacroCall(
 /**
  * Recursively mark each generated node with provided attribute and a new span
  */
-static void markExpandedMacro(std::shared_ptr<ast::Node> body, ast::Node::Attribute attr, SourceSpan span) {
+static void markExpandedMacro(
+  std::shared_ptr<ast::Node>               body,
+  ast::Node::Attribute                     attr,
+  SourceSpan                               span
+) {
   body->addAttribute(attr);
   body->span = span;
 
-  body->visit([&attr, &span](auto node) -> std::shared_ptr<ast::Node> {
+  std::unique_ptr<codegen::GlobalContext> ctx = {nullptr};
+
+  body->visit(ctx, [&attr, &span](auto node) -> std::shared_ptr<ast::Node> {
     if (!node->hasAttribute(attr.name)) {
       node->addAttribute(attr);
       node->span = span;
@@ -351,7 +358,7 @@ static void processMacros(
 ) {
   auto phantoms = globalContext->globalModule->phantomScope({});
 
-  root->visit([&globalContext, &phantoms](auto node) -> std::shared_ptr<ast::Node> {
+  root->visit(globalContext, [&globalContext, &phantoms](auto node) -> std::shared_ptr<ast::Node> {
     gatherPhantomsForMacro(globalContext, phantoms, node);
 
     if (!node->is(ast::AST_EXPR_MACRO_CALL)) {
@@ -386,7 +393,7 @@ static void processMacros(
     auto body = ast::Node::cast<ast::Block>(macro->body->clone());
 
     try {
-      processMacroCall(macro, call, body);
+      processMacroCall(globalContext, macro, call, body);
       registerCustomTypes(globalContext, body);
 
       processMacros(globalContext, body);
