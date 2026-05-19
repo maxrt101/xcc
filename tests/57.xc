@@ -7,7 +7,15 @@ enum TestEnum : i8 {
   D,
   E,
   F = TestEnum::C + 7,
-  G
+  G,
+
+  fn toString(self) -> i8* {
+    if (*self == TestEnum::A) {
+      return "A";
+    } else {
+      return "?";
+    }
+  }
 }
 
 mod test {
@@ -30,5 +38,6 @@ fn main() -> i32 {
   printf("TestEnum: %d %d %d %d %d %d %d\n", TestEnum::A, TestEnum::B, TestEnum::C, TestEnum::D, TestEnum::E, TestEnum::F, TestEnum::G);
   printf("ModEnum: %d %d %d %d %d %d %d\n", test::ModEnum::A, test::ModEnum::B, test::ModEnum::C, test::ModEnum::D, test::ModEnum::E, test::ModEnum::F, test::ModEnum::G);
   printf("F=%d\n", test::getEnumF());
+  printf("A='%s'\n", TestEnum::A.toString());
   return 0;
 }

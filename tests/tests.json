@@ -576,7 +576,8 @@
       "stdout": [
         "TestEnum: 0 1 5 6 7 12 13\n",
         "ModEnum: 0 1 5 6 7 12 13\n",
-        "F=12\n"
+        "F=12\n",
+        "A='A'\n"
       ],
       "retcode": 0
     }
