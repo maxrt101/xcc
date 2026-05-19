@@ -96,10 +96,11 @@ fn main() -> i32 {
  - [X] Array initialization  
  - [X] Global importable constants  
  - [X] Tuples  
- - [X] Tuple/struct/array decomposition 
- - [ ] Enums (int & tagged)  
+ - [X] Tuple/struct/array decomposition  
+ - [X] Enums (int)  
+ - [ ] Enums (tagged)  
  - [ ] Destructors (or something like `defer`)  
- - [ ] Lambdas (closures)
+ - [ ] Lambdas (closures)  
  - [ ] The rest of gcc/clang attributes (alias, section & packed are done)  
  - [X] Full variadic support  
  - [ ] Stable ABI/FFI  
