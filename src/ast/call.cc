@@ -16,11 +16,11 @@ std::shared_ptr<Node> Call::clone() {
   return withAttrs(create(span, callee->clone(), cloneVector(args)));
 }
 
-void Call::visit(Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  callVisitor(callee, visitor, ignoreSubtree);
+void Call::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  callVisitor(globalContext, callee, visitor, ignoreSubtree);
 
   for (auto& node : args) {
-    callVisitor(node, visitor, ignoreSubtree);
+    callVisitor(globalContext, node, visitor, ignoreSubtree);
   }
 }
 
@@ -49,7 +49,23 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
 
   if (info.isMember) {
     auto selfNode = callee->as<MemberAccess>()->lhs;
-    arg_vals.push_back(selfNode->generateValueWithoutLoad(ctx, payload));
+    auto selfType = selfNode->generateType(ctx, payload);
+
+    llvm::Value * self_ptr = selfNode->generateValueWithoutLoad(ctx, payload);
+
+    if (!self_ptr->getType()->isPointerTy()) {
+      auto * alloca = ctx.ir_builder->CreateAlloca(
+          selfType->getLLVMType(ctx),
+          nullptr,
+          "self_alloca_tmp"
+      );
+
+      ctx.ir_builder->CreateStore(self_ptr, alloca);
+
+      self_ptr = alloca;
+    }
+
+    arg_vals.push_back(self_ptr);
   }
 
   size_t expectedArgs = signature->getNumParams();
@@ -155,9 +171,9 @@ void Call::getCalleeInfoForFunctionCall(codegen::ModuleContext& ctx, PayloadList
 void Call::getCalleeInfoForMethodCall(codegen::ModuleContext& ctx, PayloadList payload, CalleeInfo& info, MemberAccess * memberAccess) {
   // Method call
   info.isMember = true;
-  auto structType = memberAccess->lhs->generateType(ctx, payload);
+  auto caleeeType = memberAccess->lhs->generateType(ctx, payload);
 
-  info.fnName = structType->getName() + "_" + memberAccess->rhs->value;
+  info.fnName = caleeeType->getName() + "_" + memberAccess->rhs->value;
 
   auto * directFn = ctx.getFunction(info.fnName);
 
