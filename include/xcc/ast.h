@@ -8,6 +8,7 @@
 #include "xcc/ast/cast.h"
 #include "xcc/ast/const.h"
 #include "xcc/ast/decomposition.h"
+#include "xcc/ast/enum.h"
 #include "xcc/ast/fndecl.h"
 #include "xcc/ast/fndef.h"
 #include "xcc/ast/for.h"
