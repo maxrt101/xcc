@@ -9,6 +9,42 @@ using namespace xcc::meta;
 // TODO: Should be scoped per-module (or per-file)!
 std::unordered_map<std::string, std::shared_ptr<Type>> Type::customTypes;
 
+static llvm::DICompositeType * createDIEnumerator(
+  codegen::ModuleContext& ctx,
+  const std::string&      name,
+  std::shared_ptr<Type>   base,
+  std::vector<EnumField> members
+) {
+  auto& dl = ctx.llvm.module->getDataLayout();
+  auto llvmType = base->getLLVMType(ctx);
+
+  uint64_t structSize  = dl.getTypeAllocSizeInBits(llvmType);
+  uint32_t structAlign = dl.getABITypeAlign(llvmType).value() * 8;
+
+  std::vector<llvm::Metadata*> enumMembers;
+
+  for (size_t i = 0; i < members.size(); ++i) {
+    auto& member = members[i];
+
+    enumMembers.push_back(ctx.globalContext.di_builder->createEnumerator(
+      member.name,
+      member.value,
+      base->isUnsigned()
+    ));
+  }
+
+  return ctx.globalContext.di_builder->createEnumerationType(
+    ctx.currentDIScope(),
+    name,
+    ctx.globalContext.getCurrentDIFile(),
+    0, // FIXME
+    structSize,
+    structAlign,
+    ctx.globalContext.di_builder->getOrCreateArray(enumMembers),
+    base->getDIType(ctx)
+  );
+}
+
 /**
  * Helper to create DIDerivedType (struct member)
  *
@@ -37,7 +73,7 @@ static llvm::DIDerivedType * createDIDerivedType(
       ctx.currentDIScope(),
       name,
       ctx.globalContext.di_compile_unit->getFile(),
-      0,
+      0, // FIXME
       memberSize,
       memberAlign,
       offsetInBits,
@@ -69,7 +105,7 @@ static llvm::DICompositeType * createDICompositeType(
       ctx.currentDIScope(),
       name,
       ctx.globalContext.getCurrentDIFile(),
-      0,
+      0, // FIXME
       structSize,
       structAlign,
       llvm::DINode::FlagZero,
@@ -136,6 +172,12 @@ std::shared_ptr<Type> Type::getElementType() const {
   return arr.elementType;
 }
 
+std::shared_ptr<Type> Type::getEnumElementType() const {
+  assertThrow(isEnum(), std::runtime_error("getEnumElementType called on a non-array type"));
+
+  return _enum.base;
+}
+
 std::shared_ptr<Type> Type::getBaseType() const {
   if (isArray()) {
     return getElementType();
@@ -143,6 +185,10 @@ std::shared_ptr<Type> Type::getBaseType() const {
 
   if (isPointer()) {
     return getPointedType();
+  }
+
+  if (isEnum()) {
+    return getEnumElementType();
   }
 
   throw std::runtime_error("Type is not a pointer or an array");
@@ -200,6 +246,9 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
 
     case TypeTag::FUNCTION:
       return llvm::PointerType::getUnqual(getLLVMFunctionType(ctx));
+
+    case TypeTag::ENUM:
+      return _enum.base->getLLVMType(ctx);
 
     case TypeTag::TUPLE: {
       std::vector<llvm::Type*> elements;
@@ -288,6 +337,10 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
       return ctx.globalContext.di_builder->createPointerType(getDISubroutineType(ctx), ptrSize, ptrAlign);
     }
 
+    case TypeTag::ENUM: {
+      return createDIEnumerator(ctx, _enum.name, _enum.base, _enum.members);
+    }
+
     case TypeTag::TUPLE: {
       auto * llvmType = getLLVMType(ctx);
 
@@ -361,6 +414,7 @@ std::string Type::toString() const {
     case TypeTag::USIZE:  return "usize";
     case TypeTag::ARRAY:  return std::format("{}[{}]", arr.elementType->toString(), arr.size);
     case TypeTag::PTR:    return ptr.pointedType->toString() + "*";
+
     case TypeTag::FUNCTION: {
       std::string result = "fn (";
 
@@ -373,6 +427,20 @@ std::string Type::toString() const {
 
       return result + "): " + fn.returnType->toString();
     }
+
+    case TypeTag::ENUM: {
+      std::string result = "enum : " + _enum.base->toString() + " {";
+
+      for (size_t i = 0; i < _enum.members.size(); ++i) {
+        result += _enum.members[i].name + " = " + std::to_string(_enum.members[i].value);
+        if (i + 1 < _enum.members.size()) {
+          result += ", ";
+        }
+      }
+
+      return result += "}";
+    }
+
     case TypeTag::TUPLE: {
       std::string result = "[";
 
@@ -385,6 +453,7 @@ std::string Type::toString() const {
 
       return result + "]";
     }
+
     case TypeTag::STRUCT: {
       std::string result;
 
@@ -403,6 +472,7 @@ std::string Type::toString() const {
       }
       return result + "}";
     }
+
     default:
       return "<?>";
   }
@@ -446,6 +516,10 @@ bool Type::isFunction() const {
   return is(TypeTag::FUNCTION);
 }
 
+bool Type::isEnum() const {
+  return is(TypeTag::ENUM);
+}
+
 bool Type::isTuple() const {
   return is(TypeTag::TUPLE);
 }
@@ -476,6 +550,7 @@ int Type::getNumberBitWidth() const {
       return 64;
     case TypeTag::PTR:
     case TypeTag::FUNCTION:
+    case TypeTag::ENUM:
     case TypeTag::TUPLE:
     case TypeTag::STRUCT:
     case TypeTag::VOID:
@@ -576,6 +651,47 @@ std::shared_ptr<Type> Type::getTupleMemberType(size_t i) const {
   return tuple.members[i];
 }
 
+size_t Type::getEnumElementCount() const {
+  assertThrow(isEnum(), std::runtime_error("Type is not an enum"));
+
+  return _enum.members.size();
+}
+
+EnumField Type::getEnumElement(size_t i) const {
+  assertThrow(isEnum(), std::runtime_error("Type is not an enum"));
+  assertThrow(i < _enum.members.size(), std::runtime_error("Out of bounds enum member value request"));
+
+  return _enum.members[i];
+}
+
+EnumField Type::getEnumElement(const std::string& name) const {
+  assertThrow(isEnum(), std::runtime_error("Type is not an enum"));
+
+  for (size_t i = 0; i < _enum.members.size(); ++i) {
+    if (_enum.members[i].name == name) {
+      return _enum.members[i];
+    }
+  }
+
+  throw std::runtime_error("No such enum member " + name + " for enum " + _enum.name);
+}
+
+bool Type::hasEnumElement(const std::string& name) const {
+  assertThrow(isEnum(), std::runtime_error("Type is not an enum"));
+
+  for (size_t i = 0; i < _enum.members.size(); ++i) {
+    if (_enum.members[i].name == name) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void Type::addEnumElement(EnumField field) {
+  _enum.members.push_back(std::move(field));
+}
+
 llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
   switch (tag) {
     case TypeTag::BOOL:
@@ -605,6 +721,11 @@ llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
     case TypeTag::FUNCTION: {
       return llvm::Constant::getNullValue(getLLVMType(ctx));
     }
+
+    case TypeTag::ENUM:
+      return _enum.members.empty()
+        ? _enum.base->getDefault(ctx)
+        : llvm::ConstantInt::get(_enum.base->getLLVMType(ctx), _enum.members[0].value);
 
     case TypeTag::TUPLE: {
       std::vector<llvm::Constant *> initializers;
@@ -649,6 +770,7 @@ std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
     case TypeTag::ISIZE: return ast::Type::create(span, ast::Identifier::create(span, "isize"));
     case TypeTag::USIZE: return ast::Type::create(span, ast::Identifier::create(span, "usize"));
     case TypeTag::PTR:   return ast::Type::createPointer(span, ptr.pointedType->toAst());
+
     case TypeTag::ARRAY: {
       return ast::Type::createArray(
         span,
@@ -656,8 +778,9 @@ std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
         ast::Number::createInteger(span, arr.size)
       );
     }
+
     case TypeTag::FUNCTION: {
-      std::vector<std::shared_ptr<ast::Node>> args;
+      ast::NodeList args;
 
       for (auto& arg : fn.args) {
         args.push_back(arg->toAst());
@@ -666,8 +789,21 @@ std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
       return ast::Type::createFunction(span, fn.returnType->toAst(), args, fn.isVariadic);
     }
 
+    case TypeTag::ENUM: {
+      ast::Enum::FieldList fields;
+
+      for (auto& field : _enum.members) {
+        fields.emplace_back(
+          ast::Identifier::create(span, field.name),
+          ast::Number::createInteger(span, field.value)
+        );
+      }
+
+      return ast::Enum::create(span, ast::Identifier::create(span, _enum.name), _enum.base->toAst(span), fields);
+    }
+
     case TypeTag::TUPLE: {
-      std::vector<std::shared_ptr<ast::Node>> members;
+      ast::NodeList members;
 
       for (auto& member : tuple.members) {
         members.push_back(member->toAst());
@@ -824,9 +960,21 @@ std::shared_ptr<Type> Type::createFunction(
   bool                               isVariadic
 ) {
   auto type = create(TypeTag::FUNCTION);
-  type->fn.returnType = returnType;
-  type->fn.args       = args;
+  type->fn.returnType = std::move(returnType);
+  type->fn.args       = std::move(args);
   type->fn.isVariadic = isVariadic;
+  return type;
+}
+
+std::shared_ptr<Type> Type::createEnum(
+  std::string            name,
+  std::shared_ptr<Type>  base,
+  std::vector<EnumField> members
+) {
+  auto type = create(TypeTag::ENUM);
+  type->_enum.name    = std::move(name);
+  type->_enum.base    = std::move(base);
+  type->_enum.members = std::move(members);
   return type;
 }
 
@@ -854,6 +1002,10 @@ void Type::registerCustomType(const std::string& name, std::shared_ptr<Type> typ
 
 bool Type::hasCustomType(const std::string& name) {
   return customTypes.contains(name);
+}
+
+std::shared_ptr<Type> Type::getCustomType(const std::string& name) {
+  return customTypes[name];
 }
 
 std::shared_ptr<Type> Type::alignTypes(std::shared_ptr<Type> lhs, std::shared_ptr<Type> rhs) {

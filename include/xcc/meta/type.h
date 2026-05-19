@@ -37,11 +37,25 @@ enum class TypeTag {
   ARRAY,    /** Array type */
   PTR,      /** Generic/Opaque pointer type */
   FUNCTION, /** Function type */
+  ENUM,     /** Enum type */
   TUPLE,    /** Tuple type. Basically an anonymous struct */
   STRUCT,   /** Type tag for user-defined types */
 };
 
 class Type;
+
+/**
+ * Enum Value - allways i64, to cover most cases
+ */
+using EnumValue = int64_t;
+
+/**
+ * Enum field - name + value
+ */
+struct EnumField {
+  std::string name;
+  EnumValue   value;
+};
 
 /**
  * Shortcut for struct members list
@@ -74,6 +88,13 @@ private:
     std::vector<std::shared_ptr<Type>> args;
     bool                               isVariadic;
   } fn;
+
+  /** For TypeTag::ENUM */
+  struct {
+    std::string            name;
+    std::shared_ptr<Type>  base;
+    std::vector<EnumField> members;
+  } _enum;
 
   /** For TypeTag::TUPLE */
   struct {
@@ -111,6 +132,11 @@ public:
    * If type is an array - return element type
    */
   [[nodiscard]] std::shared_ptr<Type> getElementType() const;
+
+  /**
+   * If type is an enum - return element type
+   */
+  [[nodiscard]] std::shared_ptr<Type> getEnumElementType() const;
 
   /**
    * For pointers - returns pointed type, for arrays - element type
@@ -183,6 +209,21 @@ public:
    */
   [[nodiscard]] std::shared_ptr<Type> getTupleMemberType(size_t i) const;
 
+  /** If type is an enum - get member count */
+  [[nodiscard]] size_t getEnumElementCount() const;
+
+  /** If type is an enum - get member by index */
+  [[nodiscard]] EnumField getEnumElement(size_t i) const;
+
+  /** If type is an enum - get member by name */
+  [[nodiscard]] EnumField getEnumElement(const std::string& name) const;
+
+  /** If type is an enum - get member type */
+  [[nodiscard]] bool hasEnumElement(const std::string& name) const;
+
+  /** If type is an enum - add enum field */
+  void addEnumElement(EnumField field);
+
   /**
    * Generate LLVM type from a valid meta type, needs ModuleContext
    */
@@ -227,6 +268,7 @@ public:
   [[nodiscard]] bool isArray() const;
   [[nodiscard]] bool isPointer() const;
   [[nodiscard]] bool isFunction() const;
+  [[nodiscard]] bool isEnum() const;
   [[nodiscard]] bool isTuple() const;
   [[nodiscard]] bool isStruct() const;
 
@@ -291,6 +333,7 @@ public:
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
   static std::shared_ptr<Type> createFunction(
     std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);
+  static std::shared_ptr<Type> createEnum(std::string name, std::shared_ptr<Type> base, std::vector<EnumField> members);
   static std::shared_ptr<Type> createTuple(std::vector<std::shared_ptr<Type>> members);
   static std::shared_ptr<Type> createStruct(std::string name, StructMembers members, bool packed = false);
 
@@ -308,6 +351,11 @@ public:
    * Check if custom type with specified type is present
    */
   static bool hasCustomType(const std::string& name);
+
+  /**
+   * Return custom type by name (or nullptr if not found)
+   */
+  static std::shared_ptr<Type> getCustomType(const std::string& name);
 
   /**
    * Compares tag of lhs & rhs and returns 'bigger' type to avoid implicit downcasts
