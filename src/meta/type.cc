@@ -393,6 +393,10 @@ std::string Type::getName() const {
     return _struct.name;
   }
 
+  if (tag == TypeTag::ENUM) {
+    return _enum.name;
+  }
+
   return toString();
 }
 
