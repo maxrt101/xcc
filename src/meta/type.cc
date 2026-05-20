@@ -273,11 +273,21 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     case TypeTag::FUNCTION:
       return llvm::PointerType::getUnqual(getLLVMFunctionType(ctx));
 
+    case TypeTag::LAMBDA: {
+      std::vector<llvm::Type *> elements;
+
+      for (auto & member : lambda.captures) {
+        elements.push_back(member.second->getLLVMType(ctx));
+      }
+
+      return llvm::StructType::get(*ctx.llvm.ctx, elements, false);
+    }
+
     case TypeTag::ENUM:
       return _enum.base->getLLVMType(ctx);
 
     case TypeTag::TUPLE: {
-      std::vector<llvm::Type*> elements;
+      std::vector<llvm::Type *> elements;
 
       for (auto & member : tuple.members) {
         elements.push_back(member->getLLVMType(ctx));
@@ -287,7 +297,7 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     }
 
     case TypeTag::STRUCT: {
-      std::vector<llvm::Type*> elements;
+      std::vector<llvm::Type *> elements;
 
       for (auto & member : _struct.members) {
         elements.push_back(member.second->getLLVMType(ctx));
@@ -363,6 +373,19 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
       return ctx.globalContext.di_builder->createPointerType(getDISubroutineType(ctx), ptrSize, ptrAlign);
     }
 
+    case TypeTag::LAMBDA: {
+      auto * llvmType = getLLVMType(ctx);
+
+      std::vector<llvm::Metadata *> captures;
+
+      for (size_t i = 0; i < lambda.captures.size(); ++i) {
+        auto& capture = lambda.captures[i];
+        captures.push_back(createDIDerivedType(ctx, llvmType, i, capture.first, capture.second));
+      }
+
+      return createDICompositeType(ctx, llvmType, toString(), captures);
+    }
+
     case TypeTag::ENUM: {
       return createDIEnumerator(ctx, _enum.name, _enum.base, _enum.members);
     }
@@ -370,7 +393,7 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
     case TypeTag::TUPLE: {
       auto * llvmType = getLLVMType(ctx);
 
-      std::vector<llvm::Metadata*> members;
+      std::vector<llvm::Metadata *> members;
 
       for (size_t i = 0; i < tuple.members.size(); ++i) {
         auto& member = tuple.members[i];
@@ -383,7 +406,7 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
     case TypeTag::STRUCT: {
       auto * llvmType = getLLVMType(ctx);
 
-      std::vector<llvm::Metadata*> members;
+      std::vector<llvm::Metadata *> members;
 
       for (size_t i = 0; i < _struct.members.size(); ++i) {
         auto& member = _struct.members[i];
@@ -401,7 +424,7 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
 llvm::DISubroutineType * Type::getDISubroutineType(codegen::ModuleContext& ctx) const {
   assertThrow(is(TypeTag::FUNCTION), std::runtime_error("getDISubroutineType called on non-function type"));
 
-  std::vector<llvm::Metadata*> typeEltArray;
+  std::vector<llvm::Metadata *> typeEltArray;
 
   typeEltArray.push_back(fn.returnType->getDIType(ctx));
 
@@ -456,6 +479,30 @@ std::string Type::toString() const {
       }
 
       return result + "): " + fn.returnType->toString();
+    }
+
+    case TypeTag::LAMBDA: {
+      std::string result = "fn [";
+
+      for (size_t i = 0; i < lambda.captures.size(); ++i) {
+        auto& capture = lambda.captures[i];
+        result += capture.second->isPointer() ? "&" : "";
+        result += capture.first;
+        if (i + 1 < lambda.captures.size()) {
+          result += ", ";
+        }
+      }
+
+      result += "(";
+
+      for (size_t i = 0; i < lambda.fn->fn.args.size(); ++i) {
+        result += lambda.fn->fn.args[i]->toString();
+        if (i + 1 < lambda.fn->fn.args.size()) {
+          result += ", ";
+        }
+      }
+
+      return result + "): " + lambda.fn->fn.returnType->toString();
     }
 
     case TypeTag::ENUM: {
@@ -546,6 +593,10 @@ bool Type::isFunction() const {
   return is(TypeTag::FUNCTION);
 }
 
+bool Type::isLambda() const {
+  return is(TypeTag::LAMBDA);
+}
+
 bool Type::isEnum() const {
   return is(TypeTag::ENUM);
 }
@@ -580,6 +631,7 @@ int Type::getNumberBitWidth() const {
       return 64;
     case TypeTag::PTR:
     case TypeTag::FUNCTION:
+    case TypeTag::LAMBDA:
     case TypeTag::ENUM:
     case TypeTag::TUPLE:
     case TypeTag::STRUCT:
@@ -638,28 +690,29 @@ void Type::addMember(const std::string& name, const std::shared_ptr<Type>& type)
 }
 
 std::shared_ptr<Type> Type::getReturnType() const {
-  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
+  assertThrow(isFunction() || isLambda(), std::runtime_error("Type is not a function or a lambda"));
 
-  return fn.returnType;
+  return isFunction() ? fn.returnType : lambda.fn->fn.returnType;
 }
 
 size_t Type::getArgumentCount() const {
-  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
+  assertThrow(isFunction() || isLambda(), std::runtime_error("Type is not a function or a lambda"));
 
-  return fn.args.size();
+  return isFunction() ? fn.args.size() : lambda.fn->fn.args.size();
 }
 
 std::shared_ptr<Type> Type::getArgumentType(size_t i) const {
-  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
-  assertThrow(i < fn.args.size(), std::runtime_error("Out of bounds function argument type request"));
+  assertThrow(isFunction() || isLambda(), std::runtime_error("Type is not a function or a lambda"));
+  assertThrow(isFunction() ? i < fn.args.size() : lambda.fn->fn.args.size(),
+    std::runtime_error("Out of bounds function/lambda argument type request"));
 
-  return fn.args[i];
+  return isFunction() ? fn.args[i] : lambda.fn->fn.args[i];
 }
 
 bool Type::isVariadic() const {
-  assertThrow(isFunction(), std::runtime_error("Type is not a function"));
+  assertThrow(isFunction() || isLambda(), std::runtime_error("Type is not a function or a lambda"));
 
-  return fn.isVariadic;
+  return isFunction() ? fn.isVariadic : lambda.fn->fn.isVariadic;
 }
 
 size_t Type::getElementCount() const {
@@ -722,6 +775,30 @@ void Type::addEnumElement(EnumField field) {
   _enum.members.push_back(std::move(field));
 }
 
+bool Type::hasCapture(const std::string& name) {
+  assertThrow(isEnum(), std::runtime_error("Type is not a lambda"));
+
+  for (auto& capture : lambda.captures) {
+    if (capture.first == name) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+std::shared_ptr<Type> Type::getCaptureType(const std::string& name) {
+  assertThrow(isEnum(), std::runtime_error("Type is not a lambda"));
+
+  for (auto& capture : lambda.captures) {
+    if (capture.first == name) {
+      return capture.second;
+    }
+  }
+
+  throw std::runtime_error("No such lambda capture " + name + " for lambda " + toString());
+}
+
 llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
   switch (tag) {
     case TypeTag::BOOL:
@@ -750,6 +827,16 @@ llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
 
     case TypeTag::FUNCTION: {
       return llvm::Constant::getNullValue(getLLVMType(ctx));
+    }
+
+    case TypeTag::LAMBDA: {
+      std::vector<llvm::Constant *> initializers;
+
+      for (auto & capture : lambda.captures) {
+        initializers.push_back((llvm::Constant *) capture.second->getDefault(ctx));
+      }
+
+      return llvm::ConstantStruct::get((llvm::StructType *) getLLVMType(ctx), initializers);
     }
 
     case TypeTag::ENUM:
@@ -783,7 +870,7 @@ llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
   }
 }
 
-std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
+std::shared_ptr<ast::Node> Type::toAst(SourceSpan span) const {
   switch (tag) {
     case TypeTag::VOID:  return ast::Type::create(span, ast::Identifier::create(span, "void"));
     case TypeTag::BOOL:  return ast::Type::create(span, ast::Identifier::create(span, "bool"));
@@ -817,6 +904,20 @@ std::shared_ptr<xcc::ast::Node> Type::toAst(SourceSpan span) const {
       }
 
       return ast::Type::createFunction(span, fn.returnType->toAst(), args, fn.isVariadic);
+    }
+
+    case TypeTag::LAMBDA: {
+      ast::NodeList captures, args;
+
+      for (auto& capture : lambda.captures) {
+        args.push_back(ast::Identifier::create(span, capture.first));
+      }
+
+      for (auto& arg : lambda.fn->fn.args) {
+        args.push_back(arg->toAst());
+      }
+
+      return ast::Type::createLambda(span, captures, lambda.fn->fn.returnType->toAst(), args, lambda.fn->fn.isVariadic);
     }
 
     case TypeTag::ENUM: {
@@ -993,6 +1094,13 @@ std::shared_ptr<Type> Type::createFunction(
   type->fn.returnType = std::move(returnType);
   type->fn.args       = std::move(args);
   type->fn.isVariadic = isVariadic;
+  return type;
+}
+
+std::shared_ptr<Type> Type::createLambda(std::shared_ptr<Type> fn, StructMembers captures) {
+  auto type = create(TypeTag::LAMBDA);
+  type->lambda.fn       = std::move(fn);
+  type->lambda.captures = std::move(captures);
   return type;
 }
 

@@ -37,6 +37,7 @@ enum class TypeTag {
   ARRAY,    /** Array type */
   PTR,      /** Generic/Opaque pointer type */
   FUNCTION, /** Function type */
+  LAMBDA,   /** Lambda type */
   ENUM,     /** Enum type */
   TUPLE,    /** Tuple type. Basically an anonymous struct */
   STRUCT,   /** Type tag for user-defined types */
@@ -88,6 +89,12 @@ private:
     std::vector<std::shared_ptr<Type>> args;
     bool                               isVariadic;
   } fn;
+
+  /** For TypeTag::LAMBDA */
+  struct {
+    std::shared_ptr<Type> fn;
+    StructMembers         captures;
+  } lambda;
 
   /** For TypeTag::ENUM */
   struct {
@@ -175,12 +182,12 @@ public:
   void addMember(const std::string& name, const std::shared_ptr<Type>& type);
 
   /**
-   * If type in a function - get return type
+   * If type in a function or lambda - get return type
    */
   [[nodiscard]] std::shared_ptr<Type> getReturnType() const;
 
   /**
-   * If type in a function - get count of arguments
+   * If type in a function or lambda - get count of arguments
    */
   [[nodiscard]] size_t getArgumentCount() const;
 
@@ -190,7 +197,7 @@ public:
   [[nodiscard]] std::shared_ptr<Type> getArgumentType(size_t i) const;
 
   /**
-   * If type is a function - get isVariadic flag
+   * If type is a function or lambda - get isVariadic flag
    */
   [[nodiscard]] bool isVariadic() const;
 
@@ -223,6 +230,12 @@ public:
 
   /** If type is an enum - add enum field */
   void addEnumElement(EnumField field);
+
+  /** If type is a lambda - check if capture is present */
+  [[nodiscard]] bool hasCapture(const std::string& name);
+
+  /** If type is a lambda - get capture type */
+  [[nodiscard]] std::shared_ptr<Type> getCaptureType(const std::string& name);
 
   /**
    * Generate LLVM type from a valid meta type, needs ModuleContext
@@ -268,6 +281,7 @@ public:
   [[nodiscard]] bool isArray() const;
   [[nodiscard]] bool isPointer() const;
   [[nodiscard]] bool isFunction() const;
+  [[nodiscard]] bool isLambda() const;
   [[nodiscard]] bool isEnum() const;
   [[nodiscard]] bool isTuple() const;
   [[nodiscard]] bool isStruct() const;
@@ -333,6 +347,7 @@ public:
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
   static std::shared_ptr<Type> createFunction(
     std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);
+  static std::shared_ptr<Type> createLambda(std::shared_ptr<Type> fn, StructMembers captures);
   static std::shared_ptr<Type> createEnum(std::string name, std::shared_ptr<Type> base, std::vector<EnumField> members);
   static std::shared_ptr<Type> createTuple(std::vector<std::shared_ptr<Type>> members);
   static std::shared_ptr<Type> createStruct(std::string name, StructMembers members, bool packed = false);
