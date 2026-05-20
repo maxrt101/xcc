@@ -216,15 +216,3 @@ std::shared_ptr<Node> Match::findOrCreateDefault() {
 
   return Block::create(span, {});
 }
-
-// llvm::BasicBlock * Match::generateArm(codegen::ModuleContext& ctx, PayloadList payload, std::shared_ptr<Node> then) {
-//   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
-//
-//   auto block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "after_loop", fn);
-//
-//   ctx.ir_builder->SetInsertPoint(block);
-//
-//   then->generateValue(ctx, payload);
-//
-//   return block;
-// }
