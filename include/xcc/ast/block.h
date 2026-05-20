@@ -32,6 +32,7 @@ public:
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   llvm::Value * generateValue(codegen::ModuleContext &ctx, PayloadList payload) override;
+  llvm::Constant * generateConstant(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext& ctx, PayloadList payload) override;
 };
 
