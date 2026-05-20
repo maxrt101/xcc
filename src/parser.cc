@@ -155,6 +155,18 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
   }
 
   if (!name && checkAdvance(TOKEN_FN)) {
+    ast::NodeList captures;
+
+    if (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+      do {
+        captures.push_back(parseType());
+      } while (checkAdvance(TOKEN_COMMA));
+
+      if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
+        Error(ERROR_LAMBDA_TYPE_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
+      }
+    }
+
     if (!checkAdvance(TOKEN_LEFT_PAREN)) {
       Error(ERROR_FN_TYPE_MISSING_OPENING_PAREN, current().span).raise();
     }
@@ -181,7 +193,9 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
 
     std::shared_ptr<ast::Node> returnType = parseType();
 
-    return ast::Type::createFunction(span + previous().span, returnType, args, isVariadic);
+    return captures.empty()
+      ? ast::Type::createFunction(span + previous().span, returnType, args, isVariadic)
+      : ast::Type::createLambda(span + previous().span, captures, returnType, args, isVariadic);
   }
 
   auto id = name ? name : parseScopedIdentifier("for type name");
@@ -1121,14 +1135,13 @@ std::shared_ptr<ast::Node> Parser::parseLambda() {
     Error(ERROR_LAMBDA_MISSING_OPENING_SQUARE_BRACE, current().span).raise();
   }
 
-  while (!check(TOKEN_RIGHT_SQUARE_BRACE) && !isAtEnd()) {
+  do {
     captures.push_back(parseExpr());
-  }
+  } while (checkAdvance(TOKEN_COMMA));
 
   if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
     Error(ERROR_LAMBDA_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
   }
-
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
     Error(ERROR_LAMBDA_MISSING_OPENING_PAREN, current().span).raise();
@@ -1161,7 +1174,7 @@ std::shared_ptr<ast::Node> Parser::parseLambda() {
 
   auto body = parseBlock();
 
-  return ast::Lambda::create(span + previous().span, captures, args, return_type, body);
+  return ast::Lambda::create(span + previous().span, captures, args, return_type, body, is_variadic);
 }
 
 std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {

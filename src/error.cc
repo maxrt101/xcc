@@ -167,6 +167,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_LAMBDA_MISSING_OPENING_PAREN,               "Missing '(' at the start of argument list in lambda expression"),
   DESC(ERROR_LAMBDA_MISSING_CLOSING_PAREN,               "Missing ')' after argument list in lambda expression"),
   DESC(ERROR_LAMBDA_MISSING_BODY,                        "Missing '{' (body) after return type in lambda expression"),
+  DESC(ERROR_LAMBDA_TYPE_MISSING_CLOSING_SQUARE_BRACE,   "Missing ']' after capture list in lambda type"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {
