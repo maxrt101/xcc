@@ -25,6 +25,7 @@ static const std::unordered_map<NodeType, NodeString> s_type_map {
     DESC(AST_EXPR_CAST,             "cast"),
     DESC(AST_FUNCTION_DECL,         "function declaration"),
     DESC(AST_FUNCTION_DEF,          "function definition"),
+    DESC(AST_LAMBDA,                "lambda expression"),
     DESC(AST_TYPE_DECL,             "type declaration"),
     DESC(AST_FOR,                   "for statement"),
     DESC(AST_EXPR_IDENTIFIER,       "identifier"),

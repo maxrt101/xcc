@@ -15,6 +15,7 @@
 #include "xcc/ast/identifier.h"
 #include "xcc/ast/if.h"
 #include "xcc/ast/init.h"
+#include "xcc/ast/lambda.h"
 #include "xcc/ast/macro.h"
 #include "xcc/ast/macro_call.h"
 #include "xcc/ast/match.h"
