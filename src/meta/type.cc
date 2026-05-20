@@ -122,11 +122,37 @@ bool Type::operator==(Type& rhs) {
   }
 
   if (tag == TypeTag::PTR) {
-    return ptr.pointedType == rhs.ptr.pointedType;
+    return *ptr.pointedType == *rhs.ptr.pointedType;
   }
 
   if (tag == TypeTag::STRUCT) {
-    return _struct.name == rhs._struct.name;
+    for (size_t i = 0; i < _struct.members.size(); ++i) {
+      if ( _struct.members[i].first   !=  rhs._struct.members[i].first
+        || *_struct.members[i].second != *rhs._struct.members[i].second) {
+        return false;
+      }
+    }
+  }
+
+  if (tag == TypeTag::ENUM) {
+    if (*_enum.base != *rhs._enum.base) {
+      return false;
+    }
+
+    for (size_t i = 0; i < _enum.members.size(); ++i) {
+      if ( _enum.members[i].name  != rhs._enum.members[i].name
+        || _enum.members[i].value != rhs._enum.members[i].value) {
+        return false;
+      }
+    }
+  }
+
+  if (tag == TypeTag::TUPLE) {
+    for (size_t i = 0; i < tuple.members.size(); ++i) {
+      if (*tuple.members[i] != *rhs.tuple.members[i]) {
+        return false;
+      }
+    }
   }
 
   if (tag == TypeTag::FUNCTION) {
