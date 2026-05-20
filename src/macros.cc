@@ -98,7 +98,7 @@ struct FormatModifier {
     size_t index = 0;
 
     while (index < str.size()) {
-      if (isnumber(str[index])) {
+      if (isdigit(str[index])) {
         if (res.dot) {
           res.floatPrecision += str[index];
         } else {
