@@ -60,6 +60,31 @@ std::string Block::toString(Node * grandparent, Node * parent, int indent, bool 
   return res;
 }
 
+llvm::Constant * Block::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
+  if (body.empty()) return nullptr;
+
+  ctx.pushScope(span);
+  ctx.setDebugLocation(span);
+
+  llvm::Constant * val = nullptr;
+
+  for (size_t i = 0; i < body.size() - 1; ++i) {
+    body[i]->generateConstant(ctx, payload);
+  }
+
+  if (auto p = selectPayloadFirst(payload)) {
+    // If type hint was passed for AST_BLOCK, repackage it for AST_INIT
+    auto t = p->as<Payload>()->type;
+    payload = extendPayload(excludePayload(payload, AST_BLOCK), Initializer::Payload::create(t));
+  }
+
+  val = body.back()->generateConstant(ctx, payload);
+
+  ctx.popScope();
+
+  return val;
+}
+
 llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payload) {
   if (body.empty()) return nullptr;
 
