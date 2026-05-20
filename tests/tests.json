@@ -583,5 +583,44 @@
       ],
       "retcode": 0
     }
+  },
+  {
+    "id": 58,
+    "name": "print! & println! macros",
+    "file": "58.xc",
+    "expect": {
+      "stdout": [
+        "abcdef\n",
+        "0100 test123 15\\.40        123 40 \\[i32, u8\\*\\] 0x.+\n"
+      ],
+      "retcode": 0
+    }
+  },
+  {
+    "id": 59,
+    "name": "assert! & warn! macros",
+    "file": "59.xc",
+    "expect": {
+      "stderr": [
+        "warn\\[.+W0001.+\\]:.+Warning triggered by warn! macro: This is a warning.+\n",
+        "error\\[.+E0135.+\\]:.+Compile-time assertion failed: '0': This should fail.+\n"
+      ],
+      "retcode": "*"
+    }
+  },
+  {
+    "id": 60,
+    "name": "Match-case expression",
+    "file": "60.xc",
+    "expect": {
+      "stdout": [
+        "A::toString: 'A'\n",
+        "B::toString: 'B'\n",
+        "F::toString: 'F or G'\n",
+        "G::toString: 'F or G'\n",
+        "42::toString: '\\?'\n"
+      ],
+      "retcode": 0
+    }
   }
 ]
