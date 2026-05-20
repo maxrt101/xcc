@@ -182,7 +182,7 @@ static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t l
     res += " ";
   }
 
-  for (size_t i = 0; i < std::min(line_size, len); ++i) {
+  for (size_t i = 0; i < std::min(line_size - line_ofs, len); ++i) {
     res += "~";
   }
 
