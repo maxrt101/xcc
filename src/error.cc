@@ -161,6 +161,12 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_MATCH_BAD_ARM_TYPE,                         "Type of match expression's arm is different from previous arms"),
   DESC(ERROR_MATCH_COND_NON_CONST_INT,                   "Value cannot be converted to a constant integer for match arm condition"),
   DESC(ERROR_MATCH_MULTIPLE_WILDCARDS,                   "Only one wildcard ('_') is allowed for single match expression"),
+  DESC(ERROR_LAMBDA_MISSING_KEYWORD,                     "Missing 'fn' at the start of lambda expression"),
+  DESC(ERROR_LAMBDA_MISSING_OPENING_SQUARE_BRACE,        "Missing '[' at the start of lambda expression"),
+  DESC(ERROR_LAMBDA_MISSING_CLOSING_SQUARE_BRACE,        "Missing ']' after capture list in lambda expression"),
+  DESC(ERROR_LAMBDA_MISSING_OPENING_PAREN,               "Missing '(' at the start of argument list in lambda expression"),
+  DESC(ERROR_LAMBDA_MISSING_CLOSING_PAREN,               "Missing ')' after argument list in lambda expression"),
+  DESC(ERROR_LAMBDA_MISSING_BODY,                        "Missing '{' (body) after return type in lambda expression"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {

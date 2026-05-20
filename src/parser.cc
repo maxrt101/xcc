@@ -1098,7 +1098,70 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
     return parseInitializer();
   }
 
+  if (check(TOKEN_FN)) {
+    return parseLambda();
+  }
+
   return parseLvalueOrCallOrInitializer();
+}
+
+std::shared_ptr<ast::Node> Parser::parseLambda() {
+  std::vector<std::shared_ptr<ast::TypedIdentifier>> args;
+  ast::NodeList                                      captures;
+  std::shared_ptr<ast::Node>                         return_type;
+  bool                                               is_variadic = false;
+
+  auto span = current().span;
+
+  if (!checkAdvance(TOKEN_FN)) {
+    Error(ERROR_LAMBDA_MISSING_KEYWORD, current().span).raise();
+  }
+
+  if (!checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
+    Error(ERROR_LAMBDA_MISSING_OPENING_SQUARE_BRACE, current().span).raise();
+  }
+
+  while (!check(TOKEN_RIGHT_SQUARE_BRACE) && !isAtEnd()) {
+    captures.push_back(parseExpr());
+  }
+
+  if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
+    Error(ERROR_LAMBDA_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
+  }
+
+
+  if (!checkAdvance(TOKEN_LEFT_PAREN)) {
+    Error(ERROR_LAMBDA_MISSING_OPENING_PAREN, current().span).raise();
+  }
+
+  if (!check(TOKEN_RIGHT_PAREN) && !isAtEnd()) {
+    do {
+      if (checkAdvance(TOKEN_3_DOTS)) {
+        is_variadic = true;
+        break;
+      }
+
+      args.push_back(parseValueDecl("for lambda argument name"));
+    } while (checkAdvance(TOKEN_COMMA));
+  }
+
+  if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
+    Error(ERROR_LAMBDA_MISSING_CLOSING_PAREN, current().span).raise();
+  }
+
+  if (checkAdvance(TOKEN_RIGHT_ARROW)) {
+    return_type = parseType();
+  } else {
+    return_type = ast::Type::create(previous().span, ast::Identifier::create(previous().span, "void"));;
+  }
+
+  if (!check(TOKEN_LEFT_BRACE)) {
+    Error(ERROR_LAMBDA_MISSING_BODY, current().span).raise();
+  }
+
+  auto body = parseBlock();
+
+  return ast::Lambda::create(span + previous().span, captures, args, return_type, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {

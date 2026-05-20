@@ -215,6 +215,7 @@ private:
   std::shared_ptr<ast::Node> parseSubscript();
   std::shared_ptr<ast::Node> parseNumber();
   std::shared_ptr<ast::Node> parseRvalue();
+  std::shared_ptr<ast::Node> parseLambda();
   std::shared_ptr<ast::Node> parseLvalueOrCallOrInitializer();
   std::shared_ptr<ast::Node> parseMemberAccessOrLvalue(std::shared_ptr<ast::Node> id = nullptr);
   std::shared_ptr<ast::Node> parseCall(std::shared_ptr<ast::Node> callee);
