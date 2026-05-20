@@ -94,7 +94,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
 
     if (i < signature->getNumParams()) {
       // Positional argument
-      val = codegen::castIfNotSame(ctx, val, signature->getParamType(llvmParamIdx), args[i]->span);
+      val = castIfNotSame(ctx, val, signature->getParamType(llvmParamIdx), args[i]->span);
     } else {
       // Variadic argument
       llvm::Type* argType = val->getType();
@@ -160,7 +160,7 @@ void Call::getCalleeInfoForFunctionCall(codegen::ModuleContext& ctx, PayloadList
     info.calleePtr = directFn;
   } else {
     // Function pointer call
-    info.metaType  = ident->generateType(ctx, payload);
+    info.metaType = ident->generateType(ctx, payload);
 
     if (generateCallee) {
       info.calleePtr = ident->generateValue(ctx, payload);

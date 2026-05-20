@@ -349,12 +349,15 @@ static void gatherPhantomsForMacro(
 /**
  * Find and expand all ast::MacroCall nodes
  *
+ * FIXME: Currently all arguments are evaluated before macro call is processed, it means that, for example
+ *        conditional error! isn't possible, because it'll get evaluated either way
+ *
  * @param globalContext Global Context
  * @param root          Root AST node
  */
 static void processMacros(
   std::unique_ptr<codegen::GlobalContext>& globalContext,
-  const std::shared_ptr<ast::Block>& root
+  const std::shared_ptr<ast::Block>&       root
 ) {
   auto phantoms = globalContext->globalModule->phantomScope({});
 

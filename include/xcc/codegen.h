@@ -266,10 +266,10 @@ public:
    * enables some stack-space optimization later on
    */
   struct Scope {
-    SourceSpan      span;
-    llvm::DIScope * di_scope;
+    SourceSpan                                                         span;
+    llvm::DIScope *                                                    di_scope;
     std::unordered_map<std::string, std::shared_ptr<meta::TypedValue>> locals;
-    bool cleared = false;
+    bool                                                               cleared = false;
 
     void clear(ModuleContext& ctx);
   };

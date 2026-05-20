@@ -2,10 +2,19 @@
 
 using namespace xcc::meta;
 
-Function::Function(std::string name, std::shared_ptr<Type> returnType, OrderedMap<std::string, std::shared_ptr<Type>> args, std::shared_ptr<ast::FnDecl> decl)
-  : name(std::move(name)), returnType(std::move(returnType)), args(std::move(args)), decl(std::move(decl)) {}
+Function::Function(
+  std::string                                    name,
+  std::shared_ptr<Type>                          returnType,
+  OrderedMap<std::string, std::shared_ptr<Type>> args,
+  std::shared_ptr<ast::FnDecl>                   decl
+) : name(std::move(name)), returnType(std::move(returnType)), args(std::move(args)), decl(std::move(decl)) {}
 
-std::shared_ptr<Function> Function::create(std::string name, std::shared_ptr<Type> returnType, OrderedMap<std::string, std::shared_ptr<Type>> args, std::shared_ptr<ast::FnDecl> decl) {
+std::shared_ptr<Function> Function::create(
+  std::string                                    name,
+  std::shared_ptr<Type>                          returnType,
+  OrderedMap<std::string, std::shared_ptr<Type>> args,
+  std::shared_ptr<ast::FnDecl>                   decl
+) {
   return std::make_shared<Function>(std::move(name), std::move(returnType), std::move(args), std::move(decl));
 }
 

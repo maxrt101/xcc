@@ -527,7 +527,7 @@ llvm::AllocaInst * ModuleContext::createEntryBlockAlloca(llvm::Type * type, cons
   return tmpBuilder.CreateAlloca(type, nullptr, name);
 }
 
-llvm::Value * xcc::codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type, SourceSpan span) {
+llvm::Value * codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type, SourceSpan span) {
   if (!val || !target_type) {
     throw std::runtime_error("codegen::cast received nullptr");
   }
