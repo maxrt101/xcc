@@ -347,6 +347,8 @@ static std::shared_ptr<Node> xcc_macro_cond(codegen::GlobalContext& global, std:
 
   auto else_branch = call->args.size() > 2 ? call->args[2] : Block::create(call->span, {});
 
+  // FIXME: Currently both branches are evaluated before cond! call is processed, it means that, for example
+  //        conditional error! isn't possible, because it'll get evaluated either way
   return (cond ? call->args[1] : else_branch)->clone();
 }
 
@@ -472,6 +474,19 @@ static std::shared_ptr<Node> xcc_macro_println(codegen::GlobalContext& global, s
   return xcc_macro_print(global, call);
 }
 
+static std::shared_ptr<Node> xcc_macro_include(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "include! expects a string as first argument"));
+
+  auto file = FileManager::load(call->args[0]->as<String>()->value);
+
+  auto lexer  = Lexer(file);
+  auto tokens = lexer.tokenize();
+  auto parser = Parser(file, tokens, true);
+
+  return parser.parse(false);
+}
+
 static std::vector builtin_macros = {
   createNativeMacro("cat",     {"a", "b"},               xcc_macro_cat),
   createNativeMacro("sizeof",  {"expr"},                 xcc_macro_sizeof),
@@ -485,13 +500,15 @@ static std::vector builtin_macros = {
   createNativeMacro("asm",     {"code", "constraints"},  xcc_macro_asm, true),
 
   createNativeMacro("assert",  {"expr"},                 xcc_macro_assert, true),
-
   createNativeMacro("warn",    {"msg"},                  xcc_macro_warn),
   createNativeMacro("error",   {"msg"},                  xcc_macro_error),
 
   createNativeMacro("print",   {"fmt"},                  xcc_macro_print, true),
   createNativeMacro("println", {"fmt"},                  xcc_macro_println, true),
 
+  createNativeMacro("include", {"path"},                 xcc_macro_include),
+
+  // TODO: Is this needed, if constant unary/binary expressions are implemented
   createNativeMacro("inc", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "inc!", ctx, call, ++); }),
   createNativeMacro("dec", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "dec!", ctx, call, --); }),
   createNativeMacro("add", {"a", "b"}, [](auto& ctx, auto& call) { __ARITHMETIC_BINARY_OP("add!", ctx, call, +);  }),
