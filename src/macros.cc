@@ -180,6 +180,8 @@ static std::string getStr(std::shared_ptr<Node> node) {
  * {.03}   - float precision zero-pad
  * {3}     - int precision
  * {03}    - int precision zero-pad
+ * {03}    - string left space-pad
+ * {-03}   - string right space-pad
  * {T}     - type
  * {%...}  - passthrough to printf
  *
