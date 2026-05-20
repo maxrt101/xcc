@@ -67,6 +67,68 @@ using namespace xcc::ast;
 
 static auto logger = util::log::Logger("MACROS");
 
+struct FormatModifier {
+  bool isHexLower = false;
+  bool isHexUpper = false;
+  bool neg        = false;
+  bool dot        = false;
+  std::string intPrecision, floatPrecision;
+
+  [[nodiscard]] std::string consideringHex(const std::string& base) const {
+    if (isHexLower) return "x";
+    if (isHexUpper) return "X";
+    return base;
+  }
+
+  [[nodiscard]] std::string getIntPrec() const {
+    return intPrecision.empty() ? "" : intPrecision;
+  }
+
+  [[nodiscard]] std::string getStrPad() const {
+    return intPrecision.empty() ? "" : ((neg ? "-" : "") + intPrecision);
+  }
+
+  [[nodiscard]] std::string getFloatPrec() const {
+    return (intPrecision.empty() ? "" : intPrecision) + (dot ? "." : "") + (floatPrecision.empty() ? "" : floatPrecision);
+  }
+
+  static FormatModifier fromString(const std::string& str) {
+    FormatModifier res;
+
+    size_t index = 0;
+
+    while (index < str.size()) {
+      if (isnumber(str[index])) {
+        if (res.dot) {
+          res.floatPrecision += str[index];
+        } else {
+          res.intPrecision += str[index];
+        }
+      }
+
+      if (str[index] == '-') {
+        res.neg = true;
+      }
+
+      if (str[index] == '.') {
+        res.dot = true;
+      }
+
+      if (str[index] == 'x') {
+        res.isHexLower = true;
+      }
+
+      if (str[index] == 'X') {
+        res.isHexUpper = true;
+      }
+
+      index++;
+    }
+
+    return res;
+  }
+};
+
 static std::shared_ptr<meta::Type> evalType(codegen::GlobalContext& global, codegen::ModuleContext& mod, std::shared_ptr<Node> node) {
   // Try to generate type using standard method
   try {
@@ -108,6 +170,107 @@ static std::string getStr(std::shared_ptr<Node> node) {
   }
 
   return "";
+}
+
+/**
+ * Modifiers:
+ * {}      - auto determine
+ * {x} {X} - print hex
+ * {.3}    - float precision
+ * {.03}   - float precision zero-pad
+ * {3}     - int precision
+ * {03}    - int precision zero-pad
+ * {T}     - type
+ * {%...}  - passthrough to printf
+ *
+ * @param global
+ * @param mod
+ * @param node
+ * @param modifierString
+ * @return
+ */
+static std::string printfSpecifierFromNode(
+  codegen::GlobalContext& global,
+  codegen::ModuleContext& mod,
+  std::shared_ptr<Node>&  node,
+  const std::string&      modifierString
+) {
+  if (modifierString.starts_with("%")) {
+    return modifierString;
+  }
+
+  auto type = evalType(global, mod, node);
+
+  if (modifierString == "T") {
+    node = String::create(node->span, type->toString());
+    return "%s";
+  }
+
+  auto modifier = FormatModifier::fromString(modifierString);
+
+  switch (type->getTag()) {
+    case meta::TypeTag::BOOL:
+      return "%d"; // TODO: true/false. Maybe inject { if (ARG) { "true" } else { "false" } } as arg
+
+    case meta::TypeTag::I8:
+    case meta::TypeTag::I16:
+    case meta::TypeTag::I32:
+      return "%" + modifier.getIntPrec() + modifier.consideringHex("d");
+
+    case meta::TypeTag::I64:
+      return "%" + modifier.getIntPrec() + "ll" + modifier.consideringHex("d");
+
+    case meta::TypeTag::U8:
+    case meta::TypeTag::U16:
+    case meta::TypeTag::U32:
+      return "%" + modifier.getIntPrec() + modifier.consideringHex("u");
+
+    case meta::TypeTag::U64:
+      return "%" + modifier.getIntPrec() + "ll" + modifier.consideringHex("u");
+
+    case meta::TypeTag::ISIZE:
+      return "%" + modifier.getIntPrec() + "z" + modifier.consideringHex("d");
+
+    case meta::TypeTag::USIZE:
+      return "%" + modifier.getIntPrec() + "z" + modifier.consideringHex("u");
+
+    case meta::TypeTag::F32:
+    case meta::TypeTag::F64:
+      return "%" + modifier.getFloatPrec() + "f";
+
+    case meta::TypeTag::PTR: {
+      if (type->getPointedType()->isAnyOf(meta::TypeTag::I8, meta::TypeTag::U8)) {
+        return "%" + modifier.getStrPad() + "s";
+      }
+
+      return "%" + modifier.getIntPrec() + "p";
+    }
+
+    case meta::TypeTag::FUNCTION:
+      return "%" + modifier.getIntPrec() + "p";
+
+    case meta::TypeTag::ENUM: {
+      // TODO: Generate a call to type->getBaseType()::toString(), set specifier to %s
+      return "%d";
+    }
+
+    case meta::TypeTag::ARRAY: {
+      // TODO: Generate specifier to N * baseTypeSpecifier, inject destructuring
+    }
+
+    case meta::TypeTag::STRUCT: {
+      // TODO: Generate specifiers for all fields with pretty formatting, inject destructuring
+    }
+
+    case meta::TypeTag::TUPLE: {
+      // TODO: Generate specifiers for all fields with pretty formatting, inject destructuring
+    }
+
+    case meta::TypeTag::VOID:
+    default:
+      // TODO: Raise an error (ERROR_UNPRINTABLE)
+      return "?";
+  }
 }
 
 static std::shared_ptr<Macro> createNativeMacro(std::string name, std::vector<std::string> args, Macro::NativeFn fn, bool variadic = false) {
@@ -173,12 +336,18 @@ static std::shared_ptr<Node> xcc_macro_cond(codegen::GlobalContext& global, std:
   assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_NUMBER),
       Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "cond! expects a number as first argument"));
 
-  auto cond = getOrGetLastInBlock(call->args[0], AST_EXPR_NUMBER)->as<Number>();
+  auto condValue = call->args[0]->generateConstant(*global.globalModule, {});
+  bool cond = false;
 
-  assertRaise(cond->tag == Number::INTEGER,
-    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "Expected integer as first argument to cond!"));
+  if (auto condInt = llvm::dyn_cast<llvm::ConstantInt>(condValue)) {
+    cond = condInt->getValue().getZExtValue();
+  } else {
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "Expected a constant as first argument to cond!").raise();
+  }
 
-  return (cond->value.integer ? call->args[1] : call->args[2])->clone();
+  auto else_branch = call->args.size() > 2 ? call->args[2] : Block::create(call->span, {});
+
+  return (cond ? call->args[1] : else_branch)->clone();
 }
 
 static std::shared_ptr<Node> xcc_macro_repeat(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -219,6 +388,90 @@ static std::shared_ptr<Node> xcc_macro_asm(codegen::GlobalContext& global, std::
   return Asm::create(call->span, call->args[0], call->args[1], args);
 }
 
+static std::shared_ptr<Node> xcc_macro_assert(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  auto val = call->args[0]->generateConstant(*global.globalModule, {});
+
+  if (auto cond = llvm::dyn_cast<llvm::ConstantInt>(val)) {
+    std::string message;
+
+    if (call->args.size() > 1) {
+      assertRaise(isOrIsLastInBlock(call->args[1], AST_EXPR_STRING),
+        Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[1]->span, "assert! expects a string as second argument"));
+
+      message = ": " + call->args[1]->as<String>()->value;
+    }
+
+    if (!cond->getValue().getZExtValue()) {
+      Error(ERROR_ASSERTION, call->span, "'{}'{}",
+        call->args[0]->toString(nullptr, nullptr, 0, false),
+        message.empty() ? "" : message
+      ).raiseFromNode(call.get());
+    }
+  } else {
+    Error(ERROR_NOT_CONSTANT, call->args[0]->span, "assert! expects a constant").raise();
+  }
+
+  // TODO: Should be Empty
+  return Block::create(call->span, {});
+}
+
+static std::shared_ptr<Node> xcc_macro_warn(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "warn! expects a string as first argument"));
+
+  Warning(WARNING_USER_WARNING, call->span, "{}", call->args[0]->as<String>()->value).emit();
+
+  // TODO: Should be Empty
+  return Block::create(call->span, {});
+}
+
+static std::shared_ptr<Node> xcc_macro_error(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "error! expects a string as first argument"));
+
+  Error(ERROR_USER_ERROR, call->span, "{}", call->args[0]->as<String>()->value).raiseFromNode(call.get());
+}
+
+static std::shared_ptr<Node> xcc_macro_print(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "print! expects a string as first argument"));
+
+  auto fmt = call->args[0]->as<String>()->value;
+
+  size_t arg = 1;
+
+  std::string res_fmt;
+
+  size_t i = 0;
+
+  while (i < fmt.size()) {
+    if (fmt[i] == '{') {
+      std::string f;
+      while (fmt[++i] != '}') {
+        f += fmt[i];
+      }
+      res_fmt += printfSpecifierFromNode(global, *global.globalModule, call->args[arg++], f);
+    } else {
+      res_fmt += fmt[i];
+    }
+
+    i++;
+  }
+
+  call->args[0] = String::create(call->args[0]->span, res_fmt);
+
+  return Call::create(call->span, Identifier::create(call->span, "printf", {"stdc", "io"}), call->args);
+}
+
+static std::shared_ptr<Node> xcc_macro_println(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  assertRaise(isOrIsLastInBlock(call->args[0], AST_EXPR_STRING),
+    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "print! expects a string as first argument"));
+
+  call->args[0]->as<String>()->value += "\n";
+
+  return xcc_macro_print(global, call);
+}
+
 static std::vector builtin_macros = {
   createNativeMacro("cat",     {"a", "b"},               xcc_macro_cat),
   createNativeMacro("sizeof",  {"expr"},                 xcc_macro_sizeof),
@@ -227,9 +480,17 @@ static std::vector builtin_macros = {
   createNativeMacro("str",     {"expr"},                 xcc_macro_str),
   createNativeMacro("strf",    {"expr"},                 xcc_macro_strf),
   createNativeMacro("int",     {"expr"},                 xcc_macro_int),
-  createNativeMacro("cond",    {"cond", "then", "else"}, xcc_macro_cond),
+  createNativeMacro("cond",    {"cond", "then"},         xcc_macro_cond, true),
   createNativeMacro("repeat",  {"n", "var", "expr"},     xcc_macro_repeat),
   createNativeMacro("asm",     {"code", "constraints"},  xcc_macro_asm, true),
+
+  createNativeMacro("assert",  {"expr"},                 xcc_macro_assert, true),
+
+  createNativeMacro("warn",    {"msg"},                  xcc_macro_warn),
+  createNativeMacro("error",   {"msg"},                  xcc_macro_error),
+
+  createNativeMacro("print",   {"fmt"},                  xcc_macro_print, true),
+  createNativeMacro("println", {"fmt"},                  xcc_macro_println, true),
 
   createNativeMacro("inc", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "inc!", ctx, call, ++); }),
   createNativeMacro("dec", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "dec!", ctx, call, --); }),
