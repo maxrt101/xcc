@@ -150,6 +150,17 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_ENUM_NO_MEMBER,                             "No such enum member"),
   DESC(ERROR_ASSERTION,                                  "Compile-time assertion failed"),
   DESC(ERROR_USER_ERROR,                                 "Error triggered by error! macro"),
+  DESC(ERROR_MATCH_MISSING_KEYWORD,                      "Missing 'match' at the start of match expression"),
+  DESC(ERROR_MATCH_MISSING_OPENING_PAREN,                "Missing '(' after 'match' keyword in match expression"),
+  DESC(ERROR_MATCH_MISSING_CLOSING_PAREN,                "Missing ')' after match value in match expression"),
+  DESC(ERROR_MATCH_MISSING_OPENING_BRACE,                "Missing '{' after match value in match expression"),
+  DESC(ERROR_MATCH_MISSING_CLOSING_BRACE,                "Missing '}' after match arms at the end of match expression"),
+  DESC(ERROR_MATCH_INVALID_ARM_COND_TYPE,                "Invalid expression in match expression's arm condition"),
+  DESC(ERROR_MATCH_MISSING_RIGHT_ARROW,                  "Missing '->' after match expression's arm condition"),
+  DESC(ERROR_MATCH_MISSING_COMMA_AFTER_ARM,              "Missing ',' after match expression's arm"),
+  DESC(ERROR_MATCH_BAD_ARM_TYPE,                         "Type of match expression's arm is different from previous arms"),
+  DESC(ERROR_MATCH_COND_NON_CONST_INT,                   "Value cannot be converted to a constant integer for match arm condition"),
+  DESC(ERROR_MATCH_MULTIPLE_WILDCARDS,                   "Only one wildcard ('_') is allowed for single match expression"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {

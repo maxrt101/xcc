@@ -160,6 +160,17 @@ enum ErrorId {
   ERROR_ENUM_NO_MEMBER                             = 134,
   ERROR_ASSERTION                                  = 135,
   ERROR_USER_ERROR                                 = 136,
+  ERROR_MATCH_MISSING_KEYWORD                      = 137,
+  ERROR_MATCH_MISSING_OPENING_PAREN                = 138,
+  ERROR_MATCH_MISSING_CLOSING_PAREN                = 139,
+  ERROR_MATCH_MISSING_OPENING_BRACE                = 140,
+  ERROR_MATCH_MISSING_CLOSING_BRACE                = 141,
+  ERROR_MATCH_INVALID_ARM_COND_TYPE                = 142,
+  ERROR_MATCH_MISSING_RIGHT_ARROW                  = 143,
+  ERROR_MATCH_MISSING_COMMA_AFTER_ARM              = 144,
+  ERROR_MATCH_BAD_ARM_TYPE                         = 145,
+  ERROR_MATCH_COND_NON_CONST_INT                   = 146,
+  ERROR_MATCH_MULTIPLE_WILDCARDS                   = 147,
 
   ERROR_MAX,
 };
