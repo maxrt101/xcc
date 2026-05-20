@@ -94,9 +94,17 @@ llvm::Constant * Unary::generateConstant(codegen::ModuleContext& ctx, PayloadLis
 
 std::shared_ptr<xcc::meta::Type> Unary::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
   /* If dereferencing - should return TypeForValueWithoutLoad */
-  return operation.type == TOKEN_STAR
-      ? generateTypeForValueWithoutLoad(ctx, payload)
-      : raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
+  if (operation.type == TOKEN_STAR) {
+    return generateTypeForValueWithoutLoad(ctx, payload);
+  }
+
+  auto t = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
+
+  if (operation.type == TOKEN_AMP) {
+    t = meta::Type::createPointer(t);
+  }
+
+  return t;
 }
 
 std::shared_ptr<xcc::meta::Type> Unary::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
