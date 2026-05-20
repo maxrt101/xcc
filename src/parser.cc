@@ -355,7 +355,7 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
       //                         ^
       // But (should) disallow any other missing semicolons
       if (!previous().is(TOKEN_RIGHT_BRACE) && !current().is(TOKEN_RIGHT_BRACE)) {
-        Error(ERROR_BLOCK_MISSING_SEMICOLON, current().span).raise();
+        Error(ERROR_BLOCK_MISSING_SEMICOLON, previous().span.pointPastLast()).raise();
       }
     }
   }
@@ -817,6 +817,68 @@ std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& at
   return ast::Macro::create(span + previous().span, id, args, body);
 }
 
+ast::Match::Arm Parser::parseMatchArm() {
+  ast::NodeList nodes;
+
+  do {
+    if (current().is(TOKEN_NUMBER)) {
+      nodes.push_back(parseNumber());
+    } else if (current().is(TOKEN_IDENTIFIER)) {
+      nodes.push_back(parseScopedIdentifier("for match arm condition"));
+    } else {
+      Error(ERROR_MATCH_INVALID_ARM_COND_TYPE, current().span)
+        .note("Only identifiers and numbers are supported")
+        .raise();
+    }
+  } while (checkAdvance(TOKEN_VERTICAL_LINE) && !current().is(TOKEN_RIGHT_ARROW) && !isAtEnd());
+
+  if (!checkAdvance(TOKEN_RIGHT_ARROW)) {
+    Error(ERROR_MATCH_MISSING_RIGHT_ARROW, current().span).raise();
+  }
+
+  auto expr = parseExpr();
+
+  return {{nodes}, expr};
+}
+
+std::shared_ptr<ast::Node> Parser::parseMatch() {
+  auto span = current().span;
+
+  if (!checkAdvance(TOKEN_MATCH)) {
+    Error(ERROR_MATCH_MISSING_KEYWORD, current().span).raise();
+  }
+
+  if (!checkAdvance(TOKEN_LEFT_PAREN)) {
+    Error(ERROR_MATCH_MISSING_OPENING_PAREN, current().span).raise();
+  }
+
+  std::shared_ptr<ast::Node> expr = parseExpr();
+
+  if (!checkAdvance(TOKEN_RIGHT_PAREN)) {
+    Error(ERROR_MATCH_MISSING_CLOSING_PAREN, current().span).raise();
+  }
+
+  if (!checkAdvance(TOKEN_LEFT_BRACE)) {
+    Error(ERROR_MATCH_MISSING_OPENING_BRACE, current().span).raise();
+  }
+
+  std::vector<ast::Match::Arm> arms;
+
+  while (!check(TOKEN_RIGHT_BRACE) && !isAtEnd()) {
+    arms.push_back(parseMatchArm());
+
+    if (!arms.back().then->is(ast::AST_BLOCK) && !check(TOKEN_RIGHT_BRACE) && !checkAdvance(TOKEN_COMMA)) {
+      Error(ERROR_MATCH_MISSING_COMMA_AFTER_ARM, previous().span.pointPastLast()).raise();
+    }
+  }
+
+  if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
+    Error(ERROR_MATCH_MISSING_CLOSING_BRACE, current().span).raise();
+  }
+
+  return ast::Match::create(span + previous().span, expr, arms);
+}
+
 std::shared_ptr<ast::Node> Parser::parseStmt(bool parseTopLevel) {
   switch (current().type) {
     case TOKEN_VAR:         return parseVar(false);
@@ -824,6 +886,7 @@ std::shared_ptr<ast::Node> Parser::parseStmt(bool parseTopLevel) {
     case TOKEN_FOR:         return parseFor();
     case TOKEN_WHILE:       return parseWhile();
     case TOKEN_RETURN:      return parseReturn();
+    case TOKEN_MATCH:       return parseMatch();
     case TOKEN_EXTERN:
     case TOKEN_FN: {
       assertRaise(parseTopLevel, Error(ERROR_INVALID_TOKEN_FOR_CONTEXT, current().span, "Unexpected 'fn' in current context"));

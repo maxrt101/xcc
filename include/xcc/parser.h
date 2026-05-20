@@ -196,6 +196,8 @@ private:
   std::shared_ptr<ast::Node> parseMod(const ast::Node::AttributeList& attrs);
   std::shared_ptr<ast::Node> parseTypeDeclaration(const ast::Node::AttributeList& attrs);
   std::shared_ptr<ast::Node> parseMacro(const ast::Node::AttributeList& attrs);
+  ast::Match::Arm            parseMatchArm();
+  std::shared_ptr<ast::Node> parseMatch();
 
   // Generic
   std::shared_ptr<ast::Node> parseStmt(bool parseTopLevel = false);
