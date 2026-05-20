@@ -153,7 +153,7 @@ class Runner:
 
         for out in ['stdout', 'stderr']:
             for expect in getattr(test.expect, out):
-                if expect.search(run.stdout):
+                if expect.search(getattr(run, out)):
                     continue
                 run.fail_reasons.append(f'Couldn\'t find expected string \'{COLOR_YELLOW}{escape(expect.pattern)}{COLOR_RESET}\'')
                 run.passed = False
