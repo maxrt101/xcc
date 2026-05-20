@@ -17,6 +17,7 @@
 #include "xcc/ast/init.h"
 #include "xcc/ast/macro.h"
 #include "xcc/ast/macro_call.h"
+#include "xcc/ast/match.h"
 #include "xcc/ast/member.h"
 #include "xcc/ast/node.h"
 #include "xcc/ast/number.h"
