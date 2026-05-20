@@ -1,6 +1,10 @@
 #include "xcc/util/string.h"
 #include <format>
 
+bool xcc::util::contains(const std::string& str, const std::string& sub) {
+  return str.find(sub) != std::string::npos;
+}
+
 std::vector<std::string> xcc::util::strsplit(const std::string& str, const std::string& delimiter) {
   std::vector<std::string> result;
 

@@ -12,6 +12,28 @@ struct BaseDetermineResult {
 };
 
 /**
+ * Check if `str` contains `sub`
+ *
+ * @param str String to check for `sub`
+ * @param sub Substring to look for
+ * @return @c true if `str` contains `sub`
+ */
+bool contains(const std::string& str, const std::string& sub);
+
+/**
+ * Check if `str` contains any of the `substrings`
+ *
+ * @tparam Args       All should be std::string
+ * @param  str        String to check for `substrings`
+ * @param  substrings Substrings to look for in `str`
+ * @return @c true if `str` contains at least one of `substrings`
+ */
+template <typename... Args>
+bool contains(const std::string& str, Args&&... substrings) {
+  return ((contains(str, substrings)) || ...);
+}
+
+/**
  * Splits string into a vector of parts using delimiter
  *
  * @param str String to split
