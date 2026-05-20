@@ -148,10 +148,13 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_ENUM_MISSING_OPENING_BRACE,                 "Missing '{' at the start of enum declaration"),
   DESC(ERROR_ENUM_MISSING_CLOSING_BRACE,                 "Missing '}' after enum declaration"),
   DESC(ERROR_ENUM_NO_MEMBER,                             "No such enum member"),
+  DESC(ERROR_ASSERTION,                                  "Compile-time assertion failed"),
+  DESC(ERROR_USER_ERROR,                                 "Error triggered by error! macro"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {
-  DESC(WARNING_RESERVED, "Reserved warning"),
+  DESC(WARNING_RESERVED,     "Reserved warning"),
+  DESC(WARNING_USER_WARNING, "Warning triggered by warn! macro"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {

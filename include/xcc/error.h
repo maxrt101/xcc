@@ -158,6 +158,8 @@ enum ErrorId {
   ERROR_ENUM_MISSING_OPENING_BRACE                 = 132,
   ERROR_ENUM_MISSING_CLOSING_BRACE                 = 133,
   ERROR_ENUM_NO_MEMBER                             = 134,
+  ERROR_ASSERTION                                  = 135,
+  ERROR_USER_ERROR                                 = 136,
 
   ERROR_MAX,
 };
@@ -166,7 +168,9 @@ enum ErrorId {
  * Compiler warning codes
  */
 enum WarningId {
-  WARNING_RESERVED = 0,
+  WARNING_RESERVED     = 0,
+
+  WARNING_USER_WARNING = 1,
 
   WARNING_MAX,
 };
