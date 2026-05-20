@@ -196,8 +196,6 @@ std::shared_ptr<meta::Type> Match::generateType(codegen::ModuleContext& ctx, Pay
 
     if (*common_type != *t) {
       // TODO: Should at least try to align t & common_type?
-      Warning(WARNING_RESERVED, arm.then->span, "Match::generateType: {} '{}' '{}'", *common_type == *t, common_type->toString(), t->toString()).emit();
-
       Error(ERROR_MATCH_BAD_ARM_TYPE, arm.then->span, "type='{}' common='{}'", t->toString(), common_type->toString())
         .note("All arms in match must evaluate to the same type")
         .raiseFromNode(this);
