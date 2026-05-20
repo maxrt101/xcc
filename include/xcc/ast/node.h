@@ -59,6 +59,8 @@ enum NodeType {
 
   AST_INIT,                   // type { id: expr, ... } OR type { expr, ... }
 
+  AST_MATCH,                  // match (expr) { value -> expr, value | value2 -> block _ -> block }
+
   AST_MOD,                    // module
   AST_MACRO,                  // macro id (id, ...) block
 
