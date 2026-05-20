@@ -38,6 +38,7 @@ enum TokenType {
   TOKEN_MOD,
   TOKEN_TYPE,
   TOKEN_MACRO,
+  TOKEN_MATCH,
 
   // Braces/Parenthesis
   TOKEN_LEFT_BRACE,
