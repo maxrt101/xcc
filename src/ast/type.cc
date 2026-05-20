@@ -32,9 +32,18 @@ std::shared_ptr<Type> Type::createFunction(SourceSpan span, std::shared_ptr<Node
   return t;
 }
 
+std::shared_ptr<Type> Type::createLambda(SourceSpan span, NodeList captures, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic) {
+  auto t = std::make_shared<Type>(span, LAMBDA, nullptr);
+  t->lambda.captures = std::move(captures);
+  t->fn.returnType   = std::move(returnType);
+  t->fn.args         = std::move(args);
+  t->fn.isVariadic   = isVariadic;
+  return t;
+}
+
 std::shared_ptr<Type> Type::createTuple(SourceSpan span, NodeList members) {
   auto t = std::make_shared<Type>(span, TUPLE, nullptr);
-  t->tuple.members = members;
+  t->tuple.members = std::move(members);
   return t;
 }
 
@@ -46,6 +55,10 @@ std::shared_ptr<Node> Type::clone() {
       return withAttrs(createArray(span, name->clone(), array.size->clone()));
     case FUNCTION:
       return withAttrs(createFunction(span, cast<Type>(fn.returnType->clone()), cloneVector(fn.args), fn.isVariadic));
+    case LAMBDA:
+      return withAttrs(createLambda(span, cloneVector(lambda.captures), cast<Type>(fn.returnType->clone()), cloneVector(fn.args), fn.isVariadic));
+    case TUPLE:
+      return withAttrs(createTuple(span, cloneVector(tuple.members)));
     case NORMAL:
     default:
       return withAttrs(create(span, name->clone()));
@@ -54,6 +67,11 @@ std::shared_ptr<Node> Type::clone() {
 
 void Type::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   switch (kind) {
+    case LAMBDA:
+      for (auto& node : lambda.captures) {
+        callVisitor(globalContext, node, visitor, ignoreSubtree);
+      }
+      [[fallthrough]];
     case FUNCTION:
       callVisitor(globalContext, fn.returnType, visitor, ignoreSubtree);
       for (auto& node : fn.args) {
@@ -88,8 +106,21 @@ std::string Type::toString(Node * grandparent, Node * parent, int indent, bool n
     return res + "]";
   }
 
-  if (kind == FUNCTION) {
-    res = "fn (";
+  if (kind == FUNCTION || kind == LAMBDA) {
+    res = "fn ";
+
+    if (kind == LAMBDA) {
+      res += "[";
+      for (size_t i = 0; i < lambda.captures.size(); ++i) {
+        res += lambda.captures[i]->toString(parent, this, indent, false);
+        if (i + 1 < lambda.captures.size()) {
+          res += ", ";
+        }
+      }
+      res += "] ";
+    }
+
+    res += "(";
 
     for (size_t i = 0; i < fn.args.size(); ++i) {
       res += fn.args[i]->toString(parent, this, indent, false);
@@ -134,6 +165,14 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
     }
 
     return meta::Type::createFunction(fn.returnType->generateType(ctx, payload), args, fn.isVariadic);
+  }
+
+  if (kind == LAMBDA) {
+    std::vector<std::shared_ptr<meta::Type>> args;
+
+    for (auto& arg : this->fn.args) {
+      args.push_back(arg->generateType(ctx, payload));
+    }
   }
 
   auto baseType = getBaseType(ctx, payload);
