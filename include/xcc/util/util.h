@@ -60,4 +60,12 @@
   if (__it != __vec.end())
 
 
-namespace xcc {}
+namespace xcc {
+
+/* Checks of value is in any of args */
+template <typename T, typename... Args>
+bool oneOf(T&& value, Args&&... args) {
+  return ((value == args) || ...);
+}
+
+}
