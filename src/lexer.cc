@@ -316,10 +316,19 @@ void Lexer::tokenizeChar() {
   // Skip opening quote
   consume();
 
+  size_t start = current_index;
+
+  auto val = std::string() + current();
+
+  if (current() == '\\') {
+    consume();
+    val += current();
+  }
+
   result.push_back({
     TOKEN_CHAR,
-    util::strescseq(std::string() + current(), true),
-    {fileId, current_index-1, 3}
+    util::strescseq(val, true),
+    {fileId, start, current_index - start}
   });
 
   consume();

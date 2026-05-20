@@ -1,8 +1,8 @@
-use stdc::{printf, puts};
+use stdc::{printf, putchar};
 
 fn main() -> i32 {
   print!("abcdef");
-  puts("\n");
+  putchar('\n');
 
   var t0: [i32, u8*] = [] { 42, "tuple" };
   var ptr = &t0;
