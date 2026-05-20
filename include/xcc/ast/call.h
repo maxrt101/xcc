@@ -13,9 +13,10 @@ class Call : public Node {
 private:
   struct CalleeInfo {
     std::string                 fnName;
-    bool                        isMember  = false;
-    llvm::Value*                calleePtr = nullptr;
-    std::shared_ptr<meta::Type> metaType  = nullptr;
+    bool                        isMember           = false;
+    // bool                        isFunctionPointer  = false;
+    llvm::Value*                calleePtr          = nullptr;
+    std::shared_ptr<meta::Type> metaType           = nullptr;
   };
 
 public:

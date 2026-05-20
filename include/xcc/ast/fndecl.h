@@ -10,12 +10,12 @@ namespace xcc::ast {
 
 class FnDecl : public Node, public std::enable_shared_from_this<FnDecl> {
 public:
-  std::shared_ptr<Identifier> name;
-  std::shared_ptr<Node> return_type;
+  std::shared_ptr<Identifier>                   name;
+  std::shared_ptr<Node>                         return_type;
   std::vector<std::shared_ptr<TypedIdentifier>> args;
-  bool isExtern;
-  bool isVariadic;
-  std::string alias_to;
+  bool                                          isExtern;
+  bool                                          isVariadic;
+  std::string                                   alias_to;
 
 public:
   FnDecl(

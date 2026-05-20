@@ -33,10 +33,21 @@ public:
   std::shared_ptr<ast::FnDecl> decl;
 
 public:
-  Function(std::string name, std::shared_ptr<Type> returnType, OrderedMap<std::string, std::shared_ptr<Type>> args = {}, std::shared_ptr<ast::FnDecl> decl = nullptr);
+  Function(
+    std::string                                    name,
+    std::shared_ptr<Type>                          returnType,
+    OrderedMap<std::string, std::shared_ptr<Type>> args = {},
+    std::shared_ptr<ast::FnDecl>                   decl = nullptr
+  );
+
   ~Function() = default;
 
-  static std::shared_ptr<Function> create(std::string name, std::shared_ptr<Type> returnType, OrderedMap<std::string, std::shared_ptr<Type>> args = {}, std::shared_ptr<ast::FnDecl> decl = nullptr);
+  static std::shared_ptr<Function> create(
+    std::string                                    name,
+    std::shared_ptr<Type>                          returnType,
+    OrderedMap<std::string, std::shared_ptr<Type>> args = {},
+    std::shared_ptr<ast::FnDecl>                   decl = nullptr
+  );
 
   /**
    * Generate llvm::Type* from function return type metadata. Needs ModuleContext

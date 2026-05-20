@@ -45,8 +45,6 @@ public:
 
 private:
   std::shared_ptr<Node> findOrCreateDefault();
-  // llvm::BasicBlock * generateArm(codegen::ModuleContext& ctx, PayloadList payload, std::shared_ptr<Node> then);
-
 };
 
 } /* namespace xcc::ast */
