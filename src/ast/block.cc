@@ -61,6 +61,8 @@ std::string Block::toString(Node * grandparent, Node * parent, int indent, bool 
 }
 
 llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payload) {
+  if (body.empty()) return nullptr;
+
   ctx.pushScope(span);
   ctx.setDebugLocation(span);
 
@@ -84,6 +86,8 @@ llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payl
 }
 
 std::shared_ptr<xcc::meta::Type> Block::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+  if (body.empty()) return meta::Type::createVoid();
+
   auto phantoms = ctx.phantomScope({});
 
   for (auto& node : body) {
