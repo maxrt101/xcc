@@ -46,7 +46,7 @@ std::shared_ptr<Node> Binary::clone() {
   return withAttrs(create(span, operation, lhs->clone(), rhs->clone()));
 }
 
-void Binary::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Binary::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, lhs, visitor, ignoreSubtree);
   callVisitor(globalContext, rhs, visitor, ignoreSubtree);
 }

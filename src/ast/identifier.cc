@@ -32,7 +32,7 @@ std::shared_ptr<Node> Identifier::clone() {
   return withAttrs(create(span, value, scope));
 }
 
-void Identifier::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
+void Identifier::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string Identifier::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   std::string res = attributesToString(0, false);

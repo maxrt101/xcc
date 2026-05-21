@@ -14,7 +14,7 @@ std::shared_ptr<Node> Cast::clone() {
   return withAttrs(create(span, expr->clone(), cast<Type>(type->clone())));
 }
 
-void Cast::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Cast::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, expr, visitor, ignoreSubtree);
   callVisitor(globalContext, type, visitor, ignoreSubtree);
 }

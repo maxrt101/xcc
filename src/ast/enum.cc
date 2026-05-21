@@ -36,7 +36,7 @@ std::shared_ptr<Node> Enum::clone() {
   return withAttrs(create(span, cast<Identifier>(name->clone()), type->clone(), fields, cloneVector(methods)));
 }
 
-void Enum::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Enum::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, name, visitor, ignoreSubtree);
   callVisitor(globalContext, type, visitor, ignoreSubtree);
 

@@ -20,7 +20,7 @@ std::shared_ptr<Node> MemberAccess::clone() {
   return withAttrs(std::make_shared<MemberAccess>(span, kind, lhs->clone(), cast<Identifier>(rhs->clone())));
 }
 
-void MemberAccess::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void MemberAccess::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, lhs, visitor, ignoreSubtree);
   callVisitor(globalContext, rhs, visitor, ignoreSubtree);
 }
@@ -60,12 +60,16 @@ llvm::Value * MemberAccess::generateValueWithoutLoad(codegen::ModuleContext& ctx
   return ctx.ir_builder->CreateStructGEP(type->getLLVMType(ctx), value_to_load, type->getMemberIndex(rhs->name()));
 }
 
-std::shared_ptr<xcc::meta::Type> MemberAccess::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
+std::shared_ptr<meta::Type> MemberAccess::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   auto type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
 
   if (kind == MEMBER_ACCESS_POINTER) {
     assertRaiseFromNode(type->isPointer(), Error(ERROR_POINTER_ACCESS_ON_SCALAR, span, "'{}'", type->toString()), this);
     type = type->getPointedType();
+  }
+
+  if (!type->isStruct()) {
+    Error(ERROR_INVALID_TYPE, span, "Type '{}' is not a struct", type->toString()).raiseFromNode(this);
   }
 
   assertRaiseFromNode(type->hasMember(rhs->name()), Error(ERROR_UNKNOWN_MEMBER, rhs->span, "type={} member={}", type->toString(), rhs->name()), this);

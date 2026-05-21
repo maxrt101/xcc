@@ -15,7 +15,7 @@ std::shared_ptr<Node> Subscript::clone() {
   return withAttrs(create(span, lhs->clone(), rhs->clone()));
 }
 
-void Subscript::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Subscript::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, lhs, visitor, ignoreSubtree);
   callVisitor(globalContext, rhs, visitor, ignoreSubtree);
 }

@@ -45,7 +45,7 @@ std::shared_ptr<Node> Macro::clone() {
   ));
 }
 
-void Macro::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Macro::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, name, visitor, ignoreSubtree);
 
   for (auto& arg : args) {

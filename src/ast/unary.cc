@@ -15,7 +15,7 @@ std::shared_ptr<Node> Unary::clone() {
   return withAttrs(create(span, operation, rhs->clone()));
 }
 
-void Unary::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Unary::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, rhs, visitor, ignoreSubtree);
 }
 
@@ -28,11 +28,11 @@ llvm::Value * Unary::generateValue(codegen::ModuleContext& ctx, PayloadList payl
 
   switch (operation.type) {
     case TOKEN_STAR: {
-      return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx, payload)->getLLVMType(ctx), generateValueWithoutLoad(ctx, {}), "dereferenced");
+      return ctx.ir_builder->CreateLoad(generateTypeForValueWithoutLoad(ctx, payload)->getLLVMType(ctx), generateValueWithoutLoad(ctx, payload), "dereferenced");
     }
 
     default:
-      return generateValueWithoutLoad(ctx, {});
+      return generateValueWithoutLoad(ctx, payload);
   }
 }
 

@@ -21,7 +21,7 @@ std::shared_ptr<Node> For::clone() {
   ));
 }
 
-void For::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void For::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, init, visitor, ignoreSubtree);
   callVisitor(globalContext, cond, visitor, ignoreSubtree);
   callVisitor(globalContext, step, visitor, ignoreSubtree);

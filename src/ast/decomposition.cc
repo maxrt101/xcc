@@ -23,7 +23,7 @@ std::shared_ptr<Node> Decomposition::clone() {
   return withAttrs(create(span, cloneVector(pieces), value->clone()));
 }
 
-void Decomposition::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Decomposition::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   for (auto& piece : pieces) {
     callVisitor(globalContext, piece, visitor, ignoreSubtree);
   }

@@ -57,7 +57,7 @@ std::shared_ptr<Node> Block::clone() {
   return withAttrs(create(span, cloneVector(body)));
 }
 
-void Block::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Block::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   for (auto& node : body) {
     callVisitor(globalContext, node, visitor, ignoreSubtree);
   }

@@ -36,7 +36,7 @@ std::shared_ptr<Node> VarDecl::clone() {
   ));
 }
 
-void VarDecl::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void VarDecl::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, name, visitor, ignoreSubtree);
   callVisitor(globalContext, type, visitor, ignoreSubtree);
   callVisitor(globalContext, value, visitor, ignoreSubtree);

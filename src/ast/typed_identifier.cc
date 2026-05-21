@@ -18,7 +18,7 @@ std::shared_ptr<Node> TypedIdentifier::clone() {
   ));
 }
 
-void TypedIdentifier::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void TypedIdentifier::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, name, visitor, ignoreSubtree);
   callVisitor(globalContext, value_type, visitor, ignoreSubtree);
   callVisitor(globalContext, value, visitor, ignoreSubtree);

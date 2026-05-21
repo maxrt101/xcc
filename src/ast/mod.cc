@@ -17,11 +17,11 @@ std::shared_ptr<Node> Module::clone() {
   return withAttrs(create(span, name->clone(), body ? cast<Block>(body->clone()) : nullptr));
 }
 
-void Module::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  globalContext->pushModule(getName());
+void Module::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  globalContext.pushModule(getName());
   callVisitor(globalContext, name, visitor, ignoreSubtree);
   callVisitor(globalContext, body, visitor, ignoreSubtree);
-  globalContext->popModule();
+  globalContext.popModule();
 }
 
 std::string Module::toString(Node * grandparent, Node * parent, int indent, bool newline) {

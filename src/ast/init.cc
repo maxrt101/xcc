@@ -29,7 +29,7 @@ std::shared_ptr<Node> Initializer::clone() {
   return withAttrs(create(span, value_type->clone(), values, has_square_braces));
 }
 
-void Initializer::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Initializer::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, value_type, visitor, ignoreSubtree);
 
   for (auto& value : values) {

@@ -50,7 +50,7 @@ std::shared_ptr<Node> Lambda::clone() {
   ));
 }
 
-void Lambda::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Lambda::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   for (auto& node : captures) {
     callVisitor(globalContext, node, visitor, ignoreSubtree);
   }

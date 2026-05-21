@@ -18,7 +18,7 @@ public:
   static std::shared_ptr<Identifier> create(SourceSpan span, const std::string& value, std::vector<std::string> scope = {});
 
   std::shared_ptr<Node> clone() override;
-  void visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
+  void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   /** Returns constructed name with scope + value (e.g. `module::Enum::Value`) */

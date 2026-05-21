@@ -36,7 +36,7 @@ std::shared_ptr<Node> Match::clone() {
   return withAttrs(create(span, value->clone(), arms_copy));
 }
 
-void Match::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Match::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, value, visitor, ignoreSubtree);
 
   for (auto& arm : arms) {

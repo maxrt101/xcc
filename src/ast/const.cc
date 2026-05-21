@@ -32,7 +32,7 @@ std::shared_ptr<Node> ConstDecl::clone() {
   ));
 }
 
-void ConstDecl::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void ConstDecl::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, name, visitor, ignoreSubtree);
   callVisitor(globalContext, type, visitor, ignoreSubtree);
   callVisitor(globalContext, value, visitor, ignoreSubtree);

@@ -15,7 +15,7 @@ std::shared_ptr<Node> While::clone() {
   return withAttrs(create(span, condition->clone(), body->clone()));
 }
 
-void While::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void While::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, condition, visitor, ignoreSubtree);
   callVisitor(globalContext, body, visitor, ignoreSubtree);
 }
