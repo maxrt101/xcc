@@ -169,6 +169,8 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_LAMBDA_MISSING_BODY,                        "Missing '{' (body) after return type in lambda expression"),
   DESC(ERROR_LAMBDA_TYPE_MISSING_CLOSING_SQUARE_BRACE,   "Missing ']' after capture list in lambda type"),
   DESC(ERROR_LAMBDA_BAD_CAPTURE_EXPR,                    "Invalid expression for lambda capture"),
+  DESC(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT,       "Missing '>' after generic list in type declaration"),
+  DESC(ERROR_GENERIC_COUNT_MISMATCH,                     "Count of generic arguments required by a type is different from the count of provided type arguments"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {
