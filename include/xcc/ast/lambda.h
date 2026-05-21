@@ -1,6 +1,7 @@
 #pragma once
 
 #include "xcc/ast/node.h"
+#include "xcc/ast/block.h"
 #include "xcc/ast/typed_identifier.h"
 
 #include <string>
@@ -13,7 +14,7 @@ public:
   NodeList                                      captures;
   std::vector<std::shared_ptr<TypedIdentifier>> args;
   std::shared_ptr<Node>                         return_type;
-  std::shared_ptr<Node>                         body;
+  std::shared_ptr<Block>                        body;
   bool                                          isVariadic;
 
 public:
@@ -22,7 +23,7 @@ public:
       NodeList                                      captures,
       std::vector<std::shared_ptr<TypedIdentifier>> args,
       std::shared_ptr<Node>                         return_type,
-      std::shared_ptr<Node>                         body,
+      std::shared_ptr<Block>                        body,
       bool                                          isVariadic = false
   );
 
@@ -33,7 +34,7 @@ public:
       NodeList                                      captures,
       std::vector<std::shared_ptr<TypedIdentifier>> args,
       std::shared_ptr<Node>                         return_type,
-      std::shared_ptr<Node>                         body,
+      std::shared_ptr<Block>                        body,
       bool                                          isVariadic = false
   );
 
@@ -42,8 +43,12 @@ public:
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
-  std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext &ctx, PayloadList payload) override;
+
+private:
+  std::shared_ptr<meta::Type> generateLambdaType(codegen::ModuleContext &ctx, PayloadList payload);
+
+  static uint64_t counter;
 };
 
 } /* namespace xcc::ast */
