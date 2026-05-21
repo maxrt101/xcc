@@ -527,9 +527,94 @@ llvm::AllocaInst * ModuleContext::createEntryBlockAlloca(llvm::Type * type, cons
   return tmpBuilder.CreateAlloca(type, nullptr, name);
 }
 
+llvm::Value * ModuleContext::createFatPointerFromGlobalFunction(llvm::Function * fn, llvm::Type * fat_ptr_type) {
+  std::string trampoline_name = fn->getName().str() + "$trampoline";
+
+  llvm::Function * trampoline = llvm.module->getFunction(trampoline_name);
+
+  if (!trampoline) {
+    std::vector<llvm::Type *> arg_types;
+    arg_types.push_back(ir_builder->getPtrTy()); // Closure
+
+    for (auto& arg : fn->args()) {
+      arg_types.push_back(arg.getType());
+    }
+
+    auto * trampoline_signature = llvm::FunctionType::get(fn->getReturnType(), arg_types, fn->isVarArg());
+
+    trampoline = llvm::Function::Create(
+      trampoline_signature, llvm::Function::InternalLinkage, trampoline_name, llvm.module.get()
+    );
+
+    auto * current_block = ir_builder->GetInsertBlock();
+
+    auto * entry = llvm::BasicBlock::Create(*llvm.ctx, "entry", trampoline);
+    ir_builder->SetInsertPoint(entry);
+
+    // Arguments of original function. Since it is not a lambda - it doesn't need the closure
+    std::vector<llvm::Value *> forward_args;
+    for (size_t i = 1; i < trampoline->arg_size(); ++i) {
+      forward_args.push_back(trampoline->getArg(i));
+    }
+
+    auto * res = ir_builder->CreateCall(fn->getFunctionType(), fn, forward_args);
+
+    if (fn->getReturnType()->isVoidTy()) {
+      ir_builder->CreateRetVoid();
+    } else {
+      ir_builder->CreateRet(res);
+    }
+
+    // Restore block
+    if (current_block) {
+      ir_builder->SetInsertPoint(current_block);
+    }
+  }
+
+  // Assemble fat pointer
+  llvm::Value * fat_ptr = llvm::PoisonValue::get(fat_ptr_type);
+  llvm::Value * closure = llvm::ConstantPointerNull::get(ir_builder->getPtrTy());
+
+  fat_ptr = ir_builder->CreateInsertValue(fat_ptr, trampoline, 0, "fn_ptr");
+  fat_ptr = ir_builder->CreateInsertValue(fat_ptr, closure,    1, "empty_closure_ptr");
+
+  return fat_ptr;
+}
+
+void ModuleContext::addDIParameter(
+  llvm::DISubprogram *         di_fn,
+  const std::string&           name,
+  const std::shared_ptr<meta::Type>& type,
+  const SourceSpan&            span,
+  size_t                       index,
+  llvm::Value *                storage
+) {
+  llvm::DILocalVariable * di_param = globalContext.di_builder->createParameterVariable(
+    di_fn,
+    name,
+    index,
+    globalContext.getCurrentDIFile(),
+    span.start().line,
+    type->getDIType(*this),
+    true
+  );
+
+  globalContext.di_builder->insertDeclare(
+    storage ? storage : getLocalValue(name),
+    di_param,
+    globalContext.di_builder->createExpression(),
+    span.start().getDILocation(*this, di_fn),
+    ir_builder->GetInsertBlock()
+  );
+}
+
 llvm::Value * codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * target_type, SourceSpan span) {
   if (!val || !target_type) {
     throw std::runtime_error("codegen::cast received nullptr");
+  }
+
+  if (val->getType() == target_type) {
+    return val;
   }
 
   // TODO: "Can't perform cast" can mean that invalid action is performed on a variable (e.g. struct s {...}; var x: s; x += 1;)
@@ -553,6 +638,13 @@ llvm::Value * codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * 
     (void *) target_type, type_collector.string(), target_type->isPointerTy());
 #endif
 
+  if (auto * fn = llvm::dyn_cast<llvm::Function>(val)) {
+    // If the target type is a struct with exactly 2 elements, it's a fat pointer
+    if (target_type->isStructTy() && target_type->getStructNumElements() == 2) {
+      return ctx.createFatPointerFromGlobalFunction(fn, target_type);
+    }
+  }
+
   if (util::isInteger(val->getType()) && util::isFloatOrDouble(target_type)) {
     return ctx.ir_builder->CreateSIToFP(val, target_type);
   }
@@ -568,9 +660,9 @@ llvm::Value * codegen::cast(ModuleContext& ctx, llvm::Value * val, llvm::Type * 
   if (util::isInteger(val->getType()) && util::isInteger(target_type)) {
     if (val->getType()->getIntegerBitWidth() > target_type->getIntegerBitWidth()) {
       return ctx.ir_builder->CreateTruncOrBitCast(val, target_type);
-    } else {
-      return ctx.ir_builder->CreateZExtOrBitCast(val, target_type);
     }
+
+    return ctx.ir_builder->CreateZExtOrBitCast(val, target_type);
   }
 
   if (util::isPointer(val->getType()) && util::isInteger(target_type)) {

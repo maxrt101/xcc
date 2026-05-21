@@ -361,6 +361,19 @@ public:
 
   /** Creates an AllocaInst at the start of current InsertBlock */
   llvm::AllocaInst * createEntryBlockAlloca(llvm::Type * type, const std::string& name) const;
+
+  /** Create a fat pointer ({callee, closure}) from a global function */
+  llvm::Value * createFatPointerFromGlobalFunction(llvm::Function * fn, llvm::Type * fat_ptr_type);
+
+  /** Create and add DIParameter to DebugInfo */
+  void addDIParameter(
+    llvm::DISubprogram *               di_fn,
+    const std::string&                 name,
+    const std::shared_ptr<meta::Type>& type,
+    const SourceSpan&                  span,
+    size_t                             index,
+    llvm::Value *                      storage = nullptr
+  );
 };
 
 /**
