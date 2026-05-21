@@ -47,6 +47,8 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
 
   std::vector<llvm::Value *> arg_vals;
 
+  bool isDirectCall = llvm::isa<llvm::Function>(info.calleePtr);
+
   if (info.isMember) {
     auto selfNode = callee->as<MemberAccess>()->lhs;
     auto selfType = selfNode->generateType(ctx, payload);
@@ -111,12 +113,48 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
     arg_vals.push_back(val);
   }
 
-  if (signature->getReturnType()->isVoidTy()) {
-    // Don't name a temporary return value, as there is no value
-    return ctx.ir_builder->CreateCall(signature, info.calleePtr, arg_vals);
+  if (isDirectCall) {
+    /* Direct call to a global function. info.calleePtr is llvm::Function* - a raw pointer to function
+     * Everything is simple in this case */
+
+    if (signature->getReturnType()->isVoidTy()) {
+      // Don't name a temporary return value, as there is no value
+      return ctx.ir_builder->CreateCall(signature, info.calleePtr, arg_vals);
+    }
+
+    return ctx.ir_builder->CreateCall(signature, info.calleePtr, arg_vals, "calltmp");
   }
 
-  return ctx.ir_builder->CreateCall(signature, info.calleePtr, arg_vals, "calltmp");
+  /* Call by function pointer, which could either be a lambda or a global function pointer
+   * In both cases info.calleePtr is a fat pointer with {callee, closure} structure
+   */
+
+  llvm::Value * fat_ptr = info.calleePtr;
+
+  llvm::Value * code_ptr    = ctx.ir_builder->CreateExtractValue(fat_ptr, 0, "lambda_fn_ptr");
+  llvm::Value * closure_ptr = ctx.ir_builder->CreateExtractValue(fat_ptr, 1, "lambda_closure_ptr");
+
+  std::vector<llvm::Value *> fat_arg_vals = {closure_ptr};
+  fat_arg_vals.insert(fat_arg_vals.end(), arg_vals.begin(), arg_vals.end());
+
+  std::vector<llvm::Type *> param_types;
+  param_types.push_back(ctx.ir_builder->getPtrTy());
+
+  for (auto& param_type : info.metaType->getArgumentTypes()) {
+    param_types.push_back(param_type->getLLVMType(ctx));
+  }
+
+  llvm::Type* ret_type = info.metaType->getReturnType()->getLLVMType(ctx);
+  llvm::FunctionType * worker_signature = llvm::FunctionType::get(
+    ret_type,
+    param_types,
+    info.metaType->isVariadic()
+  );
+
+  if (ret_type->isVoidTy()) {
+    return ctx.ir_builder->CreateCall(worker_signature, code_ptr, fat_arg_vals);
+  }
+  return ctx.ir_builder->CreateCall(worker_signature, code_ptr, fat_arg_vals, "calltmp");
 }
 
 std::shared_ptr<xcc::meta::Type> Call::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -140,8 +178,8 @@ Call::CalleeInfo Call::getCalleeInfo(codegen::ModuleContext& ctx, PayloadList pa
     }
   }
 
-  if (!info.metaType || !info.metaType->isFunction()) {
-    Error(ERROR_EXPR_NOT_CALLABLE, callee->span, "{} of type is not callable", typeToHumanReadableString(callee->type)).raiseFromNode(this);
+  if (!info.metaType || (!info.metaType->isFunction() && !info.metaType->isLambda())) {
+    Error(ERROR_EXPR_NOT_CALLABLE, callee->span, "{} is not callable", typeToHumanReadableString(callee->type)).raiseFromNode(this);
   }
 
   return info;
