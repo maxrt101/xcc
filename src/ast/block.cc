@@ -23,7 +23,7 @@ static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload,
   if (auto p = block.selectPayloadFirst(payload)) {
     // If type hint was passed for AST_BLOCK, repackage it for AST_INIT
     auto t = p->as<Block::Payload>()->type;
-    payload = block.extendPayload(block.excludePayload(payload, AST_BLOCK), Initializer::Payload::create(t));
+    payload = Node::extendPayload(Node::excludePayload(payload, AST_BLOCK), Initializer::Payload::create(t));
   }
 
   if constexpr (std::is_same_v<T, llvm::Value>) {
