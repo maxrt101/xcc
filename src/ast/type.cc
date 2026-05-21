@@ -4,13 +4,30 @@
 #include "xcc/exceptions.h"
 #include "xcc/meta/type.h"
 
+#include "xcc/util/string.h"
+
 using namespace xcc::ast;
+
+Type::Payload::Payload(SubstitutionMap sub)
+  : Node::Payload(AST_EXPR_TYPE), substitutions(std::move(sub)) {}
+
+std::shared_ptr<Node::Payload> Type::Payload::create(SubstitutionMap sub) {
+  return std::dynamic_pointer_cast<Node::Payload>(
+      std::make_shared<Type::Payload>(std::move(sub))
+  );
+}
 
 Type::Type(SourceSpan span, Kind kind, std::shared_ptr<Node> name)
   : Node(AST_EXPR_TYPE, span), kind(kind), name(std::move(name)) {}
 
 std::shared_ptr<Type> Type::create(SourceSpan span, std::shared_ptr<Node> name) {
   return std::make_shared<Type>(span, NORMAL, std::move(name));
+}
+
+std::shared_ptr<Type> Type::createGeneric(SourceSpan span, std::shared_ptr<Node> name, NodeList genericArgs) {
+  auto t = std::make_shared<Type>(span, NORMAL, std::move(name));
+  t->genericArgs = std::move(genericArgs);
+  return t;
 }
 
 std::shared_ptr<Type> Type::createPointer(SourceSpan span, std::shared_ptr<Node> name) {
@@ -47,6 +64,10 @@ std::shared_ptr<Type> Type::createTuple(SourceSpan span, NodeList members) {
   return t;
 }
 
+bool Type::isGeneric() const {
+  return !genericArgs.empty();
+}
+
 std::shared_ptr<Node> Type::clone() {
   switch (kind) {
     case POINTER:
@@ -61,31 +82,40 @@ std::shared_ptr<Node> Type::clone() {
       return withAttrs(createTuple(span, cloneVector(tuple.members)));
     case NORMAL:
     default:
-      return withAttrs(create(span, name->clone()));
+      return withAttrs(isGeneric() ? createGeneric(span, name->clone(), cloneVector(genericArgs)) : create(span, name->clone()));
   }
 }
 
-void Type::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void Type::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   switch (kind) {
     case LAMBDA:
       for (auto& node : lambda.captures) {
         callVisitor(globalContext, node, visitor, ignoreSubtree);
       }
       [[fallthrough]];
+
     case FUNCTION:
       callVisitor(globalContext, fn.returnType, visitor, ignoreSubtree);
       for (auto& node : fn.args) {
         callVisitor(globalContext, node, visitor, ignoreSubtree);
       }
       break;
+
     case ARRAY:
       callVisitor(globalContext, array.size, visitor, ignoreSubtree);
       [[fallthrough]];
+
     case NORMAL:
     case POINTER:
-    default:
+    default: {
       callVisitor(globalContext, name, visitor, ignoreSubtree);
+      if (isGeneric()) {
+        for (auto& node : genericArgs) {
+          callVisitor(globalContext, node, visitor, ignoreSubtree);
+        }
+      }
       break;
+    }
   }
 }
 
@@ -134,6 +164,17 @@ std::string Type::toString(Node * grandparent, Node * parent, int indent, bool n
   }
 
   res += name->toString(parent, this, indent, false);
+
+  if (isGeneric()) {
+    res += "<";
+    for (size_t i = 0; i < genericArgs.size(); ++i) {
+      res += genericArgs[i]->toString(parent, this, indent, false);
+      if (i + 1 < genericArgs.size()) {
+        res += ", ";
+      }
+    }
+    res += ">";
+  }
 
   if (kind == ARRAY) {
     res += std::format("[{}]", array.size->toString(parent, this, indent, false));
@@ -204,9 +245,70 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
 
 std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, PayloadList payload) {
   if (name->is(AST_EXPR_IDENTIFIER)) {
+    auto id = name->as<Identifier>()->name();
+
+    if (isGeneric() && codegen::GenericsCache::has(id)) {
+      auto generic = codegen::GenericsCache::get(id);
+
+      auto original_id = id;
+
+      for (auto& genericArg : genericArgs) {
+        id += "_" + genericArg->generateType(ctx, payload)->toString();
+      }
+
+      util::strreplace(id, "*", "_ptr");
+
+      if (meta::Type::hasCustomType(id)) {
+        return meta::Type::getCustomType(id);
+      }
+
+      auto type = meta::Type::createStruct(id, {}, generic->hasAttribute("packed"));
+      meta::Type::registerCustomType(id, type);
+
+      assertRaiseFromNode(generic->is(AST_STRUCT), Error(ERROR_UNIMPLEMENTED, generic->span, "Only generic structs are supported"), this);
+
+      generic = generic->clone();
+
+      std::vector<std::string> genericTypes;
+
+      for (auto& g : generic->as<Struct>()->genericTypes) {
+        assertRaiseFromNode(g->is(AST_EXPR_IDENTIFIER), Error(ERROR_UNIMPLEMENTED, g->span, "Only an identifier can be a generic type"), this);
+        genericTypes.push_back(g->as<Identifier>()->name());
+      }
+
+      assertRaiseFromNode(genericTypes.size() == genericArgs.size(), Error(ERROR_GENERIC_COUNT_MISMATCH, span), this);
+
+      SubstitutionMap substitutions = {{original_id, create(name->span, Identifier::create(name->span, id))->generateType(ctx, payload)}};
+
+      for (size_t i = 0; i < genericTypes.size(); ++i) {
+        substitutions[genericTypes[i]] = genericArgs[i]->generateType(ctx, payload);
+      }
+
+      payload.push_back(Type::Payload::create(substitutions));
+      payload.push_back(Struct::Payload::create(id));
+
+      auto struct_type = generic->generateType(ctx, payload);
+
+      llvm::IRBuilder<>::InsertPointGuard ir_guard(*ctx.ir_builder);
+
+      for (auto& method : generic->as<Struct>()->methods) {
+        method->generateFunction(ctx, extendPayload(payload, FnDecl::Payload::create(original_id, id)));
+      }
+
+      return struct_type;
+    }
+
+    if (auto p = selectPayloadFirst(payload)) {
+      auto sub = p->as<Type::Payload>();
+
+      if (sub->substitutions.contains(id)) {
+        return sub->substitutions[id];
+      }
+    }
+
     return meta::Type::fromTypeName(
       ctx.globalContext,
-      ctx.globalContext.aliased(name->as<Identifier>()->name()),
+      ctx.globalContext.aliased(id),
       name->span
     );
   }
