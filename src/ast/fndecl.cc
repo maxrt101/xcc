@@ -8,6 +8,15 @@ using namespace xcc::ast;
 
 static auto logger = xcc::util::log::Logger("FNDECL");
 
+FnDecl::Payload::Payload(std::string oldStructName, std::string newStructName)
+  : Node::Payload(AST_FUNCTION_DECL), oldStructName(std::move(oldStructName)), newStructName(std::move(newStructName)) {}
+
+std::shared_ptr<Node::Payload> FnDecl::Payload::create(std::string oldStructName, std::string newStructName) {
+  return std::dynamic_pointer_cast<Node::Payload>(
+      std::make_shared<FnDecl::Payload>(std::move(oldStructName), std::move(newStructName))
+  );
+}
+
 FnDecl::FnDecl(
   SourceSpan                                    span,
   std::shared_ptr<Identifier>                   name,
@@ -43,7 +52,7 @@ std::shared_ptr<Node> FnDecl::clone() {
   ));
 }
 
-void FnDecl::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void FnDecl::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, name, visitor, ignoreSubtree);
   callVisitor(globalContext, return_type, visitor, ignoreSubtree);
 
@@ -76,6 +85,28 @@ std::string FnDecl::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
+  if (auto gp = selectPayloadFirst(payload)) {
+    if (auto p = gp->as<FnDecl::Payload>()) {
+
+      auto visitor = [&p](auto node) -> std::shared_ptr<Node> {
+        if (node->is(AST_EXPR_IDENTIFIER)) {
+          auto id = node->template as<Identifier>();
+          // size_t pos = id->value.find(p->oldStructName);
+          // if (pos != std::string::npos) {
+          //   id->value.replace(pos, p->oldStructName.size(), p->newStructName);
+          // }
+          util::strreplace(id->value, p->oldStructName, p->newStructName);
+        }
+
+        return nullptr;
+      };
+
+      callVisitor(ctx.globalContext, name, visitor);
+      callVisitor(ctx.globalContext, return_type, visitor);
+      visitVector(ctx.globalContext, args, visitor);
+    }
+  }
+
   std::string fn_name = name->name();
   std::string symbol_name = fn_name;
 

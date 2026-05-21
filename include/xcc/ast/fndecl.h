@@ -10,6 +10,17 @@ namespace xcc::ast {
 
 class FnDecl : public Node, public std::enable_shared_from_this<FnDecl> {
 public:
+  struct Payload : Node::Payload {
+    // Used by generic instantiation
+    std::string oldStructName;
+    std::string newStructName;
+
+    explicit Payload(std::string oldStructName, std::string newStructName);
+    ~Payload() override = default;
+
+    static std::shared_ptr<Node::Payload> create(std::string oldStructName, std::string newStructName);
+  };
+
   std::shared_ptr<Identifier>                   name;
   std::shared_ptr<Node>                         return_type;
   std::vector<std::shared_ptr<TypedIdentifier>> args;
@@ -39,7 +50,7 @@ public:
   );
 
   std::shared_ptr<Node> clone() override;
-  void visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
+  void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;
