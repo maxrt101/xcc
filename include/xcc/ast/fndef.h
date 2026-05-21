@@ -18,7 +18,7 @@ public:
   static std::shared_ptr<FnDef> create(SourceSpan span, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body);
 
   std::shared_ptr<Node> clone() override;
-  void visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
+  void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   llvm::Function * generateFunction(codegen::ModuleContext& ctx, PayloadList payload) override;

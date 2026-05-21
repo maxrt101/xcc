@@ -26,7 +26,7 @@ std::shared_ptr<Node> FnDef::clone() {
   ));
 }
 
-void FnDef::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+void FnDef::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   callVisitor(globalContext, decl, visitor, ignoreSubtree);
   callVisitor(globalContext, body, visitor, ignoreSubtree);
 }
@@ -39,14 +39,14 @@ std::string FnDef::toString(Node * grandparent, Node * parent, int indent, bool 
 }
 
 llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
-  decl->generateFunction(ctx, {});
+  auto gen_fn = decl->generateFunction(ctx, payload);
 
-  auto meta_fn = ctx.globalContext.getMetaFunction(decl->name->name());
+  auto meta_fn = ctx.globalContext.getMetaFunction(gen_fn->getName().str());
 
-  auto fn = ctx.getFunction(decl->name->name());
+  auto fn = ctx.getFunction(gen_fn->getName().str());
 
   if (!fn) {
-    Error(ERROR_INTERNAL_FAILURE, decl->span, "Error generating Function object for '{}'", decl->name->name()).raiseFromNode(this);
+    Error(ERROR_INTERNAL_FAILURE, decl->span, "Error generating Function object for '{}'", fn->getName().str()).raiseFromNode(this);
   }
 
   auto di_fn = ctx.globalContext.di_builder->createFunction(
@@ -87,7 +87,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     logger.debug("Function {} IR:", meta_fn->name);
     logger.print("{}", fn_collector.string());
 #endif
-    Error(ERROR_LLVM_ERROR, decl->span, "Function '{}' didn't pass validation", decl->name->name())
+    Error(ERROR_LLVM_ERROR, decl->span, "Function '{}' didn't pass validation", fn->getName().str())
       .note("{}", std::string(collector.string()))
       .raiseFromNode(this);
   }
