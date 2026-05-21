@@ -168,13 +168,11 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
   }
 
   if (kind == LAMBDA) {
-    meta::StructMembers captures;
+    std::vector<std::shared_ptr<meta::Type>> captures, args;
 
     for (size_t i = 0; i < lambda.captures.size(); ++i) {
-      captures.emplace_back(std::to_string(i), lambda.captures[i]->generateType(ctx, payload));
+      captures.emplace_back(lambda.captures[i]->generateType(ctx, payload));
     }
-
-    std::vector<std::shared_ptr<meta::Type>> args;
 
     for (auto& arg : this->fn.args) {
       args.push_back(arg->generateType(ctx, payload));
