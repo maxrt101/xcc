@@ -622,5 +622,20 @@
       ],
       "retcode": 0
     }
+  },
+  {
+    "id": 61,
+    "name": "Lambdas",
+    "file": "61.xc",
+    "expect": {
+      "stdout": [
+        "f1=0x.+ f1\\(4\\)=16\n",
+        "f2\\(4\\)=16 ctx=42\n",
+        "take_fn\\(5\\): 25\n",
+        "take_fn\\(6\\): 36\n",
+        "f2\\(5\\)=25 ctx=4 ctx2=42\n"
+      ],
+      "retcode": 0
+    }
   }
 ]
