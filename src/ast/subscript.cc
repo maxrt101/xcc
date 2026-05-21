@@ -35,7 +35,11 @@ llvm::Value * Subscript::generateValue(codegen::ModuleContext& ctx, PayloadList 
     return ctx.ir_builder->CreateLoad(generateType(ctx, payload)->getLLVMType(ctx), element_ptr, "tuple_element");
   }
 
-  return ctx.ir_builder->CreateLoad(base_type->getBaseType()->getLLVMType(ctx), element_ptr, "element");
+  auto t = base_type->isFunction()
+    ? meta::Type::createPointer(meta::Type::createVoid()) // For fat function pointers {ptr, ptr} - subscript result is a ptr
+    : base_type->getBaseType();                           // For everything else (array, tuple, ptr) - get base type
+
+  return ctx.ir_builder->CreateLoad(t->getLLVMType(ctx), element_ptr, "element");
 }
 
 llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -44,13 +48,29 @@ llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, P
   auto base_type  = raiseIfNull(lhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Type is NULL"));
   auto index_type = raiseIfNull(rhs->generateType(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, rhs->span, "RHS Type is NULL"));
 
-  assertRaiseFromNode(base_type->isPointer() || base_type->isArray() || base_type->isTuple(),
+  assertRaiseFromNode(base_type->isPointer() || base_type->isArray() || base_type->isTuple() || base_type->isFunction(),
     Error(ERROR_TYPE_NOT_SUBSCRIPTABLE, lhs->span, "'{}'", base_type->toString()), this);
 
   assertRaiseFromNode(index_type->isInteger(),
     Error(ERROR_TYPE_NOT_VALID_SUBSCRIPT, rhs->span, "'{}'", index_type->toString()), this);
 
   auto base_ptr_val = raiseIfNull(lhs->generateValueWithoutLoad(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL"));
+
+  if (base_type->isFunction()) {
+    printf("Subscript function: '%s' %p:\n", base_type->toString().c_str(), base_ptr_val);
+    base_ptr_val->print(llvm::outs());
+
+    auto * const_idx = llvm::cast<llvm::ConstantInt>(rhs->generateConstant(ctx, payload));
+
+    assertRaiseFromNode(const_idx, Error(ERROR_NOT_CONSTANT, rhs->span, "Tuple subscript index must be a constant"), this);
+
+    // Decompose fat pointer
+    return ctx.ir_builder->CreateStructGEP(
+      base_type->getLLVMType(ctx),
+      base_ptr_val,
+      const_idx->getZExtValue(),
+      "fat_ptr_decompose");
+  }
 
   if (base_type->isTuple()) {
     auto * const_idx = llvm::cast<llvm::ConstantInt>(rhs->generateConstant(ctx, payload));
@@ -97,7 +117,9 @@ std::shared_ptr<xcc::meta::Type> Subscript::generateType(codegen::ModuleContext&
     return base_type->getTupleMemberType(const_idx->getZExtValue());
   }
 
-  return base_type->getBaseType();
+  return base_type->isFunction()
+    ? meta::Type::createPointer(meta::Type::createVoid()) // For fat function pointers {ptr, ptr} - subscript result is a ptr
+    : base_type->getBaseType();                           // For everything else (array, tuple, ptr) - get base type
 }
 
 std::shared_ptr<xcc::meta::Type> Subscript::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
