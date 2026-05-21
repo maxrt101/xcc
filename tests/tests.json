@@ -637,5 +637,19 @@
       ],
       "retcode": 0
     }
+  },
+  {
+    "id": 62,
+    "name": "Generic Structs",
+    "file": "62.xc",
+    "expect": {
+      "stdout": [
+        "\\*ctr1\\.ptr=42 getErasedPtr=0x.+\n",
+        "ctr2\\.ptr='test str' getErasedPtr=0x.+\n",
+        "\\*t\\.container\\.ptr=42\n",
+        "\\*tp\\.container->ptr=42\n"
+      ],
+      "retcode": 0
+    }
   }
 ]
