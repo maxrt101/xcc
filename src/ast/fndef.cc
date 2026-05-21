@@ -216,23 +216,7 @@ void FnDef::generateNormalFunction(
     auto span = decl->getArgument(arg_name)->span;
     ctx.addLocal(arg_name, meta::TypedValue::create(ctx, fn, span, meta_fn->args[arg_name], arg_name));
 
-    llvm::DILocalVariable * di_param = ctx.globalContext.di_builder->createParameterVariable(
-      di_fn,
-      arg_name,
-      arg.getArgNo() + 1,
-      ctx.globalContext.getCurrentDIFile(),
-      span.start().line,
-      meta_fn->args[arg_name]->getDIType(ctx),
-      true
-    );
-
-    ctx.globalContext.di_builder->insertDeclare(
-      ctx.getLocalValue(arg_name),
-      di_param,
-      ctx.globalContext.di_builder->createExpression(),
-      span.start().getDILocation(ctx, di_fn),
-      ctx.ir_builder->GetInsertBlock()
-    );
+    ctx.addDIParameter(di_fn, arg_name, meta_fn->args[arg_name], span, arg.getArgNo() + 1);
 
     ctx.ir_builder->CreateStore(&arg, ctx.getLocalValue(arg_name));
   }
