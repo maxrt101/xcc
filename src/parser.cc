@@ -31,14 +31,6 @@ void ModuleCache::updateDebugInfo(codegen::GlobalContext& ctx) {
   }
 }
 
-std::shared_ptr<ast::MemberAccess> Parser::MemberAccessContext::from(const MemberAccessContext& a, const MemberAccessContext& b) {
-  auto span = a.node->span + b.node->span;
-
-  return a.pointer || b.pointer
-      ? ast::MemberAccess::createByPointer(span, a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node))
-      : ast::MemberAccess::createByValue(span, a.node, std::dynamic_pointer_cast<ast::Identifier>(b.node));
-}
-
 bool Parser::isAtEnd() const {
   return current_idx >= tokens.size();
 }
@@ -199,9 +191,25 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
   }
 
   auto id = name ? name : parseScopedIdentifier("for type name");
+  ast::NodeList genericArgs;
 
+  if (checkAdvance(TOKEN_LESS)) {
+    do {
+      genericArgs.push_back(parseType());
+    } while (checkAdvance(TOKEN_COMMA));
+
+    if (!checkAdvance(TOKEN_GREATER)) {
+      Error(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT, previous().span.pointPastLast()).raise();
+    }
+  }
+
+  // TODO: Don't forget to pass genericArgs to parseCall when implementing generic functions
   if (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN)) {
     return parseCall(id);
+  }
+
+  if (!genericArgs.empty()) {
+    type = ast::Type::createGeneric(span + previous().span, ast::Node::cast(id), genericArgs);
   }
 
   // Parse nested pointer types
@@ -449,6 +457,18 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
 
   auto name = parseIdentifierWithCurrentScope("for struct name");
 
+  ast::NodeList genericTypes;
+
+  if (checkAdvance(TOKEN_LESS)) {
+    do {
+      genericTypes.push_back(parseIdentifier("for generic type name"));
+    } while (checkAdvance(TOKEN_COMMA));
+
+    if (!checkAdvance(TOKEN_GREATER)) {
+      Error(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT, previous().span.pointPastLast()).raise();
+    }
+  }
+
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
     Error(ERROR_STRUCT_MISSING_OPENING_BRACE, current().span).raise();
   }
@@ -481,7 +501,15 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
     Error(ERROR_STRUCT_MISSING_CLOSING_BRACE, current().span).raise();
   }
 
-  return ast::Struct::create(span + previous().span, name, fields, methods);
+  auto node = ast::Struct::create(span + previous().span, name, genericTypes, fields, methods);
+
+  if (genericTypes.empty()) {
+    return node;
+  }
+
+  codegen::GenericsCache::add(name->name(), node);
+
+  return ast::Empty::create();
 }
 
 std::shared_ptr<ast::Node> Parser::parseEnum(const ast::Node::AttributeList& attrs) {
@@ -1205,41 +1233,26 @@ std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue(std::shared_ptr<ast
     id = parseScopedIdentifier("for lvalue");
   }
 
-  if (check(TOKEN_DOT) || check(TOKEN_RIGHT_ARROW)) {
-    std::vector<MemberAccessContext> nodes = {{id, current().is(TOKEN_RIGHT_ARROW)}};
+  std::shared_ptr<ast::Node> expr = id;
+
+  while (check(TOKEN_DOT) || check(TOKEN_RIGHT_ARROW)) {
+    bool is_pointer = check(TOKEN_RIGHT_ARROW);
 
     advance();
 
-    do {
-      if (!checkAnyOf(TOKEN_IDENTIFIER, TOKEN_SELF)) {
-        break;
-      }
+    auto field = parseIdentifier("for member access");
 
-      nodes.push_back({parseIdentifier("for member access"), current().is(TOKEN_RIGHT_ARROW)});
-    } while (checkAdvance(TOKEN_DOT) || checkAdvance(TOKEN_RIGHT_ARROW));
-
-    /* Very specific error, shouldn't happen */
-    assertRaise(!nodes.empty(), Error(ERROR_INVALID_MEMBER_ACCESS, span + previous().span));
-
-    /* If do-while loop finished without triggering ParserException("Expected identifier ...")
-     * it is guaranteed that at least 2 elements will be present in nodes */
-    std::shared_ptr<ast::MemberAccess> memberAccess = MemberAccessContext::from(nodes[0], nodes[1]);;
-
-    /* Recursively reduce the rest of nodes into single MemberAccess tree. If only 2 nodes are present -
-     * won't get executed */
-    for (size_t i = 2; i < nodes.size(); ++i) {
-      memberAccess = MemberAccessContext::from({memberAccess, false}, nodes[i]);
-    }
-
-    /* Method Call */
-    if (check(TOKEN_LEFT_PAREN)) {
-      return parseCall(memberAccess);
-    }
-
-    return memberAccess;
+    expr = is_pointer
+      ? ast::MemberAccess::createByPointer(span + previous().span, expr, field)
+      : ast::MemberAccess::createByValue(span + previous().span, expr, field);
   }
 
-  return id;
+  /* Method Call */
+  if (check(TOKEN_LEFT_PAREN)) {
+    return parseCall(expr);
+  }
+
+  return expr;
 }
 
 std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) {

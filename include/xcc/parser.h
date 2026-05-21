@@ -44,19 +44,6 @@ private:
  * Parses token stream into an AST
  */
 class Parser {
-  /**
-   * Context for Node (part of MemberAccess)
-   */
-  struct MemberAccessContext {
-    std::shared_ptr<ast::Node> node;
-    bool pointer;
-
-    /**
-     * Creates MemberAccess AST Node from 2 contexts
-     */
-    static std::shared_ptr<ast::MemberAccess> from(const MemberAccessContext& a, const MemberAccessContext& b);
-  };
-
 private:
   FileId                    fileId;
   const std::vector<Token>& tokens;       /** Token stream */
