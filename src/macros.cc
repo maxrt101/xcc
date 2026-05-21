@@ -454,6 +454,11 @@ static std::shared_ptr<Node> xcc_macro_print(codegen::GlobalContext& global, std
       while (fmt[++i] != '}') {
         f += fmt[i];
       }
+
+      assertRaise(arg < call->args.size(),
+        Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->args[0]->span,
+          "format string has more specifiers than arguments in macro call"));
+
       res_fmt += printfSpecifierFromNode(global, *global.globalModule, call->args[arg++], f);
     } else {
       res_fmt += fmt[i];
