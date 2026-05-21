@@ -155,6 +155,18 @@ bool Type::operator==(Type& rhs) {
     }
   }
 
+  if (tag == TypeTag::LAMBDA) {
+    if (*lambda.fn != *rhs.lambda.fn) {
+      return false;
+    }
+
+    for (size_t i = 0; i < lambda.captures.size(); ++i) {
+      if (*lambda.captures[i] != *rhs.lambda.captures[i]) {
+        return false;
+      }
+    }
+  }
+
   if (tag == TypeTag::FUNCTION) {
     if (*fn.returnType != *rhs.fn.returnType) {
       return false;
@@ -271,13 +283,16 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
       return llvm::PointerType::get(ptr.pointedType->getLLVMType(ctx), 0);
 
     case TypeTag::FUNCTION:
-      return llvm::PointerType::getUnqual(getLLVMFunctionType(ctx));
+      return llvm::StructType::get(*ctx.llvm.ctx, {
+        ctx.ir_builder->getPtrTy(), // [0] Code pointer
+        ctx.ir_builder->getPtrTy()  // [1] Closure environment pointer
+      });
 
     case TypeTag::LAMBDA: {
       std::vector<llvm::Type *> elements;
 
       for (auto & member : lambda.captures) {
-        elements.push_back(member.second->getLLVMType(ctx));
+        elements.push_back(member->getLLVMType(ctx));
       }
 
       return llvm::StructType::get(*ctx.llvm.ctx, elements, false);
@@ -380,7 +395,7 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
 
       for (size_t i = 0; i < lambda.captures.size(); ++i) {
         auto& capture = lambda.captures[i];
-        captures.push_back(createDIDerivedType(ctx, llvmType, i, capture.first, capture.second));
+        captures.push_back(createDIDerivedType(ctx, llvmType, i, std::to_string(i), capture));
       }
 
       return createDICompositeType(ctx, llvmType, toString(), captures);
@@ -422,13 +437,13 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
 }
 
 llvm::DISubroutineType * Type::getDISubroutineType(codegen::ModuleContext& ctx) const {
-  assertThrow(is(TypeTag::FUNCTION), std::runtime_error("getDISubroutineType called on non-function type"));
+  assertThrow(isAnyOf(TypeTag::FUNCTION, TypeTag::LAMBDA), std::runtime_error("getDISubroutineType called on non-function type"));
 
   std::vector<llvm::Metadata *> typeEltArray;
 
-  typeEltArray.push_back(fn.returnType->getDIType(ctx));
+  typeEltArray.push_back(getReturnType()->getDIType(ctx));
 
-  for (auto& argType : fn.args) {
+  for (auto& argType : getArgumentTypes()) {
     typeEltArray.push_back(argType->getDIType(ctx));
   }
 
@@ -486,14 +501,13 @@ std::string Type::toString() const {
 
       for (size_t i = 0; i < lambda.captures.size(); ++i) {
         auto& capture = lambda.captures[i];
-        result += capture.second->isPointer() ? "&" : "";
-        result += capture.first;
+        result += capture->toString();
         if (i + 1 < lambda.captures.size()) {
           result += ", ";
         }
       }
 
-      result += "(";
+      result += "] (";
 
       for (size_t i = 0; i < lambda.fn->fn.args.size(); ++i) {
         result += lambda.fn->fn.args[i]->toString();
@@ -709,8 +723,14 @@ std::shared_ptr<Type> Type::getArgumentType(size_t i) const {
   return isFunction() ? fn.args[i] : lambda.fn->fn.args[i];
 }
 
-bool Type::isVariadic() const {
+std::vector<std::shared_ptr<Type>> Type::getArgumentTypes() const {
   assertThrow(isFunction() || isLambda(), std::runtime_error("Type is not a function or a lambda"));
+
+  return isFunction() ? fn.args : lambda.fn->fn.args;
+}
+
+bool Type::isVariadic() const {
+  assertThrow(isFunction() || isLambda() || isLambda(), std::runtime_error("Type is not a function or a lambda"));
 
   return isFunction() ? fn.isVariadic : lambda.fn->fn.isVariadic;
 }
@@ -775,28 +795,17 @@ void Type::addEnumElement(EnumField field) {
   _enum.members.push_back(std::move(field));
 }
 
-bool Type::hasCapture(const std::string& name) {
-  assertThrow(isEnum(), std::runtime_error("Type is not a lambda"));
+std::shared_ptr<Type> Type::getCaptureType(size_t i) const {
+  assertThrow(isLambda(), std::runtime_error("Type is not a lambda"));
+  assertThrow(i < lambda.captures.size(), std::runtime_error("Out of bounds capture type request"));
 
-  for (auto& capture : lambda.captures) {
-    if (capture.first == name) {
-      return true;
-    }
-  }
-
-  return false;
+  return lambda.captures[i];
 }
 
-std::shared_ptr<Type> Type::getCaptureType(const std::string& name) {
-  assertThrow(isEnum(), std::runtime_error("Type is not a lambda"));
+std::shared_ptr<Type> Type::getLambdaFunctionType() const {
+  assertThrow(isLambda(), std::runtime_error("Type is not a lambda"));
 
-  for (auto& capture : lambda.captures) {
-    if (capture.first == name) {
-      return capture.second;
-    }
-  }
-
-  throw std::runtime_error("No such lambda capture " + name + " for lambda " + toString());
+  return lambda.fn;
 }
 
 llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
@@ -833,7 +842,7 @@ llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
       std::vector<llvm::Constant *> initializers;
 
       for (auto & capture : lambda.captures) {
-        initializers.push_back((llvm::Constant *) capture.second->getDefault(ctx));
+        initializers.push_back((llvm::Constant *) capture->getDefault(ctx));
       }
 
       return llvm::ConstantStruct::get((llvm::StructType *) getLLVMType(ctx), initializers);
@@ -910,7 +919,7 @@ std::shared_ptr<ast::Node> Type::toAst(SourceSpan span) const {
       ast::NodeList captures, args;
 
       for (auto& capture : lambda.captures) {
-        args.push_back(ast::Identifier::create(span, capture.first));
+        args.push_back(capture->toAst(span));
       }
 
       for (auto& arg : lambda.fn->fn.args) {
@@ -1097,7 +1106,7 @@ std::shared_ptr<Type> Type::createFunction(
   return type;
 }
 
-std::shared_ptr<Type> Type::createLambda(std::shared_ptr<Type> fn, StructMembers captures) {
+std::shared_ptr<Type> Type::createLambda(std::shared_ptr<Type> fn, std::vector<std::shared_ptr<Type>> captures) {
   auto type = create(TypeTag::LAMBDA);
   type->lambda.fn       = std::move(fn);
   type->lambda.captures = std::move(captures);

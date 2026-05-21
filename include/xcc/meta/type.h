@@ -92,8 +92,8 @@ private:
 
   /** For TypeTag::LAMBDA */
   struct {
-    std::shared_ptr<Type> fn;
-    StructMembers         captures;
+    std::shared_ptr<Type>              fn;
+    std::vector<std::shared_ptr<Type>> captures;
   } lambda;
 
   /** For TypeTag::ENUM */
@@ -192,9 +192,14 @@ public:
   [[nodiscard]] size_t getArgumentCount() const;
 
   /**
-   * If type in a function - get argument type by index
+   * If type in a function or lambda - get argument type by index
    */
   [[nodiscard]] std::shared_ptr<Type> getArgumentType(size_t i) const;
+
+  /**
+   * If type in a function or lambda - get all argument types
+   */
+  [[nodiscard]] std::vector<std::shared_ptr<Type>> getArgumentTypes() const;
 
   /**
    * If type is a function or lambda - get isVariadic flag
@@ -216,26 +221,40 @@ public:
    */
   [[nodiscard]] std::shared_ptr<Type> getTupleMemberType(size_t i) const;
 
-  /** If type is an enum - get member count */
+  /**
+   * If type is an enum - get member count
+   */
   [[nodiscard]] size_t getEnumElementCount() const;
 
-  /** If type is an enum - get member by index */
+  /**
+   * If type is an enum - get member by index
+   */
   [[nodiscard]] EnumField getEnumElement(size_t i) const;
 
-  /** If type is an enum - get member by name */
+  /**
+   * If type is an enum - get member by name
+   */
   [[nodiscard]] EnumField getEnumElement(const std::string& name) const;
 
-  /** If type is an enum - get member type */
+  /**
+   * If type is an enum - get member type
+   */
   [[nodiscard]] bool hasEnumElement(const std::string& name) const;
 
-  /** If type is an enum - add enum field */
+  /**
+   * If type is an enum - add enum field
+   */
   void addEnumElement(EnumField field);
 
-  /** If type is a lambda - check if capture is present */
-  [[nodiscard]] bool hasCapture(const std::string& name);
+  /**
+   * If type is a lambda - get capture type
+   */
+  [[nodiscard]] std::shared_ptr<Type> getCaptureType(size_t i) const;
 
-  /** If type is a lambda - get capture type */
-  [[nodiscard]] std::shared_ptr<Type> getCaptureType(const std::string& name);
+  /**
+   * If type is a lambda - get underlying function type
+   */
+  [[nodiscard]] std::shared_ptr<Type> getLambdaFunctionType() const;
 
   /**
    * Generate LLVM type from a valid meta type, needs ModuleContext
@@ -347,7 +366,7 @@ public:
   static std::shared_ptr<Type> createPointer(std::shared_ptr<Type> pointedType);
   static std::shared_ptr<Type> createFunction(
     std::shared_ptr<Type> returnType, std::vector<std::shared_ptr<Type>> args, bool isVariadic = false);
-  static std::shared_ptr<Type> createLambda(std::shared_ptr<Type> fn, StructMembers captures);
+  static std::shared_ptr<Type> createLambda(std::shared_ptr<Type> fn, std::vector<std::shared_ptr<Type>> captures);
   static std::shared_ptr<Type> createEnum(std::string name, std::shared_ptr<Type> base, std::vector<EnumField> members);
   static std::shared_ptr<Type> createTuple(std::vector<std::shared_ptr<Type>> members);
   static std::shared_ptr<Type> createStruct(std::string name, StructMembers members, bool packed = false);
