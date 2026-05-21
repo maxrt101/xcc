@@ -100,13 +100,14 @@ fn main() -> i32 {
  - [X] Enums (int)  
  - [ ] Enums (tagged)  
  - [ ] Destructors (or something like `defer`)  
- - [ ] Lambdas (closures)  
+ - [X] Lambdas (closures)  
  - [ ] The rest of gcc/clang attributes (alias, section & packed are done)  
  - [X] Full variadic support  
  - [ ] Stable ABI/FFI  
  - [ ] String interpolation  
  - [ ] Better type inference  
- - [ ] Generics?  
+ - [X] Generics  
+ - [ ] Traits  
  - [ ] Multithreading  
  - [ ] Inheritance?  
  - [ ] Dynamic dispatch?  
