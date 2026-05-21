@@ -19,7 +19,7 @@ public:
   TypedValue(SourceSpan span, std::shared_ptr<Type> type, llvm::AllocaInst * value);
   ~TypedValue() = default;
 
-  static std::shared_ptr<TypedValue> create(codegen::ModuleContext& ctx, llvm::Function* fn, SourceSpan span, std::shared_ptr<Type> type, const std::string& name);
+  static std::shared_ptr<TypedValue> create(codegen::ModuleContext& ctx, llvm::Function * fn, SourceSpan span, std::shared_ptr<Type> type, const std::string& name);
 };
 
 }

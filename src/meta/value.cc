@@ -5,7 +5,7 @@ using namespace xcc::meta;
 
 TypedValue::TypedValue() : type(nullptr), value(nullptr) {}
 
-TypedValue::TypedValue(SourceSpan span, std::shared_ptr<xcc::meta::Type> type, llvm::AllocaInst * value)
+TypedValue::TypedValue(SourceSpan span, std::shared_ptr<Type> type, llvm::AllocaInst * value)
   : span(span), type(std::move(type)), value(value) {}
 
 std::shared_ptr<TypedValue> TypedValue::create(codegen::ModuleContext& ctx, llvm::Function * fn, SourceSpan span, std::shared_ptr<Type> type, const std::string& name) {
