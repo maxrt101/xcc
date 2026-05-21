@@ -337,7 +337,7 @@ public:
   /**
    * Visitor implementation
    */
-  virtual void visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) = 0;
+  virtual void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) = 0;
 
   /**
    * Recursively convert tree to string
@@ -458,9 +458,30 @@ public:
     return cloned;
   }
 
+  /**
+   * Call visitor recursively on a list of nodes
+   *
+   * @tparam T             Any subtype of Node
+   * @param  globalContext Global Context
+   * @param  nodes         Nodes to call visitor on
+   * @param  visitor       Visitor function
+   * @param  ignoreSubtree List of NodeTypes that should be ignored
+   */
+  template <typename T>
+  void visitVector(
+    codegen::GlobalContext&          globalContext,
+    std::vector<std::shared_ptr<T>>& nodes,
+    Visitor                          visitor,
+    const std::vector<NodeType>&     ignoreSubtree = {}
+  ) {
+    for (auto& node : nodes) {
+      callVisitor(globalContext, node, visitor, ignoreSubtree);
+    }
+  }
+
 protected:
   /**
-   * Add attributes from this to node & return node;
+   * Add attributes from this to node & return node
    */
   template <typename T>
   [[nodiscard]] std::shared_ptr<T> withAttrs(std::shared_ptr<T> node) const {
@@ -468,12 +489,21 @@ protected:
     return node;
   }
 
+  /**
+   * Call visitor on all child nodes of node via visit() & call visitor on node
+   *
+   * @tparam T             Any subtype of Node
+   * @param  globalContext Global Context
+   * @param  node          Node to call visitor on
+   * @param  visitor       Visitor function
+   * @param  ignoreSubtree List of NodeTypes that should be ignored
+   */
   template <typename T>
   void callVisitor(
-    std::unique_ptr<codegen::GlobalContext>& globalContext,
-    std::shared_ptr<T>&                      node,
-    Visitor                                  visitor,
-    std::vector<NodeType>                    ignoreSubtree
+    codegen::GlobalContext& globalContext,
+    std::shared_ptr<T>&     node,
+    Visitor                 visitor,
+    std::vector<NodeType>   ignoreSubtree = {}
   ) {
     if (!node || node->isAnyOf(ignoreSubtree)) return;
 
@@ -503,7 +533,7 @@ public:
   static std::shared_ptr<Empty> create();
 
   std::shared_ptr<Node> clone() override;
-  void visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
+  void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 };
 

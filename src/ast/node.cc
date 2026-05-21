@@ -320,7 +320,7 @@ std::shared_ptr<Node> Empty::clone() {
   return withAttrs(create());
 }
 
-void Empty::visit(std::unique_ptr<codegen::GlobalContext>& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
+void Empty::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
 
 std::string Empty::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   return "";
