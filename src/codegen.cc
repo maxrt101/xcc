@@ -17,6 +17,24 @@ constexpr char ANONYMOUS_EXPR_FN_NAME[] = "__anonymous__";
 
 static auto logger = xcc::util::log::Logger("CODEGEN");
 
+std::unordered_map<std::string, std::shared_ptr<ast::Node>> GenericsCache::cache;
+
+bool GenericsCache::has(const std::string& name) {
+  return cache.contains(name);
+}
+
+std::shared_ptr<ast::Node> GenericsCache::get(const std::string& name) {
+  if (has(name)) {
+    return cache[name];
+  }
+
+  return nullptr;
+}
+
+void GenericsCache::add(const std::string& name, std::shared_ptr<ast::Node> generic) {
+  cache[name] = generic;
+}
+
 GlobalContext::GlobalContext(util::Target target) : target(target) {
   jit = JIT::create();
 

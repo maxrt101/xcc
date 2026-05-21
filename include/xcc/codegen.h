@@ -39,6 +39,33 @@ constexpr char DEFAULT_MODULE_NAME[] = "<module>";
 class ModuleContext;
 
 /**
+ * Global generics cache
+ *
+ * All generic declarations aren't placed into the AST, instead
+ * they are registered into this cache, and retrieved upon instantiation
+ */
+class GenericsCache {
+public:
+  /**
+   * Return @c true if the cache contains a generic declaration with `name`
+   */
+  static bool has(const std::string& name);
+
+  /**
+   * Return generic declaration (if it exists) by `name`
+   */
+  static std::shared_ptr<ast::Node> get(const std::string& name);
+
+  /**
+   * Add a generic declaration into the cache
+   */
+  static void add(const std::string& name, std::shared_ptr<ast::Node> generic);
+
+private:
+  static std::unordered_map<std::string, std::shared_ptr<ast::Node>> cache;
+};
+
+/**
  * Global compiler context, holds functions/globals, global ModuleContext and JIT
  */
 class GlobalContext {
