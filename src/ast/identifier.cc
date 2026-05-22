@@ -17,15 +17,26 @@
 #include "xcc/ast/identifier.h"
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
+#include "xcc/util/string.h"
 
 using namespace xcc;
 using namespace xcc::ast;
 
-Identifier::Identifier(SourceSpan span, std::string value, std::vector<std::string> scope)
-  : Node(AST_EXPR_IDENTIFIER, span), value(std::move(value)), scope(std::move(scope)) {}
+Identifier::Identifier(
+  SourceSpan               span,
+  std::string              value,
+  std::vector<std::string> scope,
+  NodeList                 genericArgs
+)
+  : Node(AST_EXPR_IDENTIFIER, span), value(std::move(value)), scope(std::move(scope)), genericArgs(std::move(genericArgs)) {}
 
-std::shared_ptr<Identifier> Identifier::create(SourceSpan span, const std::string& value, std::vector<std::string> scope) {
-  return std::make_shared<Identifier>(span, value, scope);
+std::shared_ptr<Identifier> Identifier::create(
+  SourceSpan               span,
+  std::string              value,
+  std::vector<std::string> scope,
+  NodeList                 genericArgs
+) {
+  return std::make_shared<Identifier>(span, value, scope, genericArgs);
 }
 
 std::shared_ptr<Node> Identifier::clone() {
@@ -67,11 +78,37 @@ std::string Identifier::prefix() const {
   return prefix;
 }
 
+std::string Identifier::fullName(
+  codegen::ModuleContext& ctx,
+  PayloadList             payload,
+  bool                    isMethod,
+  NodeList                genericArgs
+) const {
+  auto res = isMethod ? prefix() : name();
+
+  // Remove trailing delimiter. Happens on prefix() result
+  if (res.ends_with('_')) {
+    res.pop_back();
+  }
+
+  for (auto & arg : (genericArgs.empty() ? this->genericArgs : genericArgs)) {
+    res += "_" + arg->generateType(ctx, payload)->toString();
+  }
+
+  util::strreplace(res, "*", "_ptr");
+
+  return res + (isMethod ? "_" + value : "");
+}
+
 llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
   auto id = ctx.globalContext.aliased(name());
   auto mid = ctx.globalContext.aliased(ctx.globalContext.getModulePrefix()); // module id - only the current module scope
+
+  if (!genericArgs.empty()) {
+    return generateStaticMethod(ctx, payload);
+  }
 
   if (ctx.hasLocal(id)) {
     auto local = ctx.getLocalValue(id);
@@ -123,6 +160,10 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, 
   auto id = ctx.globalContext.aliased(name()); // id - fully assembled identifier (with scope prepended)
   auto pid = ctx.globalContext.aliased(prefix()); // prefix id - only the scope (used to reference an enum value)
   auto mid = ctx.globalContext.aliased(ctx.globalContext.getModulePrefix()); // module id - only the current module scope
+
+  if (!genericArgs.empty()) {
+    return generateStaticMethod(ctx, payload);
+  }
 
   if (ctx.hasLocal(id)) {
     return ctx.getLocalValue(id);
@@ -185,6 +226,22 @@ std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen:
   auto id = ctx.globalContext.aliased(name()); // id - fully assembled identifier (with scope prepended)
   auto pid = ctx.globalContext.aliased(prefix()); // prefix id - only the scope (used to reference an enum value)
   auto mid = ctx.globalContext.aliased(ctx.globalContext.getModulePrefix() + prefix()); // module id - current module scope + id scope
+
+  if (!genericArgs.empty()) {
+    std::string base_name = scope.back();
+
+    auto type_node = Type::createGeneric(span, create(span, base_name), genericArgs);
+
+    type_node->generateType(ctx, payload);
+
+    std::string method_name = fullName(ctx, payload, true);
+
+    auto fn = ctx.globalContext.getMetaFunctionType(method_name);
+
+    assertRaiseFromNode(fn.get(), Error(ERROR_UNKNOWN_FUNCTION, span, "Unknown method referenced"), this);
+
+    return fn;
+  }
 
   if (ctx.hasPhantom(id)) {
     return ctx.getPhantomType(id);
@@ -274,4 +331,26 @@ llvm::Constant * Identifier::checkGenerateEnum(codegen::ModuleContext& ctx, Payl
   }
 
   return nullptr;
+}
+
+llvm::Value * Identifier::generateStaticMethod(codegen::ModuleContext& ctx, PayloadList payload) {
+  std::string base_name = scope.back();
+
+  // Construct a Type node with base name for struct, and generic args
+  auto type_node = Type::createGeneric(span, create(span, base_name), genericArgs);
+
+  // Trigger instantiation for concrete type
+  auto t = type_node->generateType(ctx, payload);
+
+  // Generate full name (scope + concrete base name + value)
+  std::string method_name = fullName(ctx, payload, true);
+
+  llvm::Function * fn = ctx.getFunction(method_name);
+
+  assertRaiseFromNode(fn, Error(ERROR_UNKNOWN_FUNCTION, span, "Unknown method referenced"), this);
+
+  // Extract fat function pointer type
+  auto fat_ptr_type = ctx.globalContext.getMetaFunctionType(method_name)->getLLVMType(ctx);
+
+  return ctx.createFatPointerFromGlobalFunction(fn, fat_ptr_type);
 }
