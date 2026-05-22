@@ -87,20 +87,19 @@ std::string FnDecl::toString(Node * grandparent, Node * parent, int indent, bool
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
   if (auto gp = selectPayloadFirst(payload)) {
     if (auto p = gp->as<FnDecl::Payload>()) {
-
+      // Replaces all occurrences of generalized struct name, with new instantiated one
+      // For example for 'Container<T>', 'Container' in this definition 'Container::method()'
+      // will become 'Container_i32' (for T=i32)
       auto visitor = [&p](auto node) -> std::shared_ptr<Node> {
         if (node->is(AST_EXPR_IDENTIFIER)) {
           auto id = node->template as<Identifier>();
-          // size_t pos = id->value.find(p->oldStructName);
-          // if (pos != std::string::npos) {
-          //   id->value.replace(pos, p->oldStructName.size(), p->newStructName);
-          // }
           util::strreplace(id->value, p->oldStructName, p->newStructName);
         }
 
         return nullptr;
       };
 
+      // Call replacer visitor on function name (containing struct name), return type and arguments
       callVisitor(ctx.globalContext, name, visitor);
       callVisitor(ctx.globalContext, return_type, visitor);
       visitVector(ctx.globalContext, args, visitor);
@@ -153,16 +152,25 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
     arg.setName(args[arg_idx++]->name->name());
   }
 
+  meta::SubstitutionMap substitutions;
+
+  if (auto gp = selectPayloadForFirst(payload, AST_EXPR_TYPE)) {
+    if (auto p = gp->as<Type::Payload>()) {
+      substitutions = p->substitutions;
+    }
+  }
+
   auto fn = meta::Function::create(
       fn_name,
       return_meta_type,
       arg_meta_types,
-      shared_from_this()
+      shared_from_this(),
+      std::move(substitutions)
   );
 
   fn->alias_to = alias_to;
 
-  ctx.globalContext.addFunction(fn_name, fn);
+  ctx.globalContext.addFunction(fn_name, fn, meta::Type::createFunction(return_meta_type, arg_meta_types.values(), isVariadic));
 
   return llvm_fn;
 }
