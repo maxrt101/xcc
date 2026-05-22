@@ -185,17 +185,16 @@ Call::CalleeInfo Call::getCalleeInfo(codegen::ModuleContext& ctx, PayloadList pa
   return info;
 }
 
-void Call::getCalleeInfoForFunctionCall(codegen::ModuleContext& ctx, PayloadList payload, CalleeInfo& info, Identifier* ident, bool generateCallee) {
+void Call::getCalleeInfoForFunctionCall(codegen::ModuleContext& ctx, PayloadList payload, CalleeInfo& info, Identifier * ident, bool generateCallee) {
   info.fnName = ctx.globalContext.aliased(ident->name());
 
   if (auto * directFn = ctx.getFunction(info.fnName)) {
     // Direct function call
-    auto meta_fn = ctx.globalContext.getMetaFunction(info.fnName);
 
-    assertRaiseFromNode(meta_fn.get(), Error(ERROR_UNKNOWN_FUNCTION, ident->span), this);
-
-    info.metaType  = meta_fn->decl->generateType(ctx, payload);
+    info.metaType  = ctx.globalContext.getMetaFunctionType(info.fnName);
     info.calleePtr = directFn;
+
+    assertRaiseFromNode(info.metaType.get(), Error(ERROR_UNKNOWN_FUNCTION, ident->span, "'{}'", info.fnName), this);
   } else {
     // Function pointer call
     info.metaType = ident->generateType(ctx, payload);
@@ -219,7 +218,8 @@ void Call::getCalleeInfoForMethodCall(codegen::ModuleContext& ctx, PayloadList p
     Error(ERROR_UNKNOWN_METHOD, callee->span, "'{}'", info.fnName).raiseFromNode(this);
   }
 
-  auto meta_fn   = ctx.globalContext.getMetaFunction(info.fnName);
   info.calleePtr = directFn;
-  info.metaType  = meta_fn->decl->generateType(ctx, payload);
+  info.metaType  = ctx.globalContext.getMetaFunctionType(info.fnName);
+
+  assertRaiseFromNode(info.metaType.get(), Error(ERROR_UNKNOWN_FUNCTION, {}, "'{}'", info.fnName), this);
 }
