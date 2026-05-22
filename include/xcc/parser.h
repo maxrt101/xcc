@@ -150,7 +150,7 @@ private:
    *
    * @param ex_msg Message to append to "Expected identifier " if parsing fails
    */
-  std::shared_ptr<ast::Identifier> parseScopedIdentifier(const std::string& ex_msg);
+  std::shared_ptr<ast::Identifier> parseScopedIdentifier(const std::string& ex_msg, bool allowGenerics = false);
 
   /**
    * Parses type

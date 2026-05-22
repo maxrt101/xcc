@@ -94,10 +94,23 @@ std::shared_ptr<ast::Identifier> Parser::parseIdentifierWithCurrentScope(const s
   return id;
 }
 
-std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string& ex_msg) {
+std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string& ex_msg, bool allowGenerics) {
   auto first = parseIdentifier(ex_msg);
 
+  ast::NodeList genericArgs;
+
+  if (allowGenerics && codegen::GenericsCache::has(first->value) && checkAdvance(TOKEN_LESS)) {
+    do {
+      genericArgs.push_back(parseType());
+    } while (checkAdvance(TOKEN_COMMA));
+
+    if (!checkAdvance(TOKEN_GREATER)) {
+      Error(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT, previous().span.pointPastLast()).raise();
+    }
+  }
+
   if (!checkAdvance(TOKEN_SCOPE)) {
+    assertRaise(genericArgs.empty(), Error(ERROR_GENERIC_EXPECTED_SCOPE, previous().span.pointPastLast()));
     return first;
   }
 
@@ -122,9 +135,7 @@ std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string
 
   nodes.pop_back();
 
-  auto id = ast::Identifier::create(span, name, nodes);
-
-  return id;
+  return ast::Identifier::create(span, name, nodes, genericArgs);
 }
 
 std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> name) {
@@ -1230,7 +1241,7 @@ std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue(std::shared_ptr<ast
   auto span = current().span;
 
   if (!id) {
-    id = parseScopedIdentifier("for lvalue");
+    id = parseScopedIdentifier("for lvalue", true);
   }
 
   std::shared_ptr<ast::Node> expr = id;
