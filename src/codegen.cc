@@ -114,13 +114,21 @@ llvm::DIFile * GlobalContext::getCurrentDIFile() {
   return di_file;
 }
 
-void GlobalContext::addFunction(const std::string& name, std::shared_ptr<meta::Function> fn) {
-  functions[name] = std::move(fn);
+void GlobalContext::addFunction(const std::string& name, std::shared_ptr<meta::Function> fn, std::shared_ptr<meta::Type> type) {
+  functions[name] = {std::move(fn), std::move(type)};
 }
 
 std::shared_ptr<meta::Function> GlobalContext::getMetaFunction(const std::string& name) {
   if (functions.find(name) != functions.end()) {
-    return functions[name];
+    return functions[name].meta_fn;
+  }
+
+  return nullptr;
+}
+
+std::shared_ptr<meta::Type> GlobalContext::getMetaFunctionType(const std::string& name) {
+  if (functions.find(name) != functions.end()) {
+    return functions[name].meta_type;
   }
 
   return nullptr;
@@ -135,7 +143,7 @@ void GlobalContext::clearCurrentFunction() {
 }
 
 std::shared_ptr<meta::Function> GlobalContext::getCurrentFunction() {
-  return current_function.empty() ? nullptr : functions[current_function];
+  return current_function.empty() ? nullptr : functions[current_function].meta_fn;
 }
 
 bool GlobalContext::hasGlobal(const std::string& name) {
@@ -394,7 +402,7 @@ llvm::Function * ModuleContext::getFunction(const std::string& name) {
   }
 
   if (globalContext.functions.find(name) != globalContext.functions.end()) {
-    return globalContext.functions[name]->decl->generateFunction(*this, {});
+    return globalContext.functions[name].meta_fn->generateFunction(*this);
   }
 
   return nullptr;

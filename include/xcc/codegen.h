@@ -70,6 +70,12 @@ private:
  */
 class GlobalContext {
 public:
+  struct Function {
+    std::shared_ptr<meta::Function> meta_fn;
+    std::shared_ptr<meta::Type>     meta_type;
+  };
+
+public:
   /* Target Info (with all LLVM contexts) */
   util::Target target;
 
@@ -98,7 +104,7 @@ public:
   std::unordered_map<std::string, std::shared_ptr<meta::Type>> globals;
 
   /* Functions */
-  std::unordered_map<std::string, std::shared_ptr<meta::Function>> functions;
+  std::unordered_map<std::string, Function> functions;
 
   /* Current Function Name */
   std::string current_function;
@@ -168,13 +174,19 @@ public:
   /**
    * Add a (meta) function record to internal function table
    */
-  void addFunction(const std::string& name, std::shared_ptr<meta::Function> fn);
+  void addFunction(const std::string& name, std::shared_ptr<meta::Function> fn, std::shared_ptr<meta::Type> type);
 
   /**
    * Retrieve function record from function table by name
    * Returns nullptr if no such function is present
    */
   std::shared_ptr<meta::Function> getMetaFunction(const std::string& name);
+
+  /**
+   * Retrieve function record type from function table by name
+   * Returns nullptr if no such function is present
+   */
+  std::shared_ptr<meta::Type> getMetaFunctionType(const std::string& name);
 
   /** Set name for currently processed function */
   void setCurrentFunction(const std::string& name);
