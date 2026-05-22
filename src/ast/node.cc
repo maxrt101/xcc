@@ -110,6 +110,14 @@ bool Node::isAnyOf(std::vector<NodeType> expected) const {
 }
 
 Node::PayloadList Node::selectPayload(const PayloadList& payload) {
+  return selectPayloadFor(payload, type);
+}
+
+std::shared_ptr<Node::Payload> Node::selectPayloadFirst(const PayloadList& payload) {
+  return selectPayloadForFirst(payload, type);
+}
+
+Node::PayloadList Node::selectPayloadFor(const PayloadList& payload, NodeType type) {
   PayloadList result;
 
   for (const auto& element : payload) {
@@ -121,7 +129,7 @@ Node::PayloadList Node::selectPayload(const PayloadList& payload) {
   return result;
 }
 
-std::shared_ptr<Node::Payload> Node::selectPayloadFirst(const PayloadList& payload) {
+std::shared_ptr<Node::Payload> Node::selectPayloadForFirst(const PayloadList& payload, NodeType type) {
   for (const auto& element : payload) {
     if (element->type == type) {
       return element;

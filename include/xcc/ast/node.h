@@ -265,6 +265,16 @@ public:
   std::shared_ptr<Payload> selectPayloadFirst(const PayloadList& payload);
 
   /**
+   * Same as @ref selectPayload, but allows to specify for which node the payload should be selected
+   */
+  PayloadList selectPayloadFor(const PayloadList& payload, NodeType type);
+
+  /**
+   * Same as @ref selectPayloadFirst, but allows to specify for which node the payload should be selected
+   */
+  std::shared_ptr<Payload> selectPayloadForFirst(const PayloadList& payload, NodeType type);
+
+  /**
    * Extends provided payload list with new value
    *
    * @param list    Payload list to extend
