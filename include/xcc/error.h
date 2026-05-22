@@ -181,6 +181,7 @@ enum ErrorId {
   ERROR_LAMBDA_BAD_CAPTURE_EXPR                    = 155,
   ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT       = 156,
   ERROR_GENERIC_COUNT_MISMATCH                     = 157,
+  ERROR_GENERIC_EXPECTED_SCOPE                     = 158,
 
   ERROR_MAX,
 };

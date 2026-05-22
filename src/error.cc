@@ -171,6 +171,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_LAMBDA_BAD_CAPTURE_EXPR,                    "Invalid expression for lambda capture"),
   DESC(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT,       "Missing '>' after generic list in type declaration"),
   DESC(ERROR_GENERIC_COUNT_MISMATCH,                     "Count of generic arguments required by a type is different from the count of provided type arguments"),
+  DESC(ERROR_GENERIC_EXPECTED_SCOPE,                     "Expected '::' after generic type in expression for static method call"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {
