@@ -57,9 +57,6 @@ llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, P
   auto base_ptr_val = raiseIfNull(lhs->generateValueWithoutLoad(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, lhs->span, "LHS Value is NULL"));
 
   if (base_type->isFunction()) {
-    printf("Subscript function: '%s' %p:\n", base_type->toString().c_str(), base_ptr_val);
-    base_ptr_val->print(llvm::outs());
-
     auto * const_idx = llvm::cast<llvm::ConstantInt>(rhs->generateConstant(ctx, payload));
 
     assertRaiseFromNode(const_idx, Error(ERROR_NOT_CONSTANT, rhs->span, "Tuple subscript index must be a constant"), this);
