@@ -4,14 +4,12 @@
 #include "xcc/exceptions.h"
 #include "xcc/meta/type.h"
 
-#include "xcc/util/string.h"
-
 using namespace xcc::ast;
 
-Type::Payload::Payload(SubstitutionMap sub)
+Type::Payload::Payload(meta::SubstitutionMap sub)
   : Node::Payload(AST_EXPR_TYPE), substitutions(std::move(sub)) {}
 
-std::shared_ptr<Node::Payload> Type::Payload::create(SubstitutionMap sub) {
+std::shared_ptr<Node::Payload> Type::Payload::create(meta::SubstitutionMap sub) {
   return std::dynamic_pointer_cast<Node::Payload>(
       std::make_shared<Type::Payload>(std::move(sub))
   );
@@ -252,39 +250,50 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
 
       auto original_id = id;
 
-      for (auto& genericArg : genericArgs) {
-        id += "_" + genericArg->generateType(ctx, payload)->toString();
-      }
+      // Create a new instantiated/mangled type name ('mod::Struct<T>' -> 'mod_Struct_i32')
+      id = name->as<Identifier>()->fullName(ctx, payload, false, genericArgs);
 
-      util::strreplace(id, "*", "_ptr");
-
+      // Don't generate if already generated
       if (meta::Type::hasCustomType(id)) {
         return meta::Type::getCustomType(id);
       }
 
+      // Create and register new custom type, needed at this stage for correct macro expansion
+      // as method may contain a macro call, which may need to know concrete type for generic struct
       auto type = meta::Type::createStruct(id, {}, generic->hasAttribute("packed"));
       meta::Type::registerCustomType(id, type);
 
       assertRaiseFromNode(generic->is(AST_STRUCT), Error(ERROR_UNIMPLEMENTED, generic->span, "Only generic structs are supported"), this);
 
+      // Clone generic struct declaration. This is needed, as FnDecl will
+      // modify itself, if payload with concrete struct name is passed to it
       generic = generic->clone();
 
       std::vector<std::string> genericTypes;
 
+      // Extract generic type names
       for (auto& g : generic->as<Struct>()->genericTypes) {
         assertRaiseFromNode(g->is(AST_EXPR_IDENTIFIER), Error(ERROR_UNIMPLEMENTED, g->span, "Only an identifier can be a generic type"), this);
         genericTypes.push_back(g->as<Identifier>()->name());
       }
 
+      // TODO: Don't forget to change this assert, when default generic types are implemented
       assertRaiseFromNode(genericTypes.size() == genericArgs.size(), Error(ERROR_GENERIC_COUNT_MISMATCH, span), this);
 
-      SubstitutionMap substitutions = {{original_id, create(name->span, Identifier::create(name->span, id))->generateType(ctx, payload)}};
+      // Initialize substitution map (generic arg -> meta type) with generalized
+      // name -> concrete type ('Container' -> 'meta::Type("Container_i32" for T=i32)')
+      meta::SubstitutionMap substitutions = {{original_id, create(name->span, Identifier::create(name->span, id))->generateType(ctx, payload)}};
 
+      // Generate substitures for each generic type
       for (size_t i = 0; i < genericTypes.size(); ++i) {
         substitutions[genericTypes[i]] = genericArgs[i]->generateType(ctx, payload);
       }
 
+      // Create Type::Payload with substitutions, will be
+      // referred to each time a generic type is requested
       payload.push_back(Type::Payload::create(substitutions));
+
+      // Create a Struct::Payload, with new concrete name
       payload.push_back(Struct::Payload::create(id));
 
       auto struct_type = generic->generateType(ctx, payload);
@@ -292,6 +301,9 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
       llvm::IRBuilder<>::InsertPointGuard ir_guard(*ctx.ir_builder);
 
       for (auto& method : generic->as<Struct>()->methods) {
+        // Sequentially generate all methods, adding FnDecl::Payload
+        // with generic struct name -> concrete name substitution
+        // TODO: This could be added once along with other payloads
         method->generateFunction(ctx, extendPayload(payload, FnDecl::Payload::create(original_id, id)));
       }
 
@@ -301,6 +313,7 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
     if (auto p = selectPayloadFirst(payload)) {
       auto sub = p->as<Type::Payload>();
 
+      // Check substitution map, if payload is present
       if (sub->substitutions.contains(id)) {
         return sub->substitutions[id];
       }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "xcc/ast/node.h"
+#include "xcc/meta/function.h"
 
 #include <string>
 #include <vector>
@@ -9,16 +10,14 @@ namespace xcc::ast {
 
 class Type : public Node {
 public:
-  using SubstitutionMap = std::unordered_map<std::string, std::shared_ptr<meta::Type>>;
-
   struct Payload : Node::Payload {
     // Used by generic instantiation
-    SubstitutionMap substitutions;
+    meta::SubstitutionMap substitutions;
 
-    explicit Payload(SubstitutionMap sub);
+    explicit Payload(meta::SubstitutionMap sub);
     ~Payload() override = default;
 
-    static std::shared_ptr<Node::Payload> create(SubstitutionMap sub);
+    static std::shared_ptr<Node::Payload> create(meta::SubstitutionMap sub);
   };
 
   enum Kind {
