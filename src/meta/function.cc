@@ -1,4 +1,5 @@
 #include "xcc/meta/function.h"
+#include "xcc/ast/fndecl.h"
 
 using namespace xcc::meta;
 
@@ -6,16 +7,22 @@ Function::Function(
   std::string                                    name,
   std::shared_ptr<Type>                          returnType,
   OrderedMap<std::string, std::shared_ptr<Type>> args,
-  std::shared_ptr<ast::FnDecl>                   decl
-) : name(std::move(name)), returnType(std::move(returnType)), args(std::move(args)), decl(std::move(decl)) {}
+  std::shared_ptr<ast::FnDecl>                   decl,
+  SubstitutionMap                                substitutions
+) : name(std::move(name)), returnType(std::move(returnType)), args(args), decl(std::move(decl)), substitutions(std::move(substitutions)) {}
 
 std::shared_ptr<Function> Function::create(
   std::string                                    name,
   std::shared_ptr<Type>                          returnType,
   OrderedMap<std::string, std::shared_ptr<Type>> args,
-  std::shared_ptr<ast::FnDecl>                   decl
+  std::shared_ptr<ast::FnDecl>                   decl,
+  SubstitutionMap                                substitutions
 ) {
-  return std::make_shared<Function>(std::move(name), std::move(returnType), std::move(args), std::move(decl));
+  return std::make_shared<Function>(std::move(name), std::move(returnType), std::move(args), std::move(decl), std::move(substitutions));
+}
+
+llvm::Function * Function::generateFunction(codegen::ModuleContext& ctx) {
+  return decl->generateFunction(ctx, {ast::Type::Payload::create(substitutions)});
 }
 
 llvm::Type * Function::getLLVMReturnType(codegen::ModuleContext& ctx) {

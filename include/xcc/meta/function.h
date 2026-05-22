@@ -1,7 +1,6 @@
 #pragma once
 
 #include "xcc/meta/type.h"
-#include "xcc/ast/fndecl.h"
 #include "xcc/util/ordered_map.h"
 
 #include <map>
@@ -10,7 +9,13 @@ namespace xcc::codegen {
 class ModuleContext;
 }
 
+namespace xcc::ast {
+struct FnDecl;
+}
+
 namespace xcc::meta {
+
+using SubstitutionMap = std::unordered_map<std::string, std::shared_ptr<Type>>;
 
 /**
  * Function metadata
@@ -32,12 +37,16 @@ public:
   /** Function declaration node for future use */
   std::shared_ptr<ast::FnDecl> decl;
 
+  /** Substitutions for generic methods */
+  SubstitutionMap substitutions;
+
 public:
   Function(
     std::string                                    name,
     std::shared_ptr<Type>                          returnType,
-    OrderedMap<std::string, std::shared_ptr<Type>> args = {},
-    std::shared_ptr<ast::FnDecl>                   decl = nullptr
+    OrderedMap<std::string, std::shared_ptr<Type>> args          = {},
+    std::shared_ptr<ast::FnDecl>                   decl          = nullptr,
+    SubstitutionMap                                substitutions = {}
   );
 
   ~Function() = default;
@@ -45,9 +54,15 @@ public:
   static std::shared_ptr<Function> create(
     std::string                                    name,
     std::shared_ptr<Type>                          returnType,
-    OrderedMap<std::string, std::shared_ptr<Type>> args = {},
-    std::shared_ptr<ast::FnDecl>                   decl = nullptr
+    OrderedMap<std::string, std::shared_ptr<Type>> args          = {},
+    std::shared_ptr<ast::FnDecl>                   decl          = nullptr,
+    SubstitutionMap                                substitutions = {}
   );
+
+  /**
+   * Generate llvm Function from declaration, using caches substitutions, if they are provided
+   */
+  llvm::Function * generateFunction(codegen::ModuleContext& ctx);
 
   /**
    * Generate llvm::Type* from function return type metadata. Needs ModuleContext
