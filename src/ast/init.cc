@@ -23,7 +23,7 @@ std::shared_ptr<Node> Initializer::clone() {
   std::vector<Value> values;
 
   for (auto& value : this->values) {
-    values.push_back({value.name->clone(), value.value->clone()});
+    values.push_back({value.name ? value.name->clone() : nullptr, value.value->clone()});
   }
 
   return withAttrs(create(span, value_type->clone(), values, has_square_braces));
