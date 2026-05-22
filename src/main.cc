@@ -235,7 +235,7 @@ static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
 
       if (command == "list" || command == "l") {
         for (auto& [name, fn] : globalContext->functions) {
-          logger.print("{}\n", fn->toString());
+          logger.print("{}\n", fn.meta_fn->toString());
         }
         continue;
       }
