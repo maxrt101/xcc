@@ -181,17 +181,15 @@ const std::unordered_map<WarningId, WarningDescription> WarningDescription::desc
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
-  std::string res = ANSI_COLOR_FG_RED;
+  return std::string(line_ofs, ' ') + ANSI_COLOR_FG_RED + std::string(std::min(line_size - line_ofs, len), '~') + ANSI_TEXT_RESET;
+}
 
-  for (size_t i = 0; i < line_ofs; ++i) {
-    res += " ";
-  }
+static std::string generateSourcePoint(size_t line_ofs) {
+  return std::string(line_ofs, ' ') + ANSI_COLOR_FG_GREEN + "^" + ANSI_TEXT_RESET;
+}
 
-  for (size_t i = 0; i < std::min(line_size - line_ofs, len); ++i) {
-    res += "~";
-  }
-
-  return res + ANSI_TEXT_RESET;
+static std::string generateSourceNote(size_t line_ofs, const std::string& note) {
+  return std::string(line_ofs, ' ') + ANSI_COLOR_FG_GREEN + note + ANSI_TEXT_RESET;
 }
 
 const ErrorDescription& ErrorDescription::get(ErrorId id) {
@@ -285,7 +283,7 @@ SourceSpan SourceSpan::builtin() {
   return {BuiltInFileId, 0, 0};
 }
 
-std::string SourceSpan::toString() const {
+std::string SourceSpan::toString(const std::string& note) const {
   if (fileId == BuiltInFileId) {
     return ANSI_COLOR_FG_YELLOW "      |" ANSI_TEXT_RESET "\n"
            ANSI_COLOR_FG_YELLOW "    0 |" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "<built-in/native>" ANSI_TEXT_RESET "\n"
@@ -299,22 +297,34 @@ std::string SourceSpan::toString() const {
   auto info     = file->lines[line];
   auto line_ofs = offset - info.offset;
 
-  return std::format(
+  auto base = std::format(
     ANSI_COLOR_FG_YELLOW  "     -->" ANSI_TEXT_RESET " {}:{}:{}\n"
     ANSI_COLOR_FG_YELLOW  "      |"  ANSI_TEXT_RESET "\n"
-    ANSI_COLOR_FG_YELLOW " {:04} |"  ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n"
-    ANSI_COLOR_FG_YELLOW  "      |"  ANSI_TEXT_RESET " {}\n",
+    ANSI_COLOR_FG_YELLOW " {:04} |"  ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n",
     file->path, line, line_ofs, line,
-    file->contents.substr(info.offset, info.length),
-    generateHighlight(line_ofs, info.length, length)
+    file->contents.substr(info.offset, info.length)
+  );
+
+  if (note.empty()) {
+    return base + std::format(
+      ANSI_COLOR_FG_YELLOW  "      |"  ANSI_TEXT_RESET " {}\n",
+      generateHighlight(line_ofs, info.length, length)
+    );
+  }
+
+  return base + std::format(
+    ANSI_COLOR_FG_YELLOW  "      |"  ANSI_TEXT_RESET " {}\n"
+    ANSI_COLOR_FG_YELLOW  "      |"  ANSI_TEXT_RESET " {}\n",
+    generateSourcePoint(line_ofs),
+    generateSourceNote(line_ofs, note)
   );
 }
 
 std::string Note::toString() const {
   return std::format(
-      ANSI_COLOR_FG_GREEN "note:" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n{}",
-      message, span.toString()
-    );
+    ANSI_COLOR_FG_GREEN "note:" ANSI_TEXT_RESET " " ANSI_TEXT_BOLD "{}" ANSI_TEXT_RESET "\n{}",
+    message, span.toString(source_note)
+  );
 }
 
 Warning::Warning(WarningId id, SourceSpan span) : id(id), span(span), message("") {}

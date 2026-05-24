@@ -280,7 +280,7 @@ struct SourceSpan {
   /**
    * Converts span to a string, containing file name, line, column, line of code & highlight of span
    */
-  [[nodiscard]] std::string toString() const;
+  [[nodiscard]] std::string toString(const std::string& note = "") const;
 
   /**
    * Default span for objects, that have to have one, but don't have a representation in source code
@@ -293,11 +293,12 @@ struct SourceSpan {
  */
 struct Note {
   SourceSpan  span;
+  std::string source_note;
   std::string message;
 
   template <typename... Args>
-  Note(SourceSpan span, std::string_view fmt, Args&&... args)
-    : span(span), message(std::vformat(fmt, std::make_format_args(args...))) {}
+  Note(SourceSpan span, const std::string& source_note, std::string_view fmt, Args&&... args)
+    : span(span), source_note(source_note), message(std::vformat(fmt, std::make_format_args(args...))) {}
 
   [[nodiscard]] std::string toString() const;
 };
@@ -323,14 +324,21 @@ struct Warning {
   /** Append a Note to this Warning. Note will have no source span */
   template <typename... Args>
   Warning& note(std::string_view fmt, Args&&... args) {
-    notes.push_back(Note({}, fmt, std::forward<Args>(args)...));
+    notes.push_back(Note({}, "", fmt, std::forward<Args>(args)...));
     return *this;
   }
 
   /** Append a Note to this Warning. With source span */
   template <typename... Args>
   Warning& note(SourceSpan span, std::string_view fmt, Args&&... args) {
-    notes.push_back(Note(span, fmt, std::forward<Args>(args)...));
+    notes.push_back(Note(span, "", fmt, std::forward<Args>(args)...));
+    return *this;
+  }
+
+  /** Append a Note to this Warning. With source span and source note */
+  template <typename... Args>
+  Warning& hint(SourceSpan span, const std::string& source_note, std::string_view fmt, Args&&... args) {
+    notes.push_back(Note(span, source_note, fmt, std::forward<Args>(args)...));
     return *this;
   }
 
@@ -382,14 +390,21 @@ struct Error {
   /** Append a Note to this Error. Note will have no source span */
   template <typename... Args>
   Error& note(std::string_view fmt, Args&&... args) {
-    notes.push_back(Note({}, fmt, std::forward<Args>(args)...));
+    notes.push_back(Note({}, "", fmt, std::forward<Args>(args)...));
     return *this;
   }
 
   /** Append a Note to this Error. With source span */
   template <typename... Args>
   Error& note(SourceSpan span, std::string_view fmt, Args&&... args) {
-    notes.push_back(Note(span, fmt, std::forward<Args>(args)...));
+    notes.push_back(Note(span, "", fmt, std::forward<Args>(args)...));
+    return *this;
+  }
+
+  /** Append a Note to this Error. With source span and source note */
+  template <typename... Args>
+  Error& hint(SourceSpan span, std::string source_note, std::string_view fmt, Args&&... args) {
+    notes.push_back(Note(span, source_note, fmt, std::forward<Args>(args)...));
     return *this;
   }
 
