@@ -52,10 +52,6 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
 
   auto i1_type = meta::Type::createBool()->getLLVMType(ctx);
 
-  if (!cond_val->getType()->isIntegerTy(1)) {
-    cond_val = codegen::cast(ctx, cond_val, i1_type, condition->span);
-  }
-
   ctx.setDebugLocation(span);
   cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i1_type, 0), "ifcond");
 
