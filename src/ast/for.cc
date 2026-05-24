@@ -42,40 +42,48 @@ llvm::Value * For::generateValue(codegen::ModuleContext& ctx, PayloadList payloa
 
   ctx.pushScope(span);
 
+  auto cond_block  = llvm::BasicBlock::Create(*ctx.llvm.ctx, "for_cond", fn);
+  auto body_block  = llvm::BasicBlock::Create(*ctx.llvm.ctx, "for_body", fn);
+  auto step_block  = llvm::BasicBlock::Create(*ctx.llvm.ctx, "for_step", fn);
+  auto after_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "for_after", fn);
+
+  // Create iterator variable
   auto var = meta::TypedValue::create(ctx, fn, init->span, init->generateType(ctx, payload), init->name->name());
 
+  // Generate and store initial value for iterator
   auto init_val = init->generateValue(ctx, payload);
 
   ctx.ir_builder->CreateStore(init_val, var->value);
 
-  auto loop_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "for_loop", fn);
+  ctx.ir_builder->CreateBr(cond_block);
 
-  ctx.ir_builder->CreateBr(loop_block);
+  ctx.ir_builder->SetInsertPoint(cond_block);
 
-  ctx.ir_builder->SetInsertPoint(loop_block);
-
-  //
-  auto body_val = body->generateValue(ctx, payload);
-
-  //
-  auto step_val = step->generateValue(ctx, payload);
-
-  //
+  // Condition Block
   auto cond_val = cond->generateValue(ctx, payload);
 
-  auto i1_type = meta::Type::createBool()->getLLVMType(ctx);
+  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(cond_val->getType(), 0), "for_cond");
 
-  if (!cond_val->getType()->isIntegerTy(1)) {
-    cond_val = codegen::cast(ctx, cond_val, i1_type, cond->span);
-  }
+  ctx.ir_builder->CreateCondBr(cond_val, body_block, after_block);
 
-  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i1_type, 0), "for_cond");
+  // Body block
+  ctx.ir_builder->SetInsertPoint(body_block);
 
-  auto loop_after_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "after_loop", fn);
+  body->generateValue(ctx, payload);
 
-  ctx.ir_builder->CreateCondBr(cond_val, loop_block, loop_after_block);
+  ctx.ir_builder->CreateBr(step_block);
 
-  ctx.ir_builder->SetInsertPoint(loop_after_block);
+  // Step block
+  ctx.ir_builder->SetInsertPoint(step_block);
+
+  // Increment iterator
+  step->generateValue(ctx, payload);
+
+  // At the end of the body, jump back to the condition
+  ctx.ir_builder->CreateBr(cond_block);
+
+  // After Block
+  ctx.ir_builder->SetInsertPoint(after_block);
 
   ctx.popScope();
 
