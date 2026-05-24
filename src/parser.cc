@@ -485,10 +485,20 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
       break;
     }
 
+    ast::Node::AttributeList attributes;
+
+    if (check(TOKEN_LEFT_SQUARE_BRACE)) {
+      attributes = parseAttributeList();
+    }
+
     if (check(TOKEN_FN)) {
-      methods.push_back(parseFunction(true));
+      auto fn = parseFunction(true);
+      fn->attributes = attributes;
+      methods.push_back(fn);
     } else {
-      fields.push_back(parseValueDecl("for struct field name"));
+      auto val = parseValueDecl("for struct field name");
+      val->attributes = attributes;
+      fields.push_back(val);
     }
 
     shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_SEMICOLON);
