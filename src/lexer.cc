@@ -6,7 +6,7 @@
 
 using namespace xcc;
 
-static auto logger = util::log::Logger("LEXER");
+static auto& logger = log::Logger::get("LEXER");
 
 static const PrefixTree<TokenType> s_token_patterns(TOKEN_EOF, {
     {"extern",  TOKEN_EXTERN},
