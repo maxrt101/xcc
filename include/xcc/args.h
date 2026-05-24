@@ -14,6 +14,7 @@ struct Arguments {
   bool                     verbose;
   bool                     compile;
   bool                     run;
+  bool                     log_stderr;
   std::string              target;
   std::string              machine;
   std::string              output;
@@ -22,6 +23,7 @@ struct Arguments {
   std::vector<std::string> lib_paths;
   std::vector<std::string> mod_paths;
   std::vector<std::string> loggers;
+  std::vector<std::string> log_files;
 
   Arguments();
 };

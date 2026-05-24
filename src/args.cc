@@ -12,6 +12,7 @@ xcc::args::Arguments::Arguments()
     verbose(false),
     compile(false),
     run(false),
+    log_stderr(false),
     target(llvm::sys::getDefaultTargetTriple()),
     machine("generic") {}
 
@@ -31,13 +32,13 @@ xcc::args::Arguments xcc::args::parse(int argc, char ** argv) {
       args.run = true;
     } else if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--lib")) {
       CHECK_ARG(i, argc, "lib");
-      args.libs.push_back(argv[++i]);
+      args.libs.emplace_back(argv[++i]);
     } else if (!strcmp(argv[i], "-L") || !strcmp(argv[i], "--lib-path")) {
       CHECK_ARG(i, argc, "lib_path");
-      args.lib_paths.push_back(argv[++i]);
+      args.lib_paths.emplace_back(argv[++i]);
     } else if (!strcmp(argv[i], "-I") || !strcmp(argv[i], "--mod-path")) {
       CHECK_ARG(i, argc, "mod_path");
-      args.mod_paths.push_back(argv[++i]);
+      args.mod_paths.emplace_back(argv[++i]);
     } else if (!strcmp(argv[i], "-t") || !strcmp(argv[i], "--target")) {
       CHECK_ARG(i, argc, "target");
       args.target = argv[++i];
@@ -49,9 +50,14 @@ xcc::args::Arguments xcc::args::parse(int argc, char ** argv) {
       args.output = argv[++i];
     } else if (!strcmp(argv[i], "--log")) {
       CHECK_ARG(i, argc, "output");
-      args.loggers.push_back(argv[++i]);
+      args.loggers.emplace_back(argv[++i]);
+    } else if (!strcmp(argv[i], "--log-stderr")) {
+      args.log_stderr = true;
+    } else if (!strcmp(argv[i], "--log-file")) {
+      CHECK_ARG(i, argc, "log_file");
+      args.log_files.emplace_back(argv[++i]);
     } else {
-      args.files.push_back(argv[i]);
+      args.files.emplace_back(argv[i]);
     }
   }
 

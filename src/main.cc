@@ -12,7 +12,9 @@
 #include <llvm/TargetParser/Host.h>
 #include <llvm/MC/MCSubtargetInfo.h>
 
-static auto logger = xcc::util::log::Logger("MAIN");
+#include "xcc/util/util.h"
+
+static auto& logger = xcc::log::Logger::get("MAIN");
 
 #if USE_LEGACY_XCC_EXTERN_FUNCTIONS
 extern "C" [[maybe_unused]] int32_t xcc_putc(int32_t c) {
@@ -66,7 +68,9 @@ static int help() {
   fprintf(stderr, "  -t, --target TARGET     - Specify target triple (use 'list' to see all)\n");
   fprintf(stderr, "  -m, --machine MACHINE   - Specify target machine (cpu) (use 'list' to see all)\n");
   fprintf(stderr, "  -o, --output OUT_FILE   - Set output file name\n");
-  fprintf(stderr, "  --log LOG_MODULE_NAME   - Enable logger for module ('*' to enable for all)\n");
+  fprintf(stderr, "  --log LOG_MODULE_NAME   - Enable logger for module ('*'/'_'/'all' to enable for every module)\n");
+  fprintf(stderr, "  --log-file FILE         - Put logs into a file, alongside stdout/stderr\n");
+  fprintf(stderr, "  --log-stderr            - Use stderr instead of default stdout for log output\n");
   fprintf(stderr, "  IN_FILE...              - Input (source/object) files\n");
   fprintf(stderr, "Environment:\n");
   fprintf(stderr, "  XCC_LD                  - Path to linker executable\n");
@@ -251,14 +255,27 @@ static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
 }
 
 static int xcc_main(int argc, char ** argv) {
+  // Parse arguments
   auto args = xcc::args::parse(argc, argv);
 
-  if (std::find(args.loggers.begin(), args.loggers.end(), "*") != args.loggers.end()) {
-    args.loggers = xcc::util::log::getModuleNames();
+  // Setup primary log output
+  xcc::log::registerOutput(args.log_stderr
+    ? std::dynamic_pointer_cast<xcc::log::outputs::OutputBase>(xcc::log::outputs::OutputStderr::get())
+    : std::dynamic_pointer_cast<xcc::log::outputs::OutputBase>(xcc::log::outputs::OutputStdout::get())
+  );
+
+  // Setup secondary (file) log outputs
+  for (auto& file : args.log_files) {
+    xcc::log::registerOutput(xcc::log::outputs::OutputFile::get(file));
   }
 
+  if (XCC_VECTOR_CONTAINS(args.loggers, "*") || XCC_VECTOR_CONTAINS(args.loggers, "_") || XCC_VECTOR_CONTAINS(args.loggers, "all")) {
+    args.loggers = xcc::log::getModuleNames();
+  }
+
+  // Enable selected loggers
   for (auto& mod : args.loggers) {
-    xcc::util::log::enableModule(mod, true);
+    xcc::log::enableModule(mod, true);
   }
 
   if (args.help) {
