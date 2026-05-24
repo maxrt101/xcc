@@ -30,5 +30,40 @@ std::string While::toString(Node * grandparent, Node * parent, int indent, bool 
 llvm::Value * While::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
-  Error(ERROR_UNIMPLEMENTED, span, "while loops are unsupported").raiseFromNode(this);
+  auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
+
+  auto cond_block  = llvm::BasicBlock::Create(*ctx.llvm.ctx, "while_cond", fn);
+  auto body_block  = llvm::BasicBlock::Create(*ctx.llvm.ctx, "while_body", fn);
+  auto after_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "while_after", fn);
+
+  // Jump from the current block into the condition block
+  ctx.ir_builder->CreateBr(cond_block);
+
+  // Condition Block
+  ctx.ir_builder->SetInsertPoint(cond_block);
+
+  auto cond_val = condition->generateValue(ctx, payload);
+  auto i1_type = meta::Type::createBool()->getLLVMType(ctx);
+
+  if (!cond_val->getType()->isIntegerTy(1)) {
+    cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i1_type, 0), "while_cond_cmp");
+  }
+
+  // If true go to body otherwise go to after
+  ctx.ir_builder->CreateCondBr(cond_val, body_block, after_block);
+
+  // Body Block
+  ctx.ir_builder->SetInsertPoint(body_block);
+
+  ctx.pushScope(span);
+  body->generateValue(ctx, payload);
+  ctx.popScope();
+
+  // At the end of the body, jump back to the condition
+  ctx.ir_builder->CreateBr(cond_block);
+
+  // After Block
+  ctx.ir_builder->SetInsertPoint(after_block);
+
+  return meta::Type::createI64()->getDefault(ctx);
 }
