@@ -409,7 +409,7 @@ static std::shared_ptr<Node> xcc_macro_assert(codegen::GlobalContext& global, st
 
     if (!cond->getValue().getZExtValue()) {
       Error(ERROR_ASSERTION, call->span, "'{}'{}",
-        call->args[0]->toString(nullptr, nullptr, 0, false),
+        call->args[0]->defaultToString(),
         message.empty() ? "" : message
       ).raiseFromNode(call.get());
     }

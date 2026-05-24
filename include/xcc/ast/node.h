@@ -473,6 +473,11 @@ public:
   [[nodiscard]] std::string resolveSymbolName(codegen::ModuleContext& ctx, const std::string& target_name) const;
 
   /**
+   * Shorthand for `node->defaultToString()`
+   */
+  [[nodiscard]] std::string defaultToString();
+
+  /**
    * Clone a vector of nodes
    */
   template <typename T>

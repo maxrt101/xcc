@@ -364,6 +364,10 @@ std::string Node::resolveSymbolName(codegen::ModuleContext& ctx, const std::stri
   return ctx.globalContext.aliased(target_name);
 }
 
+std::string Node::defaultToString() {
+  return toString(nullptr, nullptr, 0, false);
+}
+
 Empty::Empty() : Node(AST_EMPTY, {}, {}) {}
 
 std::shared_ptr<Empty> Empty::create() {

@@ -169,7 +169,7 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, 
     return enum_field;
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", toString(nullptr, nullptr, 0, false)).raiseFromNode(this);
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", defaultToString()).raiseFromNode(this);
 }
 
 llvm::Constant * Identifier::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -183,7 +183,7 @@ llvm::Constant * Identifier::generateConstant(codegen::ModuleContext& ctx, Paylo
     return enum_field;
   }
 
-  Error(ERROR_NOT_CONSTANT, span, "'{}'", toString(nullptr, nullptr, 0, false)).raiseFromNode(this);
+  Error(ERROR_NOT_CONSTANT, span, "'{}'", defaultToString()).raiseFromNode(this);
 }
 
 std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -230,7 +230,7 @@ std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen:
     }
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", toString(nullptr, nullptr, 0, false)).raiseFromNode(this);
+  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", defaultToString()).raiseFromNode(this);
 }
 
 llvm::Constant * Identifier::checkGenerateEnum(codegen::ModuleContext& ctx, PayloadList payload) {
