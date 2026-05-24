@@ -9,7 +9,7 @@
 
 using namespace xcc;
 
-static auto logger = xcc::util::log::Logger("ERROR");
+static auto& logger = xcc::log::Logger::get("ERROR");
 
 #define DESC(__err, __str) {__err, {__err, __str}}
 
@@ -32,7 +32,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_VAR_MISSING_KEYWORD,                        "Missing 'var' at the start of variable declaration"),
   DESC(ERROR_STRUCT_MISSING_KEYWORD,                     "Missing 'struct' at the start of struct declaration"),
   DESC(ERROR_STRUCT_MISSING_OPENING_BRACE,               "Missing '{' at the start of struct body declaration"),
-  DESC(ERROR_STRUCT_MISSING_CLOSING_BRACE,               "Missing '{' at the end of struct body declaration"),
+  DESC(ERROR_STRUCT_MISSING_CLOSING_BRACE,               "Missing '}' at the end of struct body declaration"),
   DESC(ERROR_IF_MISSING_KEYWORD,                         "Missing 'if' at the start of if statement"),
   DESC(ERROR_IF_MISSING_OPENING_PAREN,                   "Missing '(' after 'if'"),
   DESC(ERROR_IF_MISSING_CLOSING_PAREN,                   "Missing ')' after if condition"),
