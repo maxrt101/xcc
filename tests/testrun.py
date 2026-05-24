@@ -144,8 +144,16 @@ class Runner:
             if isinstance(test.file, str) else
             [os.path.join(self.test_dir, file) for file in test.file]
         )
+
         libs = [x for p in [('-I', f'{lib}') for lib in self.libs] for x in p]
-        result = subprocess.run([self.executable, '--log', '*', '-r', '-I', self.test_dir, *libs, *files], capture_output=True, text=True, env=test.env)
+
+        try:
+            result = subprocess.run([self.executable, '--log', '*', '-r', '-I', self.test_dir, *libs, *files], capture_output=True, text=True, env=test.env, timeout=10)
+        except subprocess.TimeoutExpired as e:
+            if self.announce or self.verbose:
+                print(f'[{COLOR_RED}ERROR{COLOR_RESET}] Test {COLOR_YELLOW}{test.id}{COLOR_RESET} timed out')
+            return TestRun(False, -1, -1, e.stdout.decode('utf-8') if e.stdout else '', e.stderr.decode('utf-8') if e.stderr else '', [f'Test timed out'])
+
         run = TestRun(True, result.returncode, 0, result.stdout, result.stderr, [])
 
         if match := self.RESULT_REGEX.search(run.stdout):
