@@ -449,11 +449,19 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
 
   auto name = parseIdentifier("for struct name");
 
-  ast::NodeList genericTypes;
+  std::vector<ast::Struct::GenericParam> genericTypes;
 
   if (checkAdvance(TOKEN_LESS)) {
     do {
-      genericTypes.push_back(parseIdentifier("for generic type name"));
+      ast::Struct::GenericParam param;
+
+      param.name = parseIdentifier("for generic type name");
+
+      if (checkAdvance(TOKEN_EQUALS)) {
+        param.default_value = parseType();
+      }
+
+      genericTypes.push_back(param);
     } while (checkAdvance(TOKEN_COMMA));
 
     if (!checkAdvance(TOKEN_GREATER)) {

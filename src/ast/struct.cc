@@ -9,12 +9,12 @@ Struct::Struct(
     SourceSpan                                    span,
     LexicalScope                                  scope,
     std::shared_ptr<Identifier>                   name,
-    NodeList                                      genericTypes,
+    std::vector<GenericParam>                     genericParams,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
     NodeList                                      methods
 ) : Node(AST_STRUCT, span, scope),
     name(std::move(name)),
-    genericTypes(std::move(genericTypes)),
+    genericParams(std::move(genericParams)),
     fields(std::move(fields)),
     methods(std::move(methods)) {}
 
@@ -22,19 +22,35 @@ std::shared_ptr<Struct> Struct::create(
     SourceSpan                                    span,
     LexicalScope                                  scope,
     std::shared_ptr<Identifier>                   name,
-    NodeList                                      genericTypes,
+    std::vector<GenericParam>                     genericParams,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
     NodeList                                      methods
 ) {
-  return std::make_shared<Struct>(span, scope, std::move(name), std::move(genericTypes), std::move(fields), std::move(methods));
+  return std::make_shared<Struct>(span, scope, std::move(name), std::move(genericParams), std::move(fields), std::move(methods));
 }
 
 bool Struct::isGeneric() const {
-  return !genericTypes.empty();
+  return !genericParams.empty();
+}
+
+NodeList Struct::getGenericParamNames() const {
+  NodeList result;
+
+  for (auto & param : genericParams) {
+    result.push_back(param.name);
+  }
+
+  return result;
 }
 
 std::shared_ptr<Node> Struct::clone() {
-  return withAttrs(create(span, scope, cast<Identifier>(name->clone()), cloneVector(genericTypes), cloneVector(fields), cloneVector(methods)));
+  std::vector<GenericParam> generics;
+
+  for (auto& g : genericParams) {
+    generics.push_back({g.name->clone(), g.default_value ? g.default_value->clone() : nullptr});
+  }
+
+  return withAttrs(create(span, scope, cast<Identifier>(name->clone()), generics, cloneVector(fields), cloneVector(methods)));
 }
 
 void Struct::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
