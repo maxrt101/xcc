@@ -169,7 +169,7 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, 
     return enum_field;
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", defaultToString()).raiseFromNode(this);
+  generateValueUndeclaredError(search_name);
 }
 
 llvm::Constant * Identifier::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -230,7 +230,7 @@ std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen:
     }
   }
 
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", defaultToString()).raiseFromNode(this);
+  generateValueUndeclaredError(search_name);
 }
 
 llvm::Constant * Identifier::checkGenerateEnum(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -281,4 +281,14 @@ std::string Identifier::resolveStaticMethodName(codegen::ModuleContext& ctx, Pay
   }
 
   Error(ERROR_UNKNOWN_FUNCTION, span, "'{}'", method_name).raiseFromNode(this);
+}
+
+void Identifier::generateValueUndeclaredError(const std::string& search_name) {
+  auto err = Error(ERROR_UNDECLARED_VALUE, span, "'{}'", defaultToString());
+
+  if (meta::Type::hasCustomType(search_name)) {
+    err = err.hint(span.pointPastLast(), "{}", "A type '{}' is found, add '{{}}' if you meant to use it as an initializer", defaultToString());
+  }
+
+  err.raiseFromNode(this);
 }

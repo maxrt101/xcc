@@ -68,6 +68,11 @@ private:
    * If genericArgs is not empty - this identifier references a static method for generic struct
    */
   std::string resolveStaticMethodName(codegen::ModuleContext& ctx, PayloadList payload);
+
+  /**
+   * Helper for generating ERROR_UNDECLARED_VALUE
+   */
+  [[noreturn]] void generateValueUndeclaredError(const std::string& search_name);
 };
 
 } /* namespace xcc::ast */
