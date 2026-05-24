@@ -4,7 +4,7 @@
 
 using namespace xcc;
 
-static auto logger = util::log::Logger("FILEMNG");
+static auto& logger = log::Logger::get("FILEMNG");
 
 std::unordered_map<FileId, std::shared_ptr<File>> FileManager::files;
 FileId FileManager::id = 1;

@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <filesystem>
 
-static auto logger = xcc::util::log::Logger("FS");
+static auto& logger = xcc::log::Logger::get("FS");
 
 std::string xcc::fs::readFile(const std::string& filename) {
   std::ifstream fs(filename);

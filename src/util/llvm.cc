@@ -3,7 +3,7 @@
 
 #include <llvm/Target/TargetOptions.h>
 
-static auto logger = xcc::util::log::Logger("LLVM");
+static auto& logger = xcc::log::Logger::get("LLVM");
 
 using namespace xcc::util;
 using namespace xcc::meta;
