@@ -202,7 +202,7 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
 
     Error(ERROR_TYPE_ARRAY_SIZE_NOT_NUMBER, array.size->span,
       "'{}' does not evaluate to a constant integer",
-      array.size->toString(nullptr, nullptr, 0, false)
+      array.size->defaultToString()
     ).raiseFromNode(this);
   }
 
@@ -220,6 +220,47 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
   std::string id = ident->getResolvedName(ctx);
 
   if (!ident->genericArgs.empty()) {
+    assertRaiseFromNode(codegen::GenericsCache::has(id),
+      Error(ERROR_NO_SUCH_GENERIC_TYPE, span, "'{}'", id), this);
+
+    auto generic = codegen::GenericsCache::get(id);
+    auto generic_struct = generic->as<Struct>();
+
+    // Add missing params from default ones
+    for (size_t i = ident->genericArgs.size(); i < generic_struct->genericParams.size(); ++i) {
+      auto& param = generic_struct->genericParams[i];
+
+      assertRaiseFromNode(param.default_value.get(),
+        Error(ERROR_GENERIC_COUNT_MISMATCH, span, "Missing required generic argument '{}' for struct '{}'", param.name->defaultToString(), id), this);
+
+      // Clone the default type and push it into the identifier's arguments
+      ident->genericArgs.push_back(param.default_value->clone());
+    }
+
+    assertRaiseFromNode(ident->genericArgs.size() <= generic_struct->genericParams.size(),
+      Error(ERROR_GENERIC_COUNT_MISMATCH, span, "Too many generic arguments provided for '{}'", id), this);
+
+    auto genericParamNames = generic_struct->getGenericParamNames();
+    auto genericsArgs = ident->genericArgs;
+
+    // Facilitate dependant default generic args
+    for (auto& arg : genericsArgs) {
+      arg->visit(ctx.globalContext, [&genericParamNames, &genericsArgs](auto node) -> std::shared_ptr<Node> {
+        if (node->is(AST_EXPR_IDENTIFIER)) {
+          auto id = node->template as<Identifier>();
+
+          // Check if this id is from generic params, if so - replace the whole node with generic argument
+          for (size_t i = 0; i < genericParamNames.size(); ++i) {
+            if (id->value == genericParamNames[i]->as<Identifier>()->value) {
+              return genericsArgs[i];
+            }
+          }
+        }
+
+        return nullptr;
+      }, {});
+    }
+
     // Build concrete, mangled name ('test::Container<T>' -> 'test_Container_i32')
     std::string concrete_name = ident->getConcreteName(ctx, id);
 
@@ -231,10 +272,6 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
       return meta::Type::getCustomType(concrete_name);
     }
 
-    assertRaiseFromNode(codegen::GenericsCache::has(id), Error(ERROR_INTERNAL_FAILURE, span, "No such generic struct: '{}'", id), this);
-
-    auto generic = codegen::GenericsCache::get(id);
-
     auto concrete = generic->clone();
 
     auto mm = Monomorphizer(
@@ -243,14 +280,14 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
       id,                                        // genericName
       concrete_name,                             // concreteName
       ident->getConcreteName(ctx, ident->value), // concreteUnqualifiedName
-      generic->as<Struct>()->genericTypes,
+      generic_struct->getGenericParamNames(),
       ident->genericArgs
     );
 
     mm.apply(concrete);
 
     concrete->as<Struct>()->name->value = ident->getConcreteName(ctx, ident->value);
-    concrete->as<Struct>()->genericTypes.clear();
+    concrete->as<Struct>()->genericParams.clear();
 
     std::shared_ptr<meta::Type> type;
 

@@ -48,7 +48,7 @@ void Monomorphizer::apply(const std::shared_ptr<Node>& node) {
       }
 
       for (auto & g : id->genericArgs) {
-        auto s = g->toString(nullptr, nullptr, 0, false);
+        auto s = g->defaultToString();
         if (substitutions.contains(s)) {
           g = substitutions[s];
         }
