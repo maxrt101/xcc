@@ -665,5 +665,17 @@
       ],
       "retcode": 0
     }
+  },
+  {
+    "id": 64,
+    "name": "While loop",
+    "file": "64.xc",
+    "expect": {
+      "stdout": [
+        "while1 i=0 iter=5\n",
+        "while2 i=5 iter=5\n"
+      ],
+      "retcode": 0
+    }
   }
 ]
