@@ -677,5 +677,16 @@
       ],
       "retcode": 0
     }
+  },
+  {
+    "id": 65,
+    "name": "Default generic params",
+    "file": "65.xc",
+    "expect": {
+      "stdout": [
+        "a 42 42 42\n"
+      ],
+      "retcode": 0
+    }
   }
 ]
