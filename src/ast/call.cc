@@ -76,9 +76,15 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
   bool isVariadic = info.metaType->isVariadic();
 
   if (!isVariadic && expectedArgs != providedArgs) {
-    Error(ERROR_FN_CALL_ARG_COUNT_MISMATCH, span,
-        "Argument mismatch (function: '{}', expected: {}, got: {})",
-        info.fnName, expectedArgs, providedArgs).raiseFromNode(this);
+    auto err = Error(ERROR_FN_CALL_ARG_COUNT_MISMATCH, span,
+        "function '{}', expected: {}, got: {}",
+        info.fnName, expectedArgs, providedArgs);
+
+    if (info.isMember) {
+      err = err.note("Looks like '{}' is a method, maybe it is a static one and doesn't expect 'self'? Try to access it via '::'", info.fnName);
+    }
+
+    err.raiseFromNode(this);
   }
 
   for (size_t i = 0; i < args.size(); ++i) {
@@ -99,7 +105,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
       val = castIfNotSame(ctx, val, signature->getParamType(llvmParamIdx), args[i]->span);
     } else {
       // Variadic argument
-      llvm::Type* argType = val->getType();
+      llvm::Type * argType = val->getType();
 
       if (argType->isIntegerTy() && argType->getIntegerBitWidth() < 32) {
         // ABI Rule: Promote i1, i8, i16 to i32
