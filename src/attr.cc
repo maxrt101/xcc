@@ -4,7 +4,7 @@
 
 using namespace xcc;
 
-auto logger = xcc::util::log::Logger("ATTR");
+static auto& logger = xcc::log::Logger::get("ATTR");
 
 static void xcc_attr_exclude(const ast::Node::Attribute& attr, ast::Node* node) {
   // Soundness: it's okay to slice objects here, because Empty has no additional
@@ -22,10 +22,14 @@ static std::unordered_map<std::string, attr::Handler> attr_handlers = {
 
   // Debug
   {"__dump_ast", xcc_attr_dump_ast}
+
+  // __dump_fn_ir
+  // __dump_module_ir
+  // if(const/macros)
 };
 
 void attr::registerHandler(const std::string& name, Handler handler) {
-  attr_handlers[name] = handler;
+  attr_handlers[name] = std::move(handler);
 }
 
 void attr::callHandler(const ast::Node::Attribute& attr, ast::Node * node) {
