@@ -49,6 +49,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     Error(ERROR_INTERNAL_FAILURE, decl->span, "Error generating Function object for '{}'", fn->getName().str()).raiseFromNode(this);
   }
 
+  // Avoid generating the function body twice
   if (!gen_fn->isDeclaration()) {
     return gen_fn;
   }

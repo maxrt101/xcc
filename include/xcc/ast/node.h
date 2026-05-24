@@ -458,14 +458,19 @@ public:
   std::string attributesToString(int indent, bool newline);
 
   /**
-   *
+   * Mangles the name (scope + base name)
+   * If `this->scope` is {"test", "Struct"} and `base_name` is "new", the result would be "test_Struct_new"
    */
-  std::string getMangledName(const std::string& base_name) const;
+  [[nodiscard]] std::string getMangledName(const std::string& base_name) const;
 
   /**
+   * Resolves symbol name
    *
+   * Will prepend current scope, and try to resolve the name, while peeling the scope outward
+   *
+   * @param target_name Variable/Type name (without the scope, but may have mangled generic postfixes)
    */
-  std::string resolveSymbolName(codegen::ModuleContext& ctx, const std::string& target_name) const;
+  [[nodiscard]] std::string resolveSymbolName(codegen::ModuleContext& ctx, const std::string& target_name) const;
 
   /**
    * Clone a vector of nodes
