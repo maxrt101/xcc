@@ -2,20 +2,37 @@
 #include "xcc/exceptions.h"
 #include <fstream>
 
+/**
+ * Helper for setting log level string and color in a log level switch-case
+ */
 #define LOG_LEVEL_CASE(__name, __color)           \
   case Level::__name:                             \
     log_level_string = #__name;                   \
     log_level_color = Color::__color;             \
     break;
 
-using namespace xcc::util;
+using namespace xcc;
 
-static std::unordered_map<std::string, log::Logger*> * loggers = nullptr;
+/**
+ * Global static map of loggers
+ *
+ * TODO: Why not make it a plain value instead of a pointer?
+ * TODO: Why not save loggers as a shared_ptr instead of raw pointer?
+ */
+static std::unordered_map<std::string, std::shared_ptr<log::Logger>> * loggers = nullptr;
+
+/**
+ * Global static list of outputs
+ */
+static std::vector<std::shared_ptr<log::outputs::OutputBase>> outputs;
+
+std::vector<std::shared_ptr<log::outputs::OutputBase>>& log::outputs::get() {
+  return ::outputs;
+}
 
 std::shared_ptr<log::outputs::OutputStdout> log::outputs::OutputStdout::instance;
 
-log::outputs::OutputStdout::OutputStdout()
-    : OutputBase() {}
+log::outputs::OutputStdout::OutputStdout() : OutputBase() {}
 
 void log::outputs::OutputStdout::output(const std::string& message) {
   printf("%s", message.c_str());
@@ -24,6 +41,22 @@ void log::outputs::OutputStdout::output(const std::string& message) {
 std::shared_ptr<log::outputs::OutputStdout> log::outputs::OutputStdout::get() {
   if (!instance) {
     instance = std::make_shared<OutputStdout>();
+  }
+
+  return instance;
+}
+
+std::shared_ptr<log::outputs::OutputStderr> log::outputs::OutputStderr::instance;
+
+log::outputs::OutputStderr::OutputStderr() : OutputBase() {}
+
+void log::outputs::OutputStderr::output(const std::string& message) {
+  fprintf(stderr, "%s", message.c_str());
+}
+
+std::shared_ptr<log::outputs::OutputStderr> log::outputs::OutputStderr::get() {
+  if (!instance) {
+    instance = std::make_shared<OutputStderr>();
   }
 
   return instance;
@@ -51,14 +84,21 @@ std::shared_ptr<log::outputs::OutputFile> log::outputs::OutputFile::get(std::str
   return instances[filename];
 }
 
-log::Logger::Logger(std::string name, uint32_t flags, const std::initializer_list<std::shared_ptr<outputs::OutputBase>>& outputs)
-  : level(Level::NONE), name(std::move(name)), enabled(false), flags((uint32_t) flags)
-{
-  for (auto out = outputs.begin(); out != outputs.end(); out++) {
-    this->outputs.push_back(*out);
+log::Logger::Logger(std::string name, uint32_t flags)
+  : level(Level::NONE), name(std::move(name)), enabled(false), flags((uint32_t) flags) {}
+
+log::Logger& log::Logger::get(std::string name, uint32_t flags) {
+  if (!loggers) {
+    loggers = new std::unordered_map<std::string, std::shared_ptr<Logger>>();
   }
 
-  registerModule(this);
+  if (!loggers->contains(name)) {
+    registerModule(std::make_shared<Logger>(name, flags));
+  }
+
+  Logger& ref = *(*loggers)[name];
+
+  return *(*loggers)[name];
 }
 
 void log::Logger::setLogLevel(Level level) {
@@ -114,28 +154,31 @@ std::string log::Logger::createLogHeader(Level level) {
         "[{}{}{}][{}{}{}]: ",
             log_level_color, log_level_string, Color::RESET,
             Color::MAGENTA, name, Color::RESET);
-    } else {
-      return std::format(
-        "[{}{}{}]: ",
-            Color::MAGENTA, name, Color::RESET);
     }
-  } else {
-    if (level != Level::NONE) {
-      return std::format("[{}][{}]: ", log_level_string, name);
-    } else {
-      return std::format("[{}]: ", name);
-    }
+    return std::format(
+      "[{}{}{}]: ",
+          Color::MAGENTA, name, Color::RESET);
   }
+
+  if (level != Level::NONE) {
+    return std::format("[{}][{}]: ", log_level_string, name);
+  }
+
+  return std::format("[{}]: ", name);
 }
 
-void log::registerModule(Logger * logger) {
+void log::registerOutput(std::shared_ptr<outputs::OutputBase> output) {
+  ::outputs.push_back(output);
+}
+
+void log::registerModule(std::shared_ptr<Logger> logger) {
   assertThrow(
-      logger,
+      logger.get(),
       std::runtime_error("registerModule got NULL pointer as logger")
   );
 
   if (!loggers) {
-    loggers = new std::unordered_map<std::string, log::Logger*>();
+    loggers = new std::unordered_map<std::string, std::shared_ptr<Logger>>();
   }
 
   (*loggers)[logger->getName()] = logger;

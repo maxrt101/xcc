@@ -9,7 +9,7 @@
 #include "xcc/util/string.h"
 
 
-namespace xcc::util::log {
+namespace xcc::log {
 
 namespace outputs {
 
@@ -45,6 +45,24 @@ public:
 };
 
 /**
+ * Output implementation that redirects logs to stderr
+ *
+ * Singleton
+ */
+class OutputStderr : public OutputBase {
+private:
+  static std::shared_ptr<OutputStderr> instance;
+
+public:
+  OutputStderr();
+  ~OutputStderr() = default;
+
+  void output(const std::string& message) override;
+
+  static std::shared_ptr<OutputStderr> get();
+};
+
+/**
  * Output implementation that redirects logs to a file
  *
  * Has an instance pool by filename
@@ -64,6 +82,13 @@ public:
 
   static std::shared_ptr<OutputFile> get(std::string filename);
 };
+
+/**
+ * Retrieves all registered outputs
+ *
+ * @warning For internal use
+ */
+std::vector<std::shared_ptr<OutputBase>>& get();
 
 }
 
@@ -111,7 +136,7 @@ enum class Level : uint8_t {
  *
  * Example:
  * @code{.c}
- *   static auto logger = xcc::util::log::Logger("MAIN");
+ *   static auto& logger = xcc::log::Logger::get("MAIN");
  *   ...
  *   logger.debug("Logger test");
  *   logger.info("Logger test");
@@ -136,21 +161,33 @@ private:
   /** Flags */
   uint32_t flags = Flag::NONE;
 
-  /** Outputs */
-  std::vector<std::shared_ptr<outputs::OutputBase>> outputs;
-
 public:
   /**
    * Logger constructor
    *
+   * @warning Logger::get method should be used instead
+   *
    * @param name Logger (module) name
-   * @param outputs Outputs list (by default only stdout output is configured)
+   * @param flags Logger flags
    */
-  explicit Logger(std::string name, uint32_t flags = Flag::NONE,
-                  const std::initializer_list<std::shared_ptr<outputs::OutputBase>>& outputs
-                    = {outputs::OutputStdout::get()});
+  explicit Logger(std::string name, uint32_t flags = Flag::NONE);
+
+  /** Disallow copying */
+  Logger(const Logger&) = delete;
+
+  /** Disallow copying */
+  Logger& operator=(const Logger&) = delete;
 
   virtual ~Logger() = default;
+
+  /**
+   * Create or retrieve (if already exists) a logger instance for specified module
+   *
+   * @param name Logger (module) name
+   * @param flags Logger flags
+   * @return Logger instance for module
+   */
+  static Logger& get(std::string name, uint32_t flags = Flag::NONE);
 
   /**
    * Maximal log level
@@ -208,13 +245,13 @@ public:
     std::vector<std::string> msg_parts;
 
     if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
-      msg_parts = strsplit(string, "\n");
+      msg_parts = util::strsplit(string, "\n");
     } else {
       msg_parts.push_back(string);
     }
 
     for (auto& msg : msg_parts) {
-      for (auto & out : outputs) {
+      for (auto & out : outputs::get()) {
         out->output(msg + (hasFlag(Flag::SPLIT_ON_NEWLINE) ? (hasFlag(Flag::DONT_ADD_NEWLINE) ? "" : "\n") : ""));
       }
     }
@@ -234,7 +271,7 @@ public:
 
     auto string = std::format(fmt, std::forward<Args>(args)...);
 
-    for (auto & out : outputs) {
+    for (auto & out : outputs::get()) {
       out->output(string + "\n");
     }
   }
@@ -324,13 +361,13 @@ private:
     std::vector<std::string> msg_parts;
 
     if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
-      msg_parts = strsplit({log_string}, "\n");
+      msg_parts = util::strsplit({log_string}, "\n");
     } else {
       msg_parts.push_back(log_string);
     }
 
     for (auto& msg : msg_parts) {
-      for (auto & out : outputs) {
+      for (auto & out : outputs::get()) {
         out->output(header + msg + (hasFlag(Flag::DONT_ADD_NEWLINE) ? "" : "\n"));
       }
     }
@@ -338,11 +375,18 @@ private:
 };
 
 /**
+ * Registered output for logs
+ */
+void registerOutput(std::shared_ptr<outputs::OutputBase> output);
+
+/**
  * Registers logger in global logger list
+ *
+ * @warning For internal use
  *
  * @param logger Logger instance
  */
-void registerModule(Logger * logger);
+void registerModule(std::shared_ptr<Logger> logger);
 
 /**
  * Enables/Disables logger by name
