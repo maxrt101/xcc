@@ -15,8 +15,6 @@ struct FnDecl;
 
 namespace xcc::meta {
 
-using SubstitutionMap = std::unordered_map<std::string, std::shared_ptr<Type>>;
-
 /**
  * Function metadata
  */
@@ -37,16 +35,12 @@ public:
   /** Function declaration node for future use */
   std::shared_ptr<ast::FnDecl> decl;
 
-  /** Substitutions for generic methods */
-  SubstitutionMap substitutions;
-
 public:
   Function(
     std::string                                    name,
     std::shared_ptr<Type>                          returnType,
     OrderedMap<std::string, std::shared_ptr<Type>> args          = {},
-    std::shared_ptr<ast::FnDecl>                   decl          = nullptr,
-    SubstitutionMap                                substitutions = {}
+    std::shared_ptr<ast::FnDecl>                   decl          = nullptr
   );
 
   ~Function() = default;
@@ -55,8 +49,7 @@ public:
     std::string                                    name,
     std::shared_ptr<Type>                          returnType,
     OrderedMap<std::string, std::shared_ptr<Type>> args          = {},
-    std::shared_ptr<ast::FnDecl>                   decl          = nullptr,
-    SubstitutionMap                                substitutions = {}
+    std::shared_ptr<ast::FnDecl>                   decl          = nullptr
   );
 
   /**
