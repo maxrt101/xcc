@@ -43,10 +43,9 @@ llvm::Value * While::generateValue(codegen::ModuleContext& ctx, PayloadList payl
   ctx.ir_builder->SetInsertPoint(cond_block);
 
   auto cond_val = condition->generateValue(ctx, payload);
-  auto i1_type = meta::Type::createBool()->getLLVMType(ctx);
 
   if (!cond_val->getType()->isIntegerTy(1)) {
-    cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i1_type, 0), "while_cond_cmp");
+    cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(cond_val->getType(), 0), "while_cond_cmp");
   }
 
   // If true go to body otherwise go to after

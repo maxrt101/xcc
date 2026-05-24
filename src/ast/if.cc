@@ -50,10 +50,8 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
     common_type = meta::Type::alignTypes(then_type, else_type);
   }
 
-  auto i1_type = meta::Type::createBool()->getLLVMType(ctx);
-
   ctx.setDebugLocation(span);
-  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(i1_type, 0), "ifcond");
+  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(cond_val->getType(), 0), "ifcond");
 
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 
