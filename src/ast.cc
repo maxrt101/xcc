@@ -5,7 +5,70 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-static auto logger = xcc::util::log::Logger("AST");
+static auto& logger = xcc::log::Logger::get("AST");
+
+Monomorphizer::Monomorphizer(
+  codegen::GlobalContext& ctx,
+  const std::string&      baseName,
+  const std::string&      genericName,
+  const std::string&      concreteName,
+  const std::string&      concreteUnqualifiedName,
+  const NodeList&         params,
+  const NodeList&         args
+) : globalContext(ctx), baseName(baseName), genericName(genericName), concreteName(concreteName), concreteUnqualifiedName(concreteUnqualifiedName) {
+  for (size_t i = 0; i < params.size(); ++i) {
+    assertRaiseFromNode(params[i]->is(AST_EXPR_IDENTIFIER), Error(ERROR_INTERNAL_UNEXPECTED_NODE, params[i]->span,
+      "Monomorphizer expected an Identifier as generic parameter name"), params[i].get());
+
+    auto param = params[i]->as<Identifier>()->value;
+
+    substitutions[param] = args[i];
+  }
+}
+
+void Monomorphizer::apply(const std::shared_ptr<Node>& node) {
+  node->visit(this->globalContext, [this](const auto& n) -> std::shared_ptr<Node> {
+    for (auto& s : n->scope) {
+      if (s == baseName) {
+        s = concreteUnqualifiedName;
+      } else if (s == genericName) {
+        s = concreteName;
+      }
+    }
+
+    if (n->is(AST_EXPR_IDENTIFIER)) {
+      auto id = n->template as<Identifier>();
+
+      if (id->genericArgs.empty() && id->scope.empty() && id->value == genericName) {
+        id->value = concreteName;
+      }
+
+      if (id->genericArgs.empty() && id->scope.empty() && id->value == baseName) {
+        id->value = concreteUnqualifiedName;
+      }
+
+      for (auto & g : id->genericArgs) {
+        auto s = g->toString(nullptr, nullptr, 0, false);
+        if (substitutions.contains(s)) {
+          g = substitutions[s];
+        }
+      }
+    }
+
+    if (n->is(AST_EXPR_TYPE)) {
+      auto type = n->template as<Type>();
+
+      if (type->name->is(AST_EXPR_IDENTIFIER)) {
+        auto id = type->name->template as<Identifier>()->value;
+        if (substitutions.contains(id)) {
+          type->name = substitutions[id];
+        }
+      }
+    }
+
+    return nullptr;
+  }, {});
+}
 
 bool ast::isOrIsLastInBlock(std::shared_ptr<Node> node, NodeType type) {
   if (node->is(type)) {
@@ -59,7 +122,7 @@ void subtree::replaceIdentifier(const std::shared_ptr<Node>& node, const std::st
 
   node->visit(*ctx, [&](auto node) -> std::shared_ptr<Node> {
     if (node->is(AST_EXPR_IDENTIFIER) && node->template as<Identifier>()->name() == oldValue) {
-      return Identifier::create(node->span, newValue);
+      return Identifier::create(node->span, node->scope, newValue);
     }
 
     return nullptr;

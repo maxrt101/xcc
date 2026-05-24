@@ -4,15 +4,15 @@
 
 using namespace xcc::ast;
 
-Unary::Unary(SourceSpan span, Token operation, std::shared_ptr<Node> rhs)
-    : Node(AST_EXPR_UNARY, span), operation(std::move(operation)), rhs(std::move(rhs)) {}
+Unary::Unary(SourceSpan span, LexicalScope scope, Token operation, std::shared_ptr<Node> rhs)
+    : Node(AST_EXPR_UNARY, span, scope), operation(std::move(operation)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<Unary> Unary::create(SourceSpan span, Token operation, std::shared_ptr<Node> rhs) {
-  return std::make_shared<Unary>(span, std::move(operation), std::move(rhs));
+std::shared_ptr<Unary> Unary::create(SourceSpan span, LexicalScope scope, Token operation, std::shared_ptr<Node> rhs) {
+  return std::make_shared<Unary>(span, scope, std::move(operation), std::move(rhs));
 }
 
 std::shared_ptr<Node> Unary::clone() {
-  return withAttrs(create(span, operation, rhs->clone()));
+  return withAttrs(create(span, scope, operation, rhs->clone()));
 }
 
 void Unary::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

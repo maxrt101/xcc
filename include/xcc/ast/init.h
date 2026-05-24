@@ -27,10 +27,10 @@ public:
   bool                  has_square_braces;
 
 public:
-  Initializer(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces);
+  Initializer(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces);
   ~Initializer() override = default;
 
-  static std::shared_ptr<Initializer> create(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces);
+  static std::shared_ptr<Initializer> create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

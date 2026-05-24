@@ -12,6 +12,7 @@ public:
 public:
   Decomposition(
     SourceSpan            span,
+    LexicalScope          scope,
     NodeList              pieces,
     std::shared_ptr<Node> value = nullptr
   );
@@ -20,6 +21,7 @@ public:
 
   static std::shared_ptr<Decomposition> create(
     SourceSpan            span,
+    LexicalScope          scope,
     NodeList              pieces,
     std::shared_ptr<Node> value = nullptr
   );

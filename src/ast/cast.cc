@@ -3,15 +3,15 @@
 
 using namespace xcc::ast;
 
-Cast::Cast(SourceSpan span, std::shared_ptr<Node> expr, std::shared_ptr<Node> type)
-  : Node(AST_EXPR_CAST, span), expr(std::move(expr)), type(std::move(type)) {}
+Cast::Cast(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> expr, std::shared_ptr<Node> type)
+  : Node(AST_EXPR_CAST, span, scope), expr(std::move(expr)), type(std::move(type)) {}
 
-std::shared_ptr<Cast> Cast::create(SourceSpan span, std::shared_ptr<Node> expr, std::shared_ptr<Node> type) {
-  return std::make_shared<Cast>(span, std::move(expr), std::move(type));
+std::shared_ptr<Cast> Cast::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> expr, std::shared_ptr<Node> type) {
+  return std::make_shared<Cast>(span, scope, std::move(expr), std::move(type));
 }
 
 std::shared_ptr<Node> Cast::clone() {
-  return withAttrs(create(span, expr->clone(), cast<Type>(type->clone())));
+  return withAttrs(create(span, scope, expr->clone(), cast<Type>(type->clone())));
 }
 
 void Cast::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

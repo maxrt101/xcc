@@ -4,15 +4,15 @@
 
 using namespace xcc::ast;
 
-Subscript::Subscript(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
-  : Node(AST_EXPR_SUBSCRIPT, span), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+Subscript::Subscript(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
+  : Node(AST_EXPR_SUBSCRIPT, span, scope), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<Subscript> Subscript::create(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
-  return std::make_shared<Subscript>(span, std::move(lhs), std::move(rhs));
+std::shared_ptr<Subscript> Subscript::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
+  return std::make_shared<Subscript>(span, scope, std::move(lhs), std::move(rhs));
 }
 
 std::shared_ptr<Node> Subscript::clone() {
-  return withAttrs(create(span, lhs->clone(), rhs->clone()));
+  return withAttrs(create(span, scope, lhs->clone(), rhs->clone()));
 }
 
 void Subscript::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

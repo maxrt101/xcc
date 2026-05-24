@@ -6,6 +6,8 @@
 
 namespace xcc::ast {
 
+class Type;
+
 class Identifier : public Node {
 public:
   std::string              value;
@@ -15,6 +17,7 @@ public:
 public:
   Identifier(
     SourceSpan               span,
+    LexicalScope             lexicalScope,
     std::string              value,
     std::vector<std::string> scope       = {},
     NodeList                 genericArgs = {}
@@ -24,6 +27,7 @@ public:
 
   static std::shared_ptr<Identifier> create(
     SourceSpan               span,
+    LexicalScope             lexicalScope,
     std::string              value,
     std::vector<std::string> scope       = {},
     NodeList                 genericArgs = {}
@@ -39,13 +43,14 @@ public:
   /** Returns scope prefix (e.g. `module::Enum`) */
   [[nodiscard]] std::string prefix() const;
 
-  /** Returns full name with mangled generics */
-  [[nodiscard]] std::string fullName(
-    codegen::ModuleContext& ctx,
-    PayloadList             payload,
-    bool                    isMethod    = false,
-    NodeList                genericArgs = {}
-  ) const;
+  /** Resolve name. If built-in type - return immediately, otherwise try to resolve qualified and unqualified names */
+  std::string getResolvedName(codegen::ModuleContext& ctx) const;
+
+  /** Generate concrete, unqualified name for generic identifier */
+  std::string getConcreteName(codegen::ModuleContext& ctx, const std::string& name) const;
+
+  /** Create a Type node from current scope */
+  std::shared_ptr<Type> intoParentType();
 
   llvm::Value * generateValue(codegen::ModuleContext& ctx, PayloadList payload) override;
   llvm::Value * generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
@@ -55,15 +60,14 @@ public:
 
 private:
   /**
-   * If `prefix()` (or current module prefix + `prefix()`) matches a registered enum type,
-   * and `value` is a member of that enum - return constant value
+   * If `scope` is an enum, and it contains a `value` element - return it's value
    */
   llvm::Constant * checkGenerateEnum(codegen::ModuleContext& ctx, PayloadList payload);
 
   /**
    * If genericArgs is not empty - this identifier references a static method for generic struct
    */
-  llvm::Value * generateStaticMethod(codegen::ModuleContext& ctx, PayloadList payload);
+  std::string resolveStaticMethodName(codegen::ModuleContext& ctx, PayloadList payload);
 };
 
 } /* namespace xcc::ast */

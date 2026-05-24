@@ -8,7 +8,7 @@
 
 using namespace xcc;
 
-static auto logger = xcc::util::log::Logger("XCC");
+static auto& logger = xcc::log::Logger::get("XCC");
 
 /**
  * Process attributes for top-level block
@@ -40,7 +40,11 @@ static void processModAliases(
 ) {
   using namespace xcc::ast;
 
-  auto prefix = topLevel ? globalContext->getModulePrefix() : globalContext->getParentModulePrefix();
+  std::string local_prefix;
+
+  for (const auto& s : mod->scope) {
+    local_prefix += s + "_";
+  }
 
   if (mod->hasAttribute("__xcc_tag_use_alias_all")) {
     for (auto& node : mod->body->body) {
@@ -63,11 +67,30 @@ static void processModAliases(
         continue;
       }
 
-      globalContext->addAlias(prefix + id->value, id->name(), attr.span);
+      std::string local_name = local_prefix + id->value;
+
+      std::string target_name;
+
+      for (const auto& s : node->scope) {
+        target_name += s + "_";
+      }
+      target_name += id->value;
+
+      if (local_name != target_name) {
+        globalContext->addAlias(local_name, target_name, attr.span);
+      }
     }
   }
 
   auto symbols = mod->getAttributes("__xcc_tag_use_alias");
+
+  std::string target_prefix;
+
+  if (mod->name && mod->name->is(AST_EXPR_IDENTIFIER)) {
+    target_prefix = mod->name->as<Identifier>()->value + "_";
+  } else {
+    target_prefix = topLevel ? globalContext->getModulePrefix() : globalContext->getParentModulePrefix();
+  }
 
   for (auto& sym : symbols) {
     auto span = sym.get().span;
@@ -81,7 +104,12 @@ static void processModAliases(
 
     auto name = arg->as<String>()->value;
 
-    globalContext->addAlias(name, prefix + name, span);
+    std::string local_name = local_prefix + name;
+    std::string target_name = target_prefix + name;
+
+    if (local_name != target_name) {
+      globalContext->addAlias(local_name, target_name, span);
+    }
   }
 }
 
@@ -149,7 +177,7 @@ static void registerConstants(
   root->visit(*globalContext, [&globalContext](auto node) -> std::shared_ptr<ast::Node> {
     if (node->is(ast::AST_CONST_DECL)) {
       auto constant = ast::Node::cast<ast::ConstDecl>(node);
-      globalContext->addConst(constant->name->name(), constant);
+      globalContext->addConst(constant->name->getMangledName(constant->name->value), constant);
     }
 
     return nullptr;
@@ -197,7 +225,7 @@ static void registerMacros(
     if (node->is(ast::AST_MACRO)) {
       auto macro = ast::Node::cast<ast::Macro>(node);
 
-      globalContext->registerMacro(macro->name->name(), macro);
+      globalContext->registerMacro(macro->name->getMangledName(macro->name->value), macro);
     }
 
     return nullptr;
@@ -369,7 +397,7 @@ static void processMacros(
     }
 
     auto call  = ast::Node::cast<ast::MacroCall>(node);
-    auto name  = globalContext->aliased(call->name->name());
+    auto name  = call->name->getResolvedName(*globalContext->globalModule);
     auto macro = globalContext->getMacro(name);
 
     assertRaise(macro != nullptr, Error(ERROR_UNKNOWN_MACRO, call->name->span, "'{}'", name));
@@ -386,7 +414,7 @@ static void processMacros(
       // Attach expansion markers & set span to call site
       markExpandedMacro(res, {
         "__xcc_macro_expanded_from",
-        {ast::Identifier::create(macro->span, name)},
+        {ast::Identifier::create(macro->span, macro->scope, name)},
         call->span
       }, call->span);
 
@@ -407,7 +435,7 @@ static void processMacros(
     // Attach expansion markers & set span to call site
     markExpandedMacro(body, {
       "__xcc_macro_expanded_from",
-      {ast::Identifier::create(macro->span, name)},
+      {ast::Identifier::create(macro->span, macro->scope, name)},
       call->span
     }, call->span);
 
@@ -472,7 +500,7 @@ static void compileBlock(
       node->generateValue(*globalContext->globalModule, {});
     } else if (node->is(ast::AST_CONST_DECL)) {
       auto constant = ast::Node::cast<ast::ConstDecl>(node);
-      globalContext->addConst(constant->name->name(), constant);
+      globalContext->addConst(constant->name->getMangledName(constant->name->value), constant);
     } else if (node->is(ast::AST_STRUCT)) {
       node->generateType(*globalContext->globalModule, {});
       for (auto& method : node->as<ast::Struct>()->methods) {
@@ -521,13 +549,20 @@ util::Target xcc::init(const std::string& target, const std::string& machine, bo
   logger.info("XCC v{} initialized for {}", getVersion().c_str(), target_info.target_triple);
 
   setenv("XCC_VERSION", getVersion().c_str(), 1);
+  // XCC_TARGET
+  // XCC_ARCH
+  // XCC_MACH
+  // XCC_OS
+
+  // XCC_BUILT_ON ?
+  // XCC_BUILT_BY ?
 
   return target_info;
 }
 
 void xcc::cleanup() {
   logger.debug("Cleaning up");
-  util::log::cleanup();
+  log::cleanup();
 }
 
 CompilationResult xcc::compile(
@@ -633,7 +668,7 @@ void xcc::run(
 
   if (isRepl) {
     if (!result.nodes.expr.empty()) {
-      globalContext->runExpr(ast::Block::create(SourceSpan::builtin(), result.nodes.expr));
+      globalContext->runExpr(ast::Block::create(SourceSpan::builtin(), {}, result.nodes.expr));
     }
   } else {
     globalContext->runFunction("main");

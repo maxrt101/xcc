@@ -15,7 +15,7 @@ using namespace xcc::codegen;
 
 constexpr char ANONYMOUS_EXPR_FN_NAME[] = "__anonymous__";
 
-static auto logger = xcc::util::log::Logger("CODEGEN");
+static auto& logger = xcc::log::Logger::get("CODEGEN");
 
 std::unordered_map<std::string, std::shared_ptr<ast::Node>> GenericsCache::cache;
 
@@ -204,11 +204,14 @@ std::shared_ptr<ast::Macro> GlobalContext::getMacro(const std::string& name) con
 
 void GlobalContext::addAlias(const std::string& name, const std::string& value, SourceSpan span) {
   if (aliases.contains(name)) {
+    if (aliases[name] == value) {
+      return;
+    }
+
     Error(ERROR_ALIAS_EXISTS, span, "'{}'", name).raise();
   }
 
   logger.debug("Adding alias '{}' -> '{}'", name, value);
-
   aliases[name] = value;
 }
 
@@ -244,12 +247,12 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   if (expr->is(ast::AST_BLOCK)) {
     auto& last = expr->as<ast::Block>()->body.back();
     if (!last->is(ast::AST_RETURN)) {
-      last = ast::Return::create(last->span, last);
+      last = ast::Return::create(last->span, last->scope, last);
     }
     body = ast::Node::cast<ast::Block>(expr);
   } else {
-    body = ast::Block::create(expr->span, {
-      expr->is(ast::AST_RETURN) ? expr : ast::Return::create(expr->span, expr)
+    body = ast::Block::create(expr->span, expr->scope, {
+      expr->is(ast::AST_RETURN) ? expr : ast::Return::create(expr->span, expr->scope, expr)
     });
   }
 
@@ -260,12 +263,12 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
     type = meta::Type::createI32();
   }
 
-  auto fndecl = ast::FnDecl::create(SourceSpan::builtin(),
-      ast::Identifier::create(SourceSpan::builtin(), ANONYMOUS_EXPR_FN_NAME),
-      ast::Type::create(SourceSpan::builtin(), ast::Identifier::create(SourceSpan::builtin(), type->toString())) // TODO: Fix
+  auto fndecl = ast::FnDecl::create(SourceSpan::builtin(), {},
+      ast::Identifier::create(SourceSpan::builtin(), {}, ANONYMOUS_EXPR_FN_NAME),
+      ast::Type::create(SourceSpan::builtin(), {}, ast::Identifier::create(SourceSpan::builtin(), {}, type->toString())) // TODO: Fix
   );
 
-  auto fndef = ast::FnDef::create(SourceSpan::builtin(), fndecl, body);
+  auto fndef = ast::FnDef::create(SourceSpan::builtin(), {}, fndecl, body);
 
 #if USE_PRINT_LLVM_IR
   auto fn = fndef->generateFunction(*globalModule, {});

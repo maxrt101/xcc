@@ -17,6 +17,7 @@ public:
 public:
   ConstDecl(
       SourceSpan                  span,
+      LexicalScope                scope,
       std::shared_ptr<Identifier> name,
       std::shared_ptr<Node>       type,
       std::shared_ptr<Node>       value = nullptr
@@ -26,6 +27,7 @@ public:
 
   static std::shared_ptr<ConstDecl> create(
       SourceSpan                  span,
+      LexicalScope                scope,
       std::shared_ptr<Identifier> name,
       std::shared_ptr<Node>       type,
       std::shared_ptr<Node>       value = nullptr

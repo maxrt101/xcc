@@ -3,15 +3,15 @@
 
 using namespace xcc::ast;
 
-Return::Return(SourceSpan span, std::shared_ptr<Node> value)
-  : Node(AST_RETURN, span), value(std::move(value)) {}
+Return::Return(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> value)
+  : Node(AST_RETURN, span, scope), value(std::move(value)) {}
 
-std::shared_ptr<Return> Return::create(SourceSpan span, std::shared_ptr<Node> value) {
-  return std::make_shared<Return>(span, std::move(value));
+std::shared_ptr<Return> Return::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> value) {
+  return std::make_shared<Return>(span, scope, std::move(value));
 }
 
 std::shared_ptr<Node> Return::clone() {
-  return withAttrs(create(span, value->clone()));
+  return withAttrs(create(span, scope, value->clone()));
 }
 
 void Return::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

@@ -4,15 +4,15 @@
 
 using namespace xcc::ast;
 
-While::While(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> body)
-  : Node(AST_WHILE, span), condition(std::move(condition)), body(std::move(body)) {}
+While::While(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> condition, std::shared_ptr<Node> body)
+  : Node(AST_WHILE, span, scope), condition(std::move(condition)), body(std::move(body)) {}
 
-std::shared_ptr<While> While::create(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> body) {
-  return std::make_shared<While>(span, std::move(condition), std::move(body));
+std::shared_ptr<While> While::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> condition, std::shared_ptr<Node> body) {
+  return std::make_shared<While>(span, scope, std::move(condition), std::move(body));
 }
 
 std::shared_ptr<Node> While::clone() {
-  return withAttrs(create(span, condition->clone(), body->clone()));
+  return withAttrs(create(span, scope, condition->clone(), body->clone()));
 }
 
 void While::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

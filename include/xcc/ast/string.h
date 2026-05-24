@@ -17,10 +17,10 @@ public:
   std::string value;
 
 public:
-  explicit String(SourceSpan span, std::string value);
+  explicit String(SourceSpan span, LexicalScope scope, std::string value);
   ~String() override = default;
 
-  static std::shared_ptr<String> create(SourceSpan span, std::string value);
+  static std::shared_ptr<String> create(SourceSpan span, LexicalScope scope, std::string value);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

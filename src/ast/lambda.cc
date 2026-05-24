@@ -16,12 +16,13 @@ uint64_t Lambda::counter = 0;
 
 Lambda::Lambda(
     SourceSpan                                    span,
+    LexicalScope                                  scope,
     NodeList                                      captures,
     std::vector<std::shared_ptr<TypedIdentifier>> args,
     std::shared_ptr<Node>                         return_type,
     std::shared_ptr<Block>                        body,
     bool                                          isVariadic
-) : Node(AST_LAMBDA, span),
+) : Node(AST_LAMBDA, span, scope),
     captures(std::move(captures)),
     args(std::move(args)),
     return_type(std::move(return_type)),
@@ -30,18 +31,20 @@ Lambda::Lambda(
 
 std::shared_ptr<Lambda> Lambda::create(
     SourceSpan                                    span,
+    LexicalScope                                  scope,
     NodeList                                      captures,
     std::vector<std::shared_ptr<TypedIdentifier>> args,
     std::shared_ptr<Node>                         return_type,
     std::shared_ptr<Block>                        body,
     bool                                          isVariadic
 ) {
-  return std::make_shared<Lambda>(span, std::move(captures), std::move(args), std::move(return_type), std::move(body), isVariadic);
+  return std::make_shared<Lambda>(span, scope, std::move(captures), std::move(args), std::move(return_type), std::move(body), isVariadic);
 }
 
 std::shared_ptr<Node> Lambda::clone() {
   return withAttrs(create(
     span,
+    scope,
     cloneVector(captures),
     cloneVector(args),
     return_type->clone(),
@@ -99,12 +102,14 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
   auto t = generateLambdaType(ctx, payload);
 
+  // LLVM Type for TypeTag::LAMBDA is closure type (tuple of captures values)
   auto closure_type = t->getLLVMType(ctx);
 
   llvm::Value * closure = ctx.ir_builder->CreateAlloca(closure_type, nullptr, "closure");
 
   std::vector<CaptureInfo> capture_info;
 
+  // Fill up the closure
   for (size_t i = 0; i < captures.size(); ++i) {
     auto& capture = captures[i];
 
@@ -115,6 +120,7 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
     capture_info.emplace_back(id->value, capture->generateType(ctx, payload), isPointer, capture);
 
+    // Closures should only capture local variables + parent function's arguments
     auto val = ctx.getLocalValue(id->value);
 
     auto * field_ptr = ctx.ir_builder->CreateStructGEP(closure_type, closure, i);
@@ -128,20 +134,25 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   }
 
   std::vector<llvm::Type *> arg_types;
-  arg_types.push_back(ctx.ir_builder->getPtrTy()); // Closure
+  arg_types.push_back(ctx.ir_builder->getPtrTy()); // Add implicit 0th argument - Closure
 
+  // Generate types for arguments
   for (auto& arg : args) {
     arg_types.push_back(arg->generateType(ctx, payload)->getLLVMType(ctx));
   }
 
+  // Generate function signature
   auto * lambda_signature = llvm::FunctionType::get(t->getReturnType()->getLLVMType(ctx), arg_types, t->isVariadic());
 
+  // All lambda names are prefixed with "lambda$" and a
+  // static monotonic counter is used for uniqueness
   std::string lambda_name = "lambda$" + std::to_string(counter++);
 
   auto * lambda_fn = llvm::Function::Create(
-    lambda_signature, llvm::Function::InternalLinkage,lambda_name, ctx.llvm.module.get()
+    lambda_signature, llvm::Function::InternalLinkage, lambda_name, ctx.llvm.module.get()
   );
 
+  // Backup current insert block to restore it later
   auto * current_block = ctx.ir_builder->GetInsertBlock();
 
   auto di_fn = ctx.globalContext.di_builder->createFunction(
@@ -162,14 +173,15 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
   ctx.pushScope(span);
 
-  auto * worker_entry = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", lambda_fn);
-  ctx.ir_builder->SetInsertPoint(worker_entry);
+  auto * entry = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", lambda_fn);
+  ctx.ir_builder->SetInsertPoint(entry);
 
   llvm::Value * closure_arg = lambda_fn->getArg(0);
   closure_arg->setName("$closure");
 
   ctx.addDIParameter(di_fn, "$closure", t, span, 0, closure_arg);
 
+  // Unpack captures values from closure into local scope
   for (size_t i = 0; i < capture_info.size(); ++i) {
     auto& capture = capture_info[i];
 
@@ -188,6 +200,7 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     ctx.ir_builder->CreateStore(val, ctx.getLocalValue(capture.name));
   }
 
+  // Unpack arguments
   for (size_t i = 0; i < args.size(); ++i) {
     size_t llvmIdx = i + 1;
 
@@ -202,10 +215,12 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     ctx.ir_builder->CreateStore(val, ctx.getLocalValue(name));
   }
 
+  // Generate actual lambda body
   auto val = body->generateValue(ctx, payload);
 
   ctx.popScope();
 
+  // Create terminator
   if (!body->body.back()->is(AST_RETURN)) {
     if (t->getReturnType()->isVoid()) {
       ctx.ir_builder->CreateRetVoid();
@@ -215,10 +230,12 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     }
   }
 
+  // Restore block
   ctx.ir_builder->SetInsertPoint(current_block);
 
   ctx.setDebugLocation(span);
 
+  // Assemble fat pointer (function address + closure)
   auto fat_ptr_type = t->getLambdaFunctionType()->getLLVMType(ctx);
 
   llvm::Value * fat_ptr = llvm::PoisonValue::get(fat_ptr_type);

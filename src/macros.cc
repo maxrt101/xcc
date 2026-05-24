@@ -13,7 +13,7 @@
   auto a = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->template as<Number>();                              \
   assertRaise(a->tag == Number::INTEGER,                                                                              \
       Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, __call->args[0]->span, "Expected integer as argument to " __name));   \
-  return Number::createInteger(__call->span, __op a->value.integer);
+  return Number::createInteger(__call->span, __call->scope, __op a->value.integer);
 
 #define __ARITHMETIC_BINARY_OP(__name, __ctx, __call, __op)                                                           \
   assertRaise(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
@@ -26,7 +26,9 @@
   auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_NUMBER)->template as<Number>();                             \
   bool is_float = a1->tag == Number::FLOATING || a2->tag == Number::FLOATING;                                         \
   double result = __GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2);                                                           \
-  return is_float ? Number::createFloating(__call->span, result) : Number::createInteger(__call->span, result);
+  return is_float                                                                                                     \
+    ? Number::createFloating(__call->span, __call->scope, result)                                                     \
+    : Number::createInteger(__call->span, __call->scope, result);
 
 #define __LOGIC_BINARY_OP_STR(__name, __ctx, __call, __op)                                                            \
   assertRaise(isOrIsLastInBlock(__call->args[0], AST_EXPR_STRING),                                                    \
@@ -37,7 +39,7 @@
           "Expected number for second argument to " __name));                                                         \
   auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_STRING)->template as<String>();                             \
   auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_STRING)->template as<String>();                             \
-  return Number::createInteger(__call->span, a1->value __op a2->value ? 1 : 0);
+  return Number::createInteger(__call->span, __call->scope, a1->value __op a2->value ? 1 : 0);
 
 #define __LOGIC_BINARY_OP_NUM(__name, __ctx, __call, __op)                                                            \
   assertRaise(isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER),                                                    \
@@ -48,7 +50,7 @@
           "Expected number for second argument to " __name));                                                         \
   auto a1 = getOrGetLastInBlock(__call->args[0], AST_EXPR_NUMBER)->template as<Number>();                             \
   auto a2 = getOrGetLastInBlock(__call->args[1], AST_EXPR_NUMBER)->template as<Number>();                             \
-  return Number::createInteger(__call->span, __GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2) ? 1 : 0);
+  return Number::createInteger(__call->span, __call->scope, __GET_NUM_VAL(a1) __op __GET_NUM_VAL(a2) ? 1 : 0);
 
 #define __LOGIC_BINARY_OP(__name, __ctx, __call, __op)                                                                \
   if (isOrIsLastInBlock(__call->args[0], AST_EXPR_NUMBER)                                                             \
@@ -65,7 +67,7 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-static auto logger = util::log::Logger("MACROS");
+static auto& logger = log::Logger::get("MACROS");
 
 struct FormatModifier {
   bool isHexLower = false;
@@ -204,7 +206,7 @@ static std::string printfSpecifierFromNode(
   auto type = evalType(global, mod, node);
 
   if (modifierString == "T") {
-    node = String::create(node->span, type->toString());
+    node = String::create(node->span, node->scope, type->toString());
     return "%s";
   }
 
@@ -279,14 +281,14 @@ static std::shared_ptr<Macro> createNativeMacro(std::string name, std::vector<st
   std::vector<std::shared_ptr<Identifier>> id_args;
 
   for (auto& arg : args) {
-    id_args.push_back(Identifier::create(SourceSpan::builtin(), arg));
+    id_args.push_back(Identifier::create(SourceSpan::builtin(), {}, arg));
   }
 
-  return Macro::createNative(Identifier::create(SourceSpan::builtin(), name), id_args, fn, variadic);
+  return Macro::createNative({}, Identifier::create(SourceSpan::builtin(), {}, name), id_args, fn, variadic);
 }
 
 static std::shared_ptr<Node> xcc_macro_cat(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
-  return Identifier::create(call->span, getStr(call->args[0]) + getStr(call->args[1]));
+  return Identifier::create(call->span, call->scope, getStr(call->args[0]) + getStr(call->args[1]));
 }
 
 static std::shared_ptr<Node> xcc_macro_sizeof(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -295,7 +297,7 @@ static std::shared_ptr<Node> xcc_macro_sizeof(codegen::GlobalContext& global, st
   auto dl   = global.globalModule->llvm.module->getDataLayout();
   auto size = dl.getTypeAllocSize(type->getLLVMType(*global.globalModule));
 
-  return Number::createInteger(call->span, size);
+  return Number::createInteger(call->span, call->scope, size);
 }
 
 static std::shared_ptr<Node> xcc_macro_typeof(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -308,15 +310,15 @@ static std::shared_ptr<Node> xcc_macro_is_same(codegen::GlobalContext& global, s
   std::shared_ptr<meta::Type> type1 = evalType(global, *global.globalModule, call->args[0]);
   std::shared_ptr<meta::Type> type2 = evalType(global, *global.globalModule, call->args[1]);
 
-  return Number::createInteger(call->span, *type1 == *type2 ? 1 : 0);
+  return Number::createInteger(call->span, call->scope, *type1 == *type2 ? 1 : 0);
 }
 
 static std::shared_ptr<Node> xcc_macro_str(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
-  return String::create(call->span, call->args[0]->toString(nullptr, call.get(), 0, false));
+  return String::create(call->span, call->scope, call->args[0]->toString(nullptr, call.get(), 0, false));
 }
 
 static std::shared_ptr<Node> xcc_macro_strf(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
-  return String::create(call->span, call->args[0]->toString(nullptr, call.get(), 0, true));
+  return String::create(call->span, call->scope, call->args[0]->toString(nullptr, call.get(), 0, true));
 }
 
 static std::shared_ptr<Node> xcc_macro_int(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -326,12 +328,12 @@ static std::shared_ptr<Node> xcc_macro_int(codegen::GlobalContext& global, std::
   auto s = getOrGetLastInBlock(call->args[0], AST_EXPR_STRING)->as<String>();
 
   if (s->value.find('.') != std::string::npos) {
-    return Number::createFloating(call->span, std::stod(s->value));
+    return Number::createFloating(call->span, call->scope, std::stod(s->value));
   }
 
   auto res = util::determineBase(s->value);
 
-  return Number::createInteger(call->span, std::stol(res.value, nullptr, res.base));
+  return Number::createInteger(call->span, call->scope, std::stol(res.value, nullptr, res.base));
 }
 
 static std::shared_ptr<Node> xcc_macro_cond(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -347,7 +349,7 @@ static std::shared_ptr<Node> xcc_macro_cond(codegen::GlobalContext& global, std:
     Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, call->args[0]->span, "Expected a constant as first argument to cond!").raise();
   }
 
-  auto else_branch = call->args.size() > 2 ? call->args[2] : Block::create(call->span, {});
+  auto else_branch = call->args.size() > 2 ? call->args[2] : Block::create(call->span, call->scope, {});
 
   // FIXME: Currently both branches are evaluated before cond! call is processed, it means that, for example
   //        conditional error! isn't possible, because it'll get evaluated either way
@@ -367,11 +369,11 @@ static std::shared_ptr<Node> xcc_macro_repeat(codegen::GlobalContext& global, st
 
   auto var = getOrGetLastInBlock(call->args[1], AST_EXPR_IDENTIFIER)->as<Identifier>()->name();
 
-  auto block = Block::create(call->span, {});
+  auto block = Block::create(call->span, call->scope, {});
 
   for (size_t i = 0; i < n->value.integer; ++i) {
     block->body.push_back(call->args[2]->clone());
-    subtree::replaceIdentifierWithNode(block->body.back(), var, Number::createInteger(call->span, i));
+    subtree::replaceIdentifierWithNode(block->body.back(), var, Number::createInteger(call->span, call->scope, i));
   }
 
   return block;
@@ -389,7 +391,7 @@ static std::shared_ptr<Node> xcc_macro_asm(codegen::GlobalContext& global, std::
     args.push_back(call->args[i]);
   }
 
-  return Asm::create(call->span, call->args[0], call->args[1], args);
+  return Asm::create(call->span, call->scope, call->args[0], call->args[1], args);
 }
 
 static std::shared_ptr<Node> xcc_macro_assert(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -416,7 +418,7 @@ static std::shared_ptr<Node> xcc_macro_assert(codegen::GlobalContext& global, st
   }
 
   // TODO: Should be Empty
-  return Block::create(call->span, {});
+  return Block::create(call->span, call->scope, {});
 }
 
 static std::shared_ptr<Node> xcc_macro_warn(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -426,7 +428,7 @@ static std::shared_ptr<Node> xcc_macro_warn(codegen::GlobalContext& global, std:
   Warning(WARNING_USER_WARNING, call->span, "{}", call->args[0]->as<String>()->value).emit();
 
   // TODO: Should be Empty
-  return Block::create(call->span, {});
+  return Block::create(call->span, call->scope, {});
 }
 
 static std::shared_ptr<Node> xcc_macro_error(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -467,9 +469,9 @@ static std::shared_ptr<Node> xcc_macro_print(codegen::GlobalContext& global, std
     i++;
   }
 
-  call->args[0] = String::create(call->args[0]->span, res_fmt);
+  call->args[0] = String::create(call->args[0]->span, call->scope, res_fmt);
 
-  return Call::create(call->span, Identifier::create(call->span, "printf", {"stdc", "io"}), call->args);
+  return Call::create(call->span, call->scope, Identifier::create(call->span, call->scope, "printf", {"stdc", "io"}), call->args);
 }
 
 static std::shared_ptr<Node> xcc_macro_println(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {

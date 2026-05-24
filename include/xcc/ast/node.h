@@ -21,6 +21,8 @@ class Function;
 
 namespace xcc::ast {
 
+using LexicalScope = std::vector<std::string>;
+
 /**
  * Abstract Syntax Tree Node Type
  */
@@ -156,9 +158,10 @@ public:
   NodeType      type;
   AttributeList attributes;
   SourceSpan    span;
+  LexicalScope  scope;
 
 public:
-  explicit Node(NodeType type, SourceSpan span);
+  explicit Node(NodeType type, SourceSpan span, LexicalScope scope);
   virtual ~Node() = default;
 
   /**
@@ -453,6 +456,16 @@ public:
    * Convert current Node's AttributeList to string
    */
   std::string attributesToString(int indent, bool newline);
+
+  /**
+   *
+   */
+  std::string getMangledName(const std::string& base_name) const;
+
+  /**
+   *
+   */
+  std::string resolveSymbolName(codegen::ModuleContext& ctx, const std::string& target_name) const;
 
   /**
    * Clone a vector of nodes

@@ -13,6 +13,7 @@ public:
 public:
   MacroCall(
     SourceSpan                  span,
+    LexicalScope                scope,
     std::shared_ptr<Identifier> name,
     NodeList                    args
   );
@@ -21,6 +22,7 @@ public:
 
   static std::shared_ptr<MacroCall> create(
     SourceSpan                  span,
+    LexicalScope                scope,
     std::shared_ptr<Identifier> name,
     NodeList                    args
   );

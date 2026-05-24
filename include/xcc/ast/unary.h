@@ -13,10 +13,10 @@ public:
   std::shared_ptr<Node> rhs;
 
 public:
-  Unary(SourceSpan span, Token operation, std::shared_ptr<Node> rhs);
+  Unary(SourceSpan span, LexicalScope scope, Token operation, std::shared_ptr<Node> rhs);
   ~Unary() override = default;
 
-  static std::shared_ptr<Unary> create(SourceSpan span, Token operation, std::shared_ptr<Node> rhs);
+  static std::shared_ptr<Unary> create(SourceSpan span, LexicalScope scope, Token operation, std::shared_ptr<Node> rhs);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

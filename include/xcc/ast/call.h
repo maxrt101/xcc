@@ -24,10 +24,10 @@ public:
   NodeList args;
 
 public:
-  Call(SourceSpan span, std::shared_ptr<Node> callee, NodeList args);
+  Call(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> callee, NodeList args);
   ~Call() override = default;
 
-  static std::shared_ptr<Call> create(SourceSpan span, std::shared_ptr<Node> callee, NodeList args);
+  static std::shared_ptr<Call> create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> callee, NodeList args);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

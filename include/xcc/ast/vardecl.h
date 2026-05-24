@@ -19,6 +19,7 @@ public:
 public:
   VarDecl(
       SourceSpan                  span,
+      LexicalScope                scope,
       std::shared_ptr<Identifier> name,
       std::shared_ptr<Node>       type,
       std::shared_ptr<Node>       value  = nullptr,
@@ -29,6 +30,7 @@ public:
 
   static std::shared_ptr<VarDecl> create(
       SourceSpan                  span,
+      LexicalScope                scope,
       std::shared_ptr<Identifier> name,
       std::shared_ptr<Node>       type,
       std::shared_ptr<Node>       value  = nullptr,

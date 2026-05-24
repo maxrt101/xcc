@@ -12,17 +12,17 @@ std::shared_ptr<Node::Payload> Number::Payload::create(int bits) {
   );
 }
 
-Number::Number(SourceSpan span) : Node(AST_EXPR_NUMBER, span) {}
+Number::Number(SourceSpan span, LexicalScope scope) : Node(AST_EXPR_NUMBER, span, scope) {}
 
-std::shared_ptr<Number> Number::createInteger(SourceSpan span, int64_t value) {
-  auto number = std::make_shared<Number>(span);
+std::shared_ptr<Number> Number::createInteger(SourceSpan span, LexicalScope scope, int64_t value) {
+  auto number = std::make_shared<Number>(span, scope);
   number->tag = INTEGER;
   number->value.integer = value;
   return number;
 }
 
-std::shared_ptr<Number> Number::createFloating(SourceSpan span, double value) {
-  auto number = std::make_shared<Number>(span);
+std::shared_ptr<Number> Number::createFloating(SourceSpan span, LexicalScope scope, double value) {
+  auto number = std::make_shared<Number>(span, scope);
   number->tag = FLOATING;
   number->value.floating = value;
   return number;
@@ -30,11 +30,11 @@ std::shared_ptr<Number> Number::createFloating(SourceSpan span, double value) {
 
 std::shared_ptr<Node> Number::clone() {
   if (tag == INTEGER) {
-    return withAttrs(createInteger(span, value.integer));
+    return withAttrs(createInteger(span, scope, value.integer));
   }
 
   if (tag == FLOATING) {
-    return withAttrs(createFloating(span, value.floating));
+    return withAttrs(createFloating(span, scope, value.floating));
   }
 
   Error(ERROR_INVALID_NUMBER_LITERAL, span).raiseFromNode(this);

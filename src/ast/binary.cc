@@ -35,15 +35,15 @@ static const binop::List s_binops = {
   XCC_BINOP(TOKEN_VERTICAL_LINE,  NONE,               CreateOr,          "ortmp",       ()                ),
 };
 
-Binary::Binary(SourceSpan span, Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
-  : Node(AST_EXPR_BINARY, span), operation(std::move(operation)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+Binary::Binary(SourceSpan span, LexicalScope scope, Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
+  : Node(AST_EXPR_BINARY, span, scope), operation(std::move(operation)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<Binary> Binary::create(SourceSpan span, Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
-  return std::make_shared<Binary>(span, std::move(operation), std::move(lhs), std::move(rhs));
+std::shared_ptr<Binary> Binary::create(SourceSpan span, LexicalScope scope, Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
+  return std::make_shared<Binary>(span, scope, std::move(operation), std::move(lhs), std::move(rhs));
 }
 
 std::shared_ptr<Node> Binary::clone() {
-  return withAttrs(create(span, operation, lhs->clone(), rhs->clone()));
+  return withAttrs(create(span, scope, operation, lhs->clone(), rhs->clone()));
 }
 
 void Binary::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

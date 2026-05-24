@@ -6,21 +6,23 @@ using namespace xcc::ast;
 
 MacroCall::MacroCall(
     SourceSpan                  span,
+    LexicalScope                scope,
     std::shared_ptr<Identifier> name,
     NodeList                    args
-) : Node(AST_EXPR_MACRO_CALL, span), name(std::move(name)), args(std::move(args)) {}
+) : Node(AST_EXPR_MACRO_CALL, span, scope), name(std::move(name)), args(std::move(args)) {}
 
 std::shared_ptr<MacroCall> MacroCall::create(
   SourceSpan                  span,
+  LexicalScope                scope,
   std::shared_ptr<Identifier> name,
   NodeList                    args
 ) {
-  return std::make_shared<MacroCall>(span, std::move(name), std::move(args));
+  return std::make_shared<MacroCall>(span, scope, std::move(name), std::move(args));
 }
 
 std::shared_ptr<Node> MacroCall::clone() {
   return withAttrs(create(
-    span,
+    span, scope,
     cast<Identifier>(name->clone()),
     cloneVector(args)
   ));

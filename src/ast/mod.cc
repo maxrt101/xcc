@@ -6,15 +6,15 @@
 
 using namespace xcc::ast;
 
-Module::Module(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Block> body)
-  : Node(AST_MOD, span), name(std::move(name)), body(std::move(body)) {}
+Module::Module(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, std::shared_ptr<Block> body)
+  : Node(AST_MOD, span, scope), name(std::move(name)), body(std::move(body)) {}
 
-std::shared_ptr<Module> Module::create(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Block> body) {
-  return std::make_shared<Module>(span, std::move(name), std::move(body));
+std::shared_ptr<Module> Module::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, std::shared_ptr<Block> body) {
+  return std::make_shared<Module>(span, scope, std::move(name), std::move(body));
 }
 
 std::shared_ptr<Node> Module::clone() {
-  return withAttrs(create(span, name->clone(), body ? cast<Block>(body->clone()) : nullptr));
+  return withAttrs(create(span, scope, name->clone(), body ? cast<Block>(body->clone()) : nullptr));
 }
 
 void Module::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

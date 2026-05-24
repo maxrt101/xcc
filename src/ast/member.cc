@@ -5,19 +5,19 @@
 using namespace xcc::ast;
 using namespace xcc;
 
-MemberAccess::MemberAccess(SourceSpan span, MemberAccessKind kind, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs)
-  : Node(AST_EXPR_MEMBER_ACCESS, span), kind(kind), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+MemberAccess::MemberAccess(SourceSpan span, LexicalScope scope, MemberAccessKind kind, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs)
+  : Node(AST_EXPR_MEMBER_ACCESS, span, scope), kind(kind), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<MemberAccess> MemberAccess::createByValue(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs) {
-  return std::make_shared<MemberAccess>(span, MEMBER_ACCESS_VALUE, std::move(lhs), std::move(rhs));
+std::shared_ptr<MemberAccess> MemberAccess::createByValue(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs) {
+  return std::make_shared<MemberAccess>(span, scope, MEMBER_ACCESS_VALUE, std::move(lhs), std::move(rhs));
 }
 
-std::shared_ptr<MemberAccess> MemberAccess::createByPointer(SourceSpan span, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs) {
-  return std::make_shared<MemberAccess>(span, MEMBER_ACCESS_POINTER, std::move(lhs), std::move(rhs));
+std::shared_ptr<MemberAccess> MemberAccess::createByPointer(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> lhs, std::shared_ptr<Identifier> rhs) {
+  return std::make_shared<MemberAccess>(span, scope, MEMBER_ACCESS_POINTER, std::move(lhs), std::move(rhs));
 }
 
 std::shared_ptr<Node> MemberAccess::clone() {
-  return withAttrs(std::make_shared<MemberAccess>(span, kind, lhs->clone(), cast<Identifier>(rhs->clone())));
+  return withAttrs(std::make_shared<MemberAccess>(span, scope, kind, lhs->clone(), cast<Identifier>(rhs->clone())));
 }
 
 void MemberAccess::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

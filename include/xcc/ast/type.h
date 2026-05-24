@@ -10,16 +10,6 @@ namespace xcc::ast {
 
 class Type : public Node {
 public:
-  struct Payload : Node::Payload {
-    // Used by generic instantiation
-    meta::SubstitutionMap substitutions;
-
-    explicit Payload(meta::SubstitutionMap sub);
-    ~Payload() override = default;
-
-    static std::shared_ptr<Node::Payload> create(meta::SubstitutionMap sub);
-  };
-
   enum Kind {
     NORMAL,
     POINTER,
@@ -34,9 +24,6 @@ public:
 
   // Type name (empty for everything except Kind::NORMAL)
   std::shared_ptr<Node> name;
-
-  // List of generic arguments, applies only to Kind::NORMAL
-  NodeList genericArgs;
 
   // For Kind::ARRAY
   struct {
@@ -61,18 +48,15 @@ public:
   } tuple;
 
 public:
-  Type(SourceSpan span, Kind kind, std::shared_ptr<Node> name);
+  Type(SourceSpan span, LexicalScope scope, Kind kind, std::shared_ptr<Node> name);
   ~Type() override = default;
 
-  static std::shared_ptr<Type> create(SourceSpan span, std::shared_ptr<Node> name);
-  static std::shared_ptr<Type> createGeneric(SourceSpan span, std::shared_ptr<Node> name, NodeList genericArgs);
-  static std::shared_ptr<Type> createPointer(SourceSpan span, std::shared_ptr<Node> name);
-  static std::shared_ptr<Type> createArray(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> size);
-  static std::shared_ptr<Type> createFunction(SourceSpan span, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic = false);
-  static std::shared_ptr<Type> createLambda(SourceSpan span, NodeList captures, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic = false);
-  static std::shared_ptr<Type> createTuple(SourceSpan span, NodeList members);
-
-  bool isGeneric() const;
+  static std::shared_ptr<Type> create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name);
+  static std::shared_ptr<Type> createPointer(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name);
+  static std::shared_ptr<Type> createArray(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, std::shared_ptr<Node> size);
+  static std::shared_ptr<Type> createFunction(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic = false);
+  static std::shared_ptr<Type> createLambda(SourceSpan span, LexicalScope scope, NodeList captures, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic = false);
+  static std::shared_ptr<Type> createTuple(SourceSpan span, LexicalScope scope, NodeList members);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

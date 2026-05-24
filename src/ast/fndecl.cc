@@ -6,25 +6,17 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-static auto logger = xcc::util::log::Logger("FNDECL");
-
-FnDecl::Payload::Payload(std::string oldStructName, std::string newStructName)
-  : Node::Payload(AST_FUNCTION_DECL), oldStructName(std::move(oldStructName)), newStructName(std::move(newStructName)) {}
-
-std::shared_ptr<Node::Payload> FnDecl::Payload::create(std::string oldStructName, std::string newStructName) {
-  return std::dynamic_pointer_cast<Node::Payload>(
-      std::make_shared<FnDecl::Payload>(std::move(oldStructName), std::move(newStructName))
-  );
-}
+static auto& logger = xcc::log::Logger::get("FNDECL");
 
 FnDecl::FnDecl(
   SourceSpan                                    span,
+  LexicalScope                                  scope,
   std::shared_ptr<Identifier>                   name,
   std::shared_ptr<Node>                         return_type,
   std::vector<std::shared_ptr<TypedIdentifier>> args,
   bool                                          isExtern,
   bool                                          isVariadic
-) : Node(AST_FUNCTION_DECL, span),
+) : Node(AST_FUNCTION_DECL, span, scope),
     name(std::move(name)),
     return_type(std::move(return_type)),
     args(std::move(args)),
@@ -33,18 +25,19 @@ FnDecl::FnDecl(
 
 std::shared_ptr<FnDecl> FnDecl::create(
   SourceSpan                                    span,
+  LexicalScope                                  scope,
   std::shared_ptr<Identifier>                   name,
   std::shared_ptr<Node>                         return_type,
   std::vector<std::shared_ptr<TypedIdentifier>> args,
   bool                                          isExtern,
   bool                                          isVariadic
 ) {
-  return std::make_shared<FnDecl>(span, std::move(name), std::move(return_type), std::move(args), isExtern, isVariadic);
+  return std::make_shared<FnDecl>(span, scope, std::move(name), std::move(return_type), std::move(args), isExtern, isVariadic);
 }
 
 std::shared_ptr<Node> FnDecl::clone() {
   return withAttrs(create(
-    span,
+    span, scope,
     cast<Identifier>(name->clone()),
     return_type->clone(),
     cloneVector(args),
@@ -85,28 +78,7 @@ std::string FnDecl::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (auto gp = selectPayloadFirst(payload)) {
-    if (auto p = gp->as<FnDecl::Payload>()) {
-      // Replaces all occurrences of generalized struct name, with new instantiated one
-      // For example for 'Container<T>', 'Container' in this definition 'Container::method()'
-      // will become 'Container_i32' (for T=i32)
-      auto visitor = [&p](auto node) -> std::shared_ptr<Node> {
-        if (node->is(AST_EXPR_IDENTIFIER)) {
-          auto id = node->template as<Identifier>();
-          util::strreplace(id->value, p->oldStructName, p->newStructName);
-        }
-
-        return nullptr;
-      };
-
-      // Call replacer visitor on function name (containing struct name), return type and arguments
-      callVisitor(ctx.globalContext, name, visitor);
-      callVisitor(ctx.globalContext, return_type, visitor);
-      visitVector(ctx.globalContext, args, visitor);
-    }
-  }
-
-  std::string fn_name = name->name();
+  std::string fn_name = isExtern ? name->value : getMangledName(name->value);
   std::string symbol_name = fn_name;
 
   if (hasAttribute("alias")) {
@@ -152,20 +124,11 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
     arg.setName(args[arg_idx++]->name->name());
   }
 
-  meta::SubstitutionMap substitutions;
-
-  if (auto gp = selectPayloadForFirst(payload, AST_EXPR_TYPE)) {
-    if (auto p = gp->as<Type::Payload>()) {
-      substitutions = p->substitutions;
-    }
-  }
-
   auto fn = meta::Function::create(
       fn_name,
       return_meta_type,
       arg_meta_types,
-      shared_from_this(),
-      std::move(substitutions)
+      shared_from_this()
   );
 
   fn->alias_to = alias_to;

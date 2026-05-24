@@ -7,7 +7,7 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-static auto logger = xcc::util::log::Logger("AST_NODE");
+static auto& logger = xcc::log::Logger::get("AST_NODE");
 
 #define DESC(__type, __name) {__type, {#__type, __name}}
 
@@ -97,7 +97,7 @@ void Node::Attribute::validateArgs(const std::vector<std::vector<NodeType>>& arg
   }
 }
 
-Node::Node(NodeType type, SourceSpan span) : type(type), span(span) {}
+Node::Node(NodeType type, SourceSpan span, LexicalScope scope) : type(type), span(span), scope(scope) {}
 
 bool Node::isAnyOf(std::vector<NodeType> expected) const {
   for (auto& typ : expected) {
@@ -318,7 +318,53 @@ std::string Node::attributesToString(int indent, bool newline) {
   return res;
 }
 
-Empty::Empty() : Node(AST_EMPTY, {}) {}
+std::string Node::getMangledName(const std::string& base_name) const {
+  std::string mangled;
+
+  for (const auto& s : scope) {
+    mangled += s + "_";
+  }
+
+  return mangled + base_name;
+}
+
+std::string Node::resolveSymbolName(codegen::ModuleContext& ctx, const std::string& target_name) const {
+  auto current_scope = scope;
+
+  // Traverse scope list outward
+  while (true) {
+    std::string current_prefix;
+
+    // Build prefix from scope
+    for (const auto& s : current_scope) {
+      current_prefix += s + "_";
+    }
+
+    auto search_name = current_prefix + target_name;
+
+    search_name = ctx.globalContext.aliased(search_name);
+
+    // Type/value exists - return current search_name
+    if (meta::Type::hasCustomType(search_name) ||
+       ctx.globalContext.getMetaFunction(search_name) ||
+       ctx.globalContext.hasGlobal(search_name) ||
+       ctx.globalContext.getConst(search_name) ||
+       codegen::GenericsCache::has(search_name)
+    ) {
+      return search_name;
+    }
+
+    if (current_scope.empty()) break;
+
+    // Otherwise - keep peeling innermost scope and trying again
+    current_scope.pop_back();
+  }
+
+  // If the symbol can't be found, or scope is empty - return raw (with alias check)
+  return ctx.globalContext.aliased(target_name);
+}
+
+Empty::Empty() : Node(AST_EMPTY, {}, {}) {}
 
 std::shared_ptr<Empty> Empty::create() {
   return std::make_shared<Empty>();

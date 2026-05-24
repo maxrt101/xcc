@@ -31,12 +31,14 @@ public:
 public:
   Macro(
     SourceSpan                               span,
+    LexicalScope                             scope,
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     std::shared_ptr<Block>                   body
   );
 
   Macro(
+    LexicalScope                             scope,
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     NativeFn                                 fn,
@@ -47,12 +49,14 @@ public:
 
   static std::shared_ptr<Macro> create(
     SourceSpan                               span,
+    LexicalScope                             scope,
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     std::shared_ptr<Block>                   body
   );
 
   static std::shared_ptr<Macro> createNative(
+    LexicalScope                             scope,
     std::shared_ptr<Identifier>              name,
     std::vector<std::shared_ptr<Identifier>> args,
     NativeFn                                 fn,

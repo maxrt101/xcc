@@ -9,10 +9,10 @@ public:
   std::shared_ptr<Node> value;
 
 public:
-  explicit Return(SourceSpan span, std::shared_ptr<Node> value = nullptr);
+  explicit Return(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> value = nullptr);
   ~Return() override = default;
 
-  static std::shared_ptr<Return> create(SourceSpan span, std::shared_ptr<Node> value = nullptr);
+  static std::shared_ptr<Return> create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> value = nullptr);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

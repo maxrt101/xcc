@@ -1,19 +1,3 @@
-/**
- * Note on name resolution:
- *
- * All of Identifier::generate* functions follow these precedence rules for resolving lvalues:
- *  - Local variables
- *  - Global variables
- *  - Constants
- *  - Functions (as a first-class value)
- *  - Enum values
- *
- * Constants and enum values are resolved differently:
- * For constants, firstly the scoped identifier (scope + name), secondly module scoped identifier (current module
- * scope + name)
- * For enum values firstly the scope, secondly module-scoped scope (current module scope + identifier scope)
- */
-
 #include "xcc/ast/identifier.h"
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
@@ -24,23 +8,25 @@ using namespace xcc::ast;
 
 Identifier::Identifier(
   SourceSpan               span,
+  LexicalScope             lexicalScope,
   std::string              value,
   std::vector<std::string> scope,
   NodeList                 genericArgs
 )
-  : Node(AST_EXPR_IDENTIFIER, span), value(std::move(value)), scope(std::move(scope)), genericArgs(std::move(genericArgs)) {}
+  : Node(AST_EXPR_IDENTIFIER, span, lexicalScope), value(std::move(value)), scope(std::move(scope)), genericArgs(std::move(genericArgs)) {}
 
 std::shared_ptr<Identifier> Identifier::create(
   SourceSpan               span,
+  LexicalScope             lexicalScope,
   std::string              value,
   std::vector<std::string> scope,
   NodeList                 genericArgs
 ) {
-  return std::make_shared<Identifier>(span, value, scope, genericArgs);
+  return std::make_shared<Identifier>(span, lexicalScope, value, scope, genericArgs);
 }
 
 std::shared_ptr<Node> Identifier::clone() {
-  return withAttrs(create(span, value, scope));
+  return withAttrs(create(span, Node::scope, value, scope, genericArgs));
 }
 
 void Identifier::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
@@ -52,7 +38,20 @@ std::string Identifier::toString(Node * grandparent, Node * parent, int indent, 
     res += part + "::";
   }
 
-  return res + value;
+  res += value;
+
+  if (!genericArgs.empty()) {
+    res += "::<";
+    for (size_t i = 0; i < genericArgs.size(); ++i) {
+      res += genericArgs[i]->toString(parent, this, indent, false);
+      if (i + 1 < genericArgs.size()) {
+        res += ", ";
+      }
+    }
+    res += ">";
+  }
+
+  return res;
 }
 
 std::string Identifier::name() const {
@@ -78,113 +77,91 @@ std::string Identifier::prefix() const {
   return prefix;
 }
 
-std::string Identifier::fullName(
-  codegen::ModuleContext& ctx,
-  PayloadList             payload,
-  bool                    isMethod,
-  NodeList                genericArgs
-) const {
-  auto res = isMethod ? prefix() : name();
-
-  // Remove trailing delimiter. Happens on prefix() result
-  if (res.ends_with('_')) {
-    res.pop_back();
+std::string Identifier::getResolvedName(codegen::ModuleContext& ctx) const {
+  if (meta::Type::isBuiltIn(value)) {
+    return value;
   }
 
-  for (auto & arg : (genericArgs.empty() ? this->genericArgs : genericArgs)) {
-    res += "_" + arg->generateType(ctx, payload)->toString();
+  if (!scope.empty()) {
+    std::string explicit_name;
+
+    for (const auto& s : scope) {
+      explicit_name += s + "_";
+    }
+
+    return ctx.globalContext.aliased(explicit_name + value);
   }
 
-  util::strreplace(res, "*", "_ptr");
+  return resolveSymbolName(ctx, value);
+}
 
-  return res + (isMethod ? "_" + value : "");
+std::string Identifier::getConcreteName(codegen::ModuleContext& ctx, const std::string& name) const {
+  std::string concrete_name = name;
+
+  for (auto& arg : genericArgs) {
+    concrete_name += "_" + arg->generateType(ctx, {})->toString();
+  }
+
+  util::strreplace(concrete_name, "*", "_ptr");
+
+  return concrete_name;
+}
+
+std::shared_ptr<Type> Identifier::intoParentType() {
+  auto ident = cast<Identifier>(clone());
+
+  ident->value = ident->scope.back();
+  ident->scope.pop_back();
+
+  return Type::create(ident->span, ident->scope, ident);
 }
 
 llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
-  auto id = ctx.globalContext.aliased(name());
-  auto mid = ctx.globalContext.aliased(ctx.globalContext.getModulePrefix()); // module id - only the current module scope
+  auto val = generateValueWithoutLoad(ctx, payload);
 
-  if (!genericArgs.empty()) {
-    return generateStaticMethod(ctx, payload);
+  if (scope.empty() && ctx.hasLocal(value)) {
+    auto meta_type = ctx.getLocalType(value);
+
+    // Arrays decay to pointers, everything else gets loaded
+    if (meta_type->isArray()) return val;
+    return ctx.ir_builder->CreateLoad(meta_type->getLLVMType(ctx), val, value.c_str());
   }
 
-  if (ctx.hasLocal(id)) {
-    auto local = ctx.getLocalValue(id);
-    if (local->getAllocatedType()->isArrayTy()) {
-      return local;
-    }
+  std::string search_name = getResolvedName(ctx);
+  if (ctx.globalContext.hasGlobal(search_name)) {
+    auto meta_type = ctx.globalContext.getGlobalType(search_name);
 
-    return ctx.ir_builder->CreateLoad(local->getAllocatedType(), local, id.c_str());
+    if (meta_type->isArray()) return val;
+    return ctx.ir_builder->CreateLoad(meta_type->getLLVMType(ctx), val, search_name.c_str());
   }
 
-  if (ctx.globalContext.hasGlobal(id)) {
-    auto global    = ctx.globalContext.getGlobal(ctx, id);
-    auto meta_type = ctx.globalContext.getGlobalType(id);
-
-    if (meta_type->isArray()) {
-      return global;
-    }
-
-    return ctx.ir_builder->CreateLoad(
-      meta_type->getLLVMType(ctx),
-      global,
-      id.c_str()
-    );
-  }
-
-  // Check const with full id (e.g. `module::constant`, where scope={module}, value=constant)
-  if (auto constant = ctx.globalContext.getConst(id)) {
-    return constant->generateConstant(ctx, payload);
-  }
-
-  // Check const with module id (e.g. `current_module::referenced_module::constant`,
-  // where modulePrefix={current_module} scope={referenced_module}, value=constant)
-  if (auto constant = ctx.globalContext.getConst(mid + value)) {
-    return constant->generateConstant(ctx, payload);
-  }
-
-  if (auto * fn = ctx.getFunction(id)) {
-    return fn;
-  }
-
-  if (auto enum_field = checkGenerateEnum(ctx, payload)) {
-    return enum_field;
-  }
-
-  Error(ERROR_UNDECLARED_VALUE, span, "'{}'", toString(nullptr, nullptr, 0, false)).raiseFromNode(this);
+  // Functions, constants, and enums don't need to be loaded
+  return val;
 }
 
 llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto id = ctx.globalContext.aliased(name()); // id - fully assembled identifier (with scope prepended)
-  auto pid = ctx.globalContext.aliased(prefix()); // prefix id - only the scope (used to reference an enum value)
-  auto mid = ctx.globalContext.aliased(ctx.globalContext.getModulePrefix()); // module id - only the current module scope
-
   if (!genericArgs.empty()) {
-    return generateStaticMethod(ctx, payload);
+    return ctx.getFunction(resolveStaticMethodName(ctx, payload));
   }
 
-  if (ctx.hasLocal(id)) {
-    return ctx.getLocalValue(id);
+  // Local variables never have explicit scopes
+  if (scope.empty() && ctx.hasLocal(value)) {
+    return ctx.getLocalValue(value);
   }
 
-  if (ctx.globalContext.hasGlobal(id)) {
-    return ctx.globalContext.getGlobal(ctx, id);
+  std::string search_name = getResolvedName(ctx);
+
+  if (ctx.globalContext.hasGlobal(search_name)) {
+    return ctx.globalContext.getGlobal(ctx, search_name);
   }
 
-  // Check const with full id (e.g. `module::constant`, where scope={module}, value=constant)
-  if (auto constant = ctx.globalContext.getConst(id)) {
+  if (auto constant = ctx.globalContext.getConst(search_name)) {
     return constant->generateConstant(ctx, payload);
   }
 
-  // Check const with module id (e.g. `current_module::referenced_module::constant`,
-  // where modulePrefix={current_module} scope={referenced_module}, value=constant)
-  if (auto constant = ctx.globalContext.getConst(mid + value)) {
-    return constant->generateConstant(ctx, payload);
-  }
-
-  if (auto * fn = ctx.getFunction(id)) {
+  if (auto * fn = ctx.getFunction(search_name)) {
     return fn;
   }
 
@@ -196,18 +173,9 @@ llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, 
 }
 
 llvm::Constant * Identifier::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto id = ctx.globalContext.aliased(name()); // id - fully assembled identifier (with scope prepended)
-  auto pid = ctx.globalContext.aliased(prefix()); // prefix id - only the scope (used to reference an enum value)
-  auto mid = ctx.globalContext.aliased(ctx.globalContext.getModulePrefix() + prefix()); // module id - current module scope + id scope
+  std::string search_name = getResolvedName(ctx);
 
-  // Check const with full id (e.g. `module::constant`, where scope={module}, value=constant)
-  if (auto constant = ctx.globalContext.getConst(id)) {
-    return constant->generateConstant(ctx, payload);
-  }
-
-  // Check const with module id (e.g. `current_module::referenced_module::constant`,
-  // where modulePrefix={current_module} scope={referenced_module}, value=constant)
-  if (auto constant = ctx.globalContext.getConst(mid + value)) {
+  if (auto constant = ctx.globalContext.getConst(search_name)) {
     return constant->generateConstant(ctx, payload);
   }
 
@@ -223,134 +191,94 @@ std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx
 }
 
 std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto id = ctx.globalContext.aliased(name()); // id - fully assembled identifier (with scope prepended)
-  auto pid = ctx.globalContext.aliased(prefix()); // prefix id - only the scope (used to reference an enum value)
-  auto mid = ctx.globalContext.aliased(ctx.globalContext.getModulePrefix() + prefix()); // module id - current module scope + id scope
-
   if (!genericArgs.empty()) {
-    std::string base_name = scope.back();
-
-    auto type_node = Type::createGeneric(span, create(span, base_name), genericArgs);
-
-    type_node->generateType(ctx, payload);
-
-    std::string method_name = fullName(ctx, payload, true);
-
-    auto fn = ctx.globalContext.getMetaFunctionType(method_name);
-
-    assertRaiseFromNode(fn.get(), Error(ERROR_UNKNOWN_FUNCTION, span, "Unknown method referenced"), this);
-
-    return fn;
+    return ctx.globalContext.getMetaFunctionType(resolveStaticMethodName(ctx, payload));
   }
 
-  if (ctx.hasPhantom(id)) {
-    return ctx.getPhantomType(id);
+  if (scope.empty()) {
+    if (ctx.hasPhantom(value)) return ctx.getPhantomType(value);
+    if (ctx.hasLocal(value)) return ctx.getLocalType(value);
   }
 
-  if (ctx.hasLocal(id)) {
-    return ctx.getLocalType(id);
+  std::string search_name = getResolvedName(ctx);
+
+  if (ctx.globalContext.hasGlobal(search_name)) {
+    return ctx.globalContext.getGlobalType(search_name);
   }
 
-  if (ctx.globalContext.hasGlobal(id)) {
-    return ctx.globalContext.getGlobalType(id);
-  }
-
-  // Check const with full id (e.g. `module::constant`, where scope={module}, value=constant)
-  if (auto constant = ctx.globalContext.getConst(id)) {
+  if (auto constant = ctx.globalContext.getConst(search_name)) {
     return constant->generateType(ctx, payload);
   }
 
-  // Check const with module id (e.g. `current_module::referenced_module::constant`,
-  // where modulePrefix={current_module} scope={referenced_module}, value=constant)
-  if (auto constant = ctx.globalContext.getConst(mid + value)) {
-    return constant->generateType(ctx, payload);
-  }
-
-  if (auto meta_fn = ctx.globalContext.getMetaFunction(id)) {
+  if (auto meta_fn = ctx.globalContext.getMetaFunction(search_name)) {
     return meta_fn->decl->generateType(ctx, payload);
   }
 
-  // Check const with prefixed id (e.g. `Enum` for `Enum::Value`, where scope={Enum}, value=Value)
-  if (meta::Type::hasCustomType(pid)) {
-    auto _enum = meta::Type::getCustomType(pid);
+  if (!scope.empty()) {
+    std::string enum_target;
 
-    assertRaiseFromNode(_enum->hasEnumElement(value),
-      Error(ERROR_ENUM_NO_MEMBER, span, "'{}' in enum '{}'", value, scope.back()), this);
-
-    return _enum;
-  }
-
-  // Check const with module prefixed id (e.g. `module::Enum` for `Enum::Value`,
-  // where modulePrefix={module} scope={Enum}, value=Value)
-  if (meta::Type::hasCustomType(mid)) {
-    auto _enum = meta::Type::getCustomType(mid);
-
-    assertRaiseFromNode(_enum->hasEnumElement(value),
-      Error(ERROR_ENUM_NO_MEMBER, span, "'{}' in enum '{}'", value, scope.back()), this);
-
-    return _enum;
-  }
-
-  // TODO: Is needed?
-#if 0
-  try {
-    if (auto t = meta::Type::fromTypeName(ctx.globalContext, name(), span)) {
-      return t;
+    for (size_t i = 0; i < scope.size(); ++i) {
+      enum_target += scope[i] + (i == scope.size() - 1 ? "" : "_");
     }
-  } catch (CompilationException&) {
-    // Ignore
+
+    std::string actual_enum_name = resolveSymbolName(ctx, enum_target);
+
+    if (meta::Type::hasCustomType(actual_enum_name)) {
+      auto _enum = meta::Type::getCustomType(actual_enum_name);
+      assertRaiseFromNode(_enum->hasEnumElement(value), Error(ERROR_ENUM_NO_MEMBER, span, "'{}' in enum '{}'", value, scope.back()), this);
+      return _enum;
+    }
   }
-#endif
 
   Error(ERROR_UNDECLARED_VALUE, span, "'{}'", toString(nullptr, nullptr, 0, false)).raiseFromNode(this);
 }
 
 llvm::Constant * Identifier::checkGenerateEnum(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto pid = ctx.globalContext.aliased(prefix()); // prefix id - only the scope (used to reference an enum value)
-  auto mid = ctx.globalContext.aliased(ctx.globalContext.getModulePrefix() + prefix()); // module id - current module scope + id scope
+  if (scope.empty()) return nullptr;
 
-  // Check const with prefixed id (e.g. `Enum` for `Enum::Value`, where scope={Enum}, value=Value)
-  if (meta::Type::hasCustomType(pid)) {
-    auto _enum = meta::Type::getCustomType(pid);
+  // Reconstruct the explicit enum target name
+  std::string enum_target;
 
-    assertRaiseFromNode(_enum->hasEnumElement(value),
-      Error(ERROR_ENUM_NO_MEMBER, span, "'{}' in enum '{}'", value, scope.back()), this);
-
-    return llvm::ConstantInt::get(_enum->getBaseType()->getLLVMType(ctx), _enum->getEnumElement(value).value);
+  for (size_t i = 0; i < scope.size(); ++i) {
+    enum_target += scope[i] + (i == scope.size() - 1 ? "" : "_");
   }
 
-  // Check const with module prefixed id (e.g. `module::Enum` for `Enum::Value`,
-  // where modulePrefix={module} scope={Enum}, value=Value)
-  if (meta::Type::hasCustomType(mid)) {
-    auto _enum = meta::Type::getCustomType(mid);
+  std::string actual_enum_name = resolveSymbolName(ctx, enum_target);
 
-    assertRaiseFromNode(_enum->hasEnumElement(value),
-      Error(ERROR_ENUM_NO_MEMBER, span, "'{}' in enum '{}'", value, scope.back()), this);
+  if (meta::Type::hasCustomType(actual_enum_name)) {
+    auto _enum = meta::Type::getCustomType(actual_enum_name);
 
-    return llvm::ConstantInt::get(_enum->getBaseType()->getLLVMType(ctx), _enum->getEnumElement(value).value);
+    if (_enum->hasEnumElement(value)) {
+      return llvm::ConstantInt::get(_enum->getBaseType()->getLLVMType(ctx), _enum->getEnumElement(value).value);
+    }
   }
 
   return nullptr;
 }
 
-llvm::Value * Identifier::generateStaticMethod(codegen::ModuleContext& ctx, PayloadList payload) {
-  std::string base_name = scope.back();
+std::string Identifier::resolveStaticMethodName(codegen::ModuleContext& ctx, PayloadList payload) {
+  std::string generic_struct_name;
 
-  // Construct a Type node with base name for struct, and generic args
-  auto type_node = Type::createGeneric(span, create(span, base_name), genericArgs);
+  for (size_t i = 0; i < scope.size(); ++i) {
+    generic_struct_name += scope[i];
+    if (i + 1 < scope.size()) {
+      generic_struct_name += "_";
+    }
+  }
 
-  // Trigger instantiation for concrete type
-  auto t = type_node->generateType(ctx, payload);
+  generic_struct_name = ctx.globalContext.aliased(generic_struct_name);
 
-  // Generate full name (scope + concrete base name + value)
-  std::string method_name = fullName(ctx, payload, true);
+  auto concrete_struct_name = getConcreteName(ctx, generic_struct_name);
 
-  llvm::Function * fn = ctx.getFunction(method_name);
+  if (!meta::Type::getCustomType(concrete_struct_name)) {
+    intoParentType()->generateType(ctx, payload);
+  }
 
-  assertRaiseFromNode(fn, Error(ERROR_UNKNOWN_FUNCTION, span, "Unknown method referenced"), this);
+  auto method_name = concrete_struct_name + "_" + value;
 
-  // Extract fat function pointer type
-  auto fat_ptr_type = ctx.globalContext.getMetaFunctionType(method_name)->getLLVMType(ctx);
+  if (ctx.getFunction(method_name)) {
+    return method_name;
+  }
 
-  return ctx.createFatPointerFromGlobalFunction(fn, fat_ptr_type);
+  Error(ERROR_UNKNOWN_FUNCTION, span, "'{}'", method_name).raiseFromNode(this);
 }

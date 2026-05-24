@@ -27,11 +27,11 @@ public:
   } value;
 
 public:
-  Number(SourceSpan span);
+  Number(SourceSpan span, LexicalScope scope);
   ~Number() override = default;
 
-  static std::shared_ptr<Number> createInteger(SourceSpan span, int64_t value);
-  static std::shared_ptr<Number> createFloating(SourceSpan span, double value);
+  static std::shared_ptr<Number> createInteger(SourceSpan span, LexicalScope scope, int64_t value);
+  static std::shared_ptr<Number> createFloating(SourceSpan span, LexicalScope scope, double value);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

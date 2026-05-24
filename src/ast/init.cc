@@ -12,11 +12,11 @@ std::shared_ptr<Node::Payload> Initializer::Payload::create(std::shared_ptr<meta
   );
 }
 
-Initializer::Initializer(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces)
-  : Node(AST_INIT, span), value_type(std::move(value_type)), values(std::move(values)), has_square_braces(has_square_braces) {}
+Initializer::Initializer(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces)
+  : Node(AST_INIT, span, scope), value_type(std::move(value_type)), values(std::move(values)), has_square_braces(has_square_braces) {}
 
-std::shared_ptr<Initializer> Initializer::create(SourceSpan span, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces) {
-  return std::make_shared<Initializer>(span, std::move(value_type), std::move(values), has_square_braces);
+std::shared_ptr<Initializer> Initializer::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> value_type, std::vector<Value> values, bool has_square_braces) {
+  return std::make_shared<Initializer>(span, scope, std::move(value_type), std::move(values), has_square_braces);
 }
 
 std::shared_ptr<Node> Initializer::clone() {
@@ -26,7 +26,7 @@ std::shared_ptr<Node> Initializer::clone() {
     values.push_back({value.name ? value.name->clone() : nullptr, value.value->clone()});
   }
 
-  return withAttrs(create(span, value_type->clone(), values, has_square_braces));
+  return withAttrs(create(span, scope, value_type->clone(), values, has_square_braces));
 }
 
 void Initializer::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

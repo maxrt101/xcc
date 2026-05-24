@@ -13,10 +13,10 @@ public:
   std::shared_ptr<Node>    body;
 
 public:
-  For(SourceSpan span, std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
+  For(SourceSpan span, LexicalScope scope, std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
   ~For() override = default;
 
-  static std::shared_ptr<For> create(SourceSpan span, std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
+  static std::shared_ptr<For> create(SourceSpan span, LexicalScope scope, std::shared_ptr<VarDecl> init, std::shared_ptr<Node> cond, std::shared_ptr<Node> step, std::shared_ptr<Node> body);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

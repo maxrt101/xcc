@@ -7,7 +7,7 @@
 
 using namespace xcc;
 
-static auto logger = xcc::util::log::Logger("PARSER");
+static auto& logger = xcc::log::Logger::get("PARSER");
 
 std::unordered_map<std::string, IncludedModule> ModuleCache::modules;
 
@@ -78,64 +78,67 @@ bool Parser::checkNext(TokenType expected) {
 
 std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_msg) {
   if (checkAdvance(TOKEN_SELF)) {
-    return ast::Identifier::create(previous().span, "self");
+    return ast::Identifier::create(previous().span, lexicalScope, "self");
   }
 
   if (!checkAdvance(TOKEN_IDENTIFIER)) {
     Error(ERROR_MISSING_IDENTIFIER, current().span, "Expected identifier " + ex_msg).raise();
   }
 
-  return ast::Identifier::create(previous().span, previous().value);
-}
-
-std::shared_ptr<ast::Identifier> Parser::parseIdentifierWithCurrentScope(const std::string& ex_msg) {
-  auto id = parseIdentifier(ex_msg);
-  id->scope = module.stack;
-  return id;
+  return ast::Identifier::create(previous().span, lexicalScope, previous().value);
 }
 
 std::shared_ptr<ast::Identifier> Parser::parseScopedIdentifier(const std::string& ex_msg, bool allowGenerics) {
   auto first = parseIdentifier(ex_msg);
+  auto span = first->span;
 
+  std::vector<std::string> nodes = {first->value};
   ast::NodeList genericArgs;
 
-  if (allowGenerics && codegen::GenericsCache::has(first->value) && checkAdvance(TOKEN_LESS)) {
-    do {
-      genericArgs.push_back(parseType());
-    } while (checkAdvance(TOKEN_COMMA));
+  while (true) {
+    // Standard generics (identifier < generic list >), which are explicitly allowed only in type scope
+    if (allowGenerics && genericArgs.empty() && check(TOKEN_LESS)) {
+      advance();
 
-    if (!checkAdvance(TOKEN_GREATER)) {
-      Error(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT, previous().span.pointPastLast()).raise();
+      do {
+        genericArgs.push_back(parseType());
+      } while (checkAdvance(TOKEN_COMMA));
+
+      if (!checkAdvance(TOKEN_GREATER)) {
+        Error(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT, previous().span.pointPastLast()).raise();
+      }
+      span += previous().span;
     }
-  }
 
-  if (!checkAdvance(TOKEN_SCOPE)) {
-    assertRaise(genericArgs.empty(), Error(ERROR_GENERIC_EXPECTED_SCOPE, previous().span.pointPastLast()));
-    return first;
-  }
+    if (checkAdvance(TOKEN_SCOPE)) {
+      // Parse turbofish (::<), which can be placed anywhere
+      if (check(TOKEN_LESS)) {
+        advance();
 
-  auto span = first->span;
-  std::vector<std::string> nodes = {first->value};
+        do {
+          genericArgs.push_back(parseType());
+        } while (checkAdvance(TOKEN_COMMA));
 
-  do {
-    if (!check(TOKEN_IDENTIFIER)) {
+        if (!checkAdvance(TOKEN_GREATER)) {
+          Error(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT, previous().span.pointPastLast()).raise();
+        }
+
+        span += previous().span;
+        break;
+      }
+
+      // Normal scope access
+      nodes.push_back(parseIdentifier("for member access")->value);
+      span += previous().span;
+    } else {
       break;
     }
-
-    nodes.push_back(parseIdentifier("for member access")->value);
-    span += previous().span;
-  } while (checkAdvance(TOKEN_SCOPE));
-
-  /* Very specific error, shouldn't happen */
-  if (nodes.empty()) {
-    Error(ERROR_INVALID_MEMBER_ACCESS, current().span, "there are no access nodes").raise();
   }
 
   auto name = nodes.back();
-
   nodes.pop_back();
 
-  return ast::Identifier::create(span, name, nodes, genericArgs);
+  return ast::Identifier::create(span, lexicalScope, name, nodes, genericArgs);
 }
 
 std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> name) {
@@ -154,7 +157,7 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
       Error(ERROR_FN_TYPE_MISSING_CLOSING_PAREN, current().span).raise();
     }
 
-    return ast::Type::createTuple(span + previous().span, members);
+    return ast::Type::createTuple(span + previous().span, lexicalScope, members);
   }
 
   if (!name && checkAdvance(TOKEN_FN)) {
@@ -197,81 +200,58 @@ std::shared_ptr<ast::Node> Parser::parseType(std::shared_ptr<ast::Identifier> na
     std::shared_ptr<ast::Node> returnType = parseType();
 
     return captures.empty()
-      ? ast::Type::createFunction(span + previous().span, returnType, args, isVariadic)
-      : ast::Type::createLambda(span + previous().span, captures, returnType, args, isVariadic);
+      ? ast::Type::createFunction(span + previous().span, lexicalScope, returnType, args, isVariadic)
+      : ast::Type::createLambda(span + previous().span, lexicalScope, captures, returnType, args, isVariadic);
   }
 
-  auto id = name ? name : parseScopedIdentifier("for type name");
-  ast::NodeList genericArgs;
-
-  if (checkAdvance(TOKEN_LESS)) {
-    do {
-      genericArgs.push_back(parseType());
-    } while (checkAdvance(TOKEN_COMMA));
-
-    if (!checkAdvance(TOKEN_GREATER)) {
-      Error(ERROR_GENERIC_TYPE_DECL_MISSING_CLOSING_GT, previous().span.pointPastLast()).raise();
-    }
-  }
+  auto id = name ? name : parseScopedIdentifier("for type name", true);
 
   // TODO: Don't forget to pass genericArgs to parseCall when implementing generic functions
+  // TODO: Should calls be allowed here? Looks off...
   if (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN)) {
     return parseCall(id);
-  }
-
-  if (!genericArgs.empty()) {
-    type = ast::Type::createGeneric(span + previous().span, ast::Node::cast(id), genericArgs);
   }
 
   // Parse nested pointer types
   // Needs to be before array bounds, because array can have a pointer base type
   while (checkAdvance(TOKEN_STAR)) {
     type = type
-      ? ast::Type::createPointer(span + previous().span, type)
-      : ast::Type::createPointer(span + previous().span, ast::Node::cast(id));
+      ? ast::Type::createPointer(span + previous().span, lexicalScope, type)
+      : ast::Type::createPointer(span + previous().span, lexicalScope, ast::Node::cast(id));
   }
 
   // Parse nested array bounds
   while (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
     // Allow 0-sized arrays
-    auto size = check(TOKEN_RIGHT_SQUARE_BRACE) ? ast::Number::createInteger(previous().span, 0) : parseExpr();
+    auto size = check(TOKEN_RIGHT_SQUARE_BRACE) ? ast::Number::createInteger(previous().span, lexicalScope, 0) : parseExpr();
 
     if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
       Error(ERROR_TYPE_ARRAY_NO_CLOSING_BRACE, previous().span.pointPastLast()).raise();
     }
 
     type = type
-      ? ast::Type::createArray(span + previous().span, type, ast::Node::cast(size))
-      : ast::Type::createArray(span + previous().span, ast::Node::cast(id), ast::Node::cast(size));
-  }
-
-  // Check if referenced type was declared inside of this module
-  auto isDeclaredInModule = std::find(module.typeAliases.begin(), module.typeAliases.end(), id->value) != module.typeAliases.end();
-
-  // If currently parsing a module, referenced type was declared in this module, and no scope is present
-  if (isModule && isDeclaredInModule && id->scope.empty()) {
-    // Set type's scope to current module stack
-    id->scope = module.stack;
+      ? ast::Type::createArray(span + previous().span, lexicalScope, type, ast::Node::cast(size))
+      : ast::Type::createArray(span + previous().span, lexicalScope, ast::Node::cast(id), ast::Node::cast(size));
   }
 
   // If base type is an array, it also can be a pointer to an array
   while (checkAdvance(TOKEN_STAR)) {
     type = type
-      ? ast::Type::createPointer(span + previous().span, type)
-      : ast::Type::createPointer(span + previous().span, ast::Node::cast(id));
+      ? ast::Type::createPointer(span + previous().span, lexicalScope, type)
+      : ast::Type::createPointer(span + previous().span, lexicalScope, ast::Node::cast(id));
   }
 
   if (!type) {
-    type = ast::Type::create(span, ast::Node::cast(id));
+    type = ast::Type::create(span, lexicalScope, ast::Node::cast(id));
   }
 
   return type;
 }
 
-std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl(const std::string& err_msg, bool scoped) {
+std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl(const std::string& err_msg) {
   auto span = current().span;
 
-  std::shared_ptr<ast::Identifier> name = scoped ? parseIdentifierWithCurrentScope(err_msg) : parseIdentifier(err_msg);
+  std::shared_ptr<ast::Identifier> name = parseIdentifier(err_msg);
   std::shared_ptr<ast::Node> type;
   std::shared_ptr<ast::Node> value;
 
@@ -283,7 +263,7 @@ std::shared_ptr<ast::TypedIdentifier> Parser::parseValueDecl(const std::string& 
     value = parseExpr();
   }
 
-  return ast::TypedIdentifier::create(span + previous().span, name, type, value);
+  return ast::TypedIdentifier::create(span + previous().span, lexicalScope, name, type, value);
 }
 
 std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
@@ -301,11 +281,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
     Error(ERROR_FN_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto name = parseIdentifierWithCurrentScope("for function name");
-
-  if (isMethod) {
-    name->value = structStack.back() + "_" + name->value;
-  }
+  auto name = parseIdentifier("for function name");
 
   std::vector<std::shared_ptr<ast::TypedIdentifier>> args;
   std::shared_ptr<ast::Node> return_type;
@@ -315,12 +291,17 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   }
 
   if (isMethod && checkAdvance(TOKEN_SELF)) {
+    auto struct_name = lexicalScope.back();
+
+    auto type_id = ast::Identifier::create(previous().span, lexicalScope, struct_name);
+    auto type_ptr = ast::Type::createPointer(previous().span, lexicalScope, type_id);
+
     args.push_back(ast::TypedIdentifier::create(
       span + current().span,
-      ast::Identifier::create(previous().span, "self"),
-        ast::Type::createPointer(previous().span, ast::Identifier::create(previous().span, structStack.back(), module.stack))
-      )
-    );
+      lexicalScope,
+      ast::Identifier::create(previous().span, lexicalScope, "self"),
+      type_ptr
+    ));
 
     checkAdvance(TOKEN_COMMA);
   }
@@ -343,10 +324,10 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
   if (checkAdvance(TOKEN_RIGHT_ARROW)) {
     return_type = parseType();
   } else {
-    return_type = ast::Type::create(previous().span, ast::Identifier::create(previous().span, "void"));;
+    return_type = ast::Type::create(previous().span, lexicalScope, ast::Identifier::create(previous().span, lexicalScope, "void"));;
   }
 
-  auto fndecl = ast::FnDecl::create(span + previous().span, name, return_type, args, is_extern, is_variadic);
+  auto fndecl = ast::FnDecl::create(span + previous().span, lexicalScope, name, return_type, args, is_extern, is_variadic);
 
   if (!check(TOKEN_LEFT_BRACE)) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
@@ -366,7 +347,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
 
   auto body = parseBlock();
 
-  return ast::FnDef::create(span + previous().span, fndecl, body);
+  return ast::FnDef::create(span + previous().span, lexicalScope, fndecl, body);
 }
 
 std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
@@ -397,7 +378,7 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
     Error(ERROR_BLOCK_MISSING_CLOSING_BRACE, current().span).raise();
   }
 
-  return ast::Block::create(span + previous().span, nodes);
+  return ast::Block::create(span + previous().span, lexicalScope, nodes);
 }
 
 std::shared_ptr<ast::Decomposition> Parser::parseDecompositionList() {
@@ -420,7 +401,7 @@ std::shared_ptr<ast::Decomposition> Parser::parseDecompositionList() {
     Error(ERROR_DECOMPOSITION_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
   }
 
-  return ast::Decomposition::create(span + previous().span, pieces);
+  return ast::Decomposition::create(span + previous().span, lexicalScope, pieces);
 }
 
 std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
@@ -444,7 +425,7 @@ std::shared_ptr<ast::Node> Parser::parseVar(bool global) {
 
   auto valdecl = parseValueDecl("for variable name");
 
-  return ast::VarDecl::create(span + previous().span, valdecl->name, valdecl->value_type, valdecl->value, global);
+  return ast::VarDecl::create(span + previous().span, lexicalScope, valdecl->name, valdecl->value_type, valdecl->value, global);
 }
 
 std::shared_ptr<ast::Node> Parser::parseConst() {
@@ -454,9 +435,9 @@ std::shared_ptr<ast::Node> Parser::parseConst() {
     Error(ERROR_CONST_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto valdecl = parseValueDecl("for constant name", true);
+  auto valdecl = parseValueDecl("for constant name");
 
-  return ast::ConstDecl::create(span + previous().span, valdecl->name, valdecl->value_type, valdecl->value);
+  return ast::ConstDecl::create(span + previous().span, lexicalScope, valdecl->name, valdecl->value_type, valdecl->value);
 }
 
 std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& attrs) {
@@ -466,7 +447,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
     Error(ERROR_STRUCT_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto name = parseIdentifierWithCurrentScope("for struct name");
+  auto name = parseIdentifier("for struct name");
 
   ast::NodeList genericTypes;
 
@@ -487,8 +468,7 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
   std::vector<std::shared_ptr<ast::TypedIdentifier>> fields;
   ast::NodeList methods;
 
-  // important: don't use name(), as it will prepend the same prefix as parseScopedIdentified in parseFunction
-  structStack.push_back(name->value);
+  lexicalScope.push_back(name->value);
 
   bool shouldContinue = true;
 
@@ -506,19 +486,25 @@ std::shared_ptr<ast::Node> Parser::parseStruct(const ast::Node::AttributeList& a
     shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_SEMICOLON);
   } while (shouldContinue);
 
-  structStack.pop_back();
+  lexicalScope.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
     Error(ERROR_STRUCT_MISSING_CLOSING_BRACE, current().span).raise();
   }
 
-  auto node = ast::Struct::create(span + previous().span, name, genericTypes, fields, methods);
+  auto node = ast::Struct::create(span + previous().span, lexicalScope, name, genericTypes, fields, methods);
 
   if (genericTypes.empty()) {
     return node;
   }
 
-  codegen::GenericsCache::add(name->name(), node);
+  std::string id;
+  // FIXME: For some fucking reason name->scope is empty here
+  for (auto & s : lexicalScope) {
+    id += s + "_";
+  }
+
+  codegen::GenericsCache::add(id + name->value, node);
 
   return ast::Empty::create();
 }
@@ -533,23 +519,21 @@ std::shared_ptr<ast::Node> Parser::parseEnum(const ast::Node::AttributeList& att
     Error(ERROR_ENUM_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto name = parseIdentifierWithCurrentScope("for enum name");
+  auto name = parseIdentifier("for enum name");
 
   if (checkAdvance(TOKEN_COLON)) {
     type = parseType();
   } else {
     // Default enum type is i32. It's easier to create it here,
     // than to add nullptr checks all over ast::Enum methods
-    type = ast::Type::create(name->span, ast::Identifier::create(name->span, "i32"));
+    type = ast::Type::create(name->span, lexicalScope, ast::Identifier::create(name->span, lexicalScope, "i32"));
   }
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
     Error(ERROR_ENUM_MISSING_OPENING_BRACE, current().span).raise();
   }
 
-  // Reuse struct stack for enums
-  // important: don't use name(), as it will prepend the same prefix as parseScopedIdentified in parseFunction
-  structStack.push_back(name->value);
+  lexicalScope.push_back(name->value);
 
   bool shouldContinue = true;
 
@@ -561,7 +545,7 @@ std::shared_ptr<ast::Node> Parser::parseEnum(const ast::Node::AttributeList& att
     if (check(TOKEN_FN)) {
       methods.push_back(parseFunction(true));
     } else {
-      std::shared_ptr<ast::Identifier> field_name = parseIdentifierWithCurrentScope("for enum field name");
+      std::shared_ptr<ast::Identifier> field_name = parseIdentifier("for enum field name");
       std::shared_ptr<ast::Node>       field_value = nullptr;
 
       if (checkAdvance(TOKEN_EQUALS)) {
@@ -574,13 +558,13 @@ std::shared_ptr<ast::Node> Parser::parseEnum(const ast::Node::AttributeList& att
     shouldContinue = previous().is(TOKEN_RIGHT_BRACE) || checkAdvance(TOKEN_COMMA);
   } while (shouldContinue);
 
-  structStack.pop_back();
+  lexicalScope.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
     Error(ERROR_ENUM_MISSING_CLOSING_BRACE, current().span).raise();
   }
 
-  return ast::Enum::create(span + previous().span, name, type, fields, methods);
+  return ast::Enum::create(span + previous().span, lexicalScope, name, type, fields, methods);
 }
 
 std::shared_ptr<ast::Node> Parser::parseIf() {
@@ -607,7 +591,7 @@ std::shared_ptr<ast::Node> Parser::parseIf() {
     else_body = parseStmt();
   }
 
-  return ast::If::create(span + previous().span, cond, then_body, else_body);
+  return ast::If::create(span + previous().span, lexicalScope, cond, then_body, else_body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseFor() {
@@ -641,7 +625,7 @@ std::shared_ptr<ast::Node> Parser::parseFor() {
 
   std::shared_ptr<ast::Node> body = parseStmt();
 
-  return ast::For::create(span + previous().span, ast::Node::cast<ast::VarDecl>(init), cond, step, body);
+  return ast::For::create(span + previous().span, lexicalScope, ast::Node::cast<ast::VarDecl>(init), cond, step, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseWhile() {
@@ -663,7 +647,7 @@ std::shared_ptr<ast::Node> Parser::parseWhile() {
 
   std::shared_ptr<ast::Node> body = parseStmt();
 
-  return ast::While::create(span + previous().span, cond, body);
+  return ast::While::create(span + previous().span, lexicalScope, cond, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseReturn() {
@@ -679,7 +663,7 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
     expr = parseExpr();
   }
 
-  return ast::Return::create(span + previous().span, expr);
+  return ast::Return::create(span + previous().span, lexicalScope, expr);
 }
 
 std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attrs) {
@@ -752,9 +736,9 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
     return ast::Empty::create();
   }
 
-  auto mod = ast::Module::create(span + previous().span, name, res.body);
+  auto mod = ast::Module::create(span + previous().span, lexicalScope, name, res.body);
 
-  mod->addAttribute({"__xcc_tag_used_from", { ast::String::create(span, res.path) }, span});
+  mod->addAttribute({"__xcc_tag_used_from", { ast::String::create(span, lexicalScope, res.path) }, span});
 
   updateModAliases(mod, all, symbols, span);
 
@@ -787,19 +771,19 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
     //   throw ParserException(current().line, "There can be only one file-scoped module in the file");
     // }
 
-    module.stack.push_back(name->name());
-    return ast::Module::create(span + previous().span, name, ast::Block::create({}, {}));
+    lexicalScope.push_back(name->value);
+    return ast::Module::create(span + previous().span, lexicalScope, name, ast::Block::create({}, lexicalScope, {}));
   }
 
-  auto body = ast::Block::create(span, {});
+  auto body = ast::Block::create(span, lexicalScope, {});
 
-  module.stack.push_back(name->name());
+  lexicalScope.push_back(name->value);
 
   while (!check(TOKEN_RIGHT_BRACE) && !isAtEnd()) {
     body->body.push_back(parseOneTopLevelNode(false, {}));
   }
 
-  module.stack.pop_back();
+  lexicalScope.pop_back();
 
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
     Error(ERROR_MOD_MISSING_CLOSING_BRACE, current().span).raise();
@@ -807,7 +791,7 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
 
   body->span = span + previous().span;
 
-  return ast::Module::create(span + previous().span, name, body);
+  return ast::Module::create(span + previous().span, lexicalScope, name, body);
 }
 
 std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::AttributeList& attrs) {
@@ -817,7 +801,7 @@ std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::Attribu
     Error(ERROR_TYPE_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto name = parseIdentifierWithCurrentScope("for type alias name");
+  auto name = parseIdentifier("for type alias name");
 
   if (!checkAdvance(TOKEN_EQUALS)) {
     Error(ERROR_TYPE_MISSING_EQUALS, current().span).raise();
@@ -833,7 +817,7 @@ std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::Attribu
     module.typeAliases.push_back(name->value);
   }
 
-  return ast::TypeDecl::create(span + previous().span, name, type);
+  return ast::TypeDecl::create(span + previous().span, lexicalScope, name, type);
 }
 
 std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& attrs) {
@@ -843,7 +827,7 @@ std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& at
     Error(ERROR_MACRO_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto id = parseIdentifierWithCurrentScope("for macro name");
+  auto id = parseIdentifier("for macro name");
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
     Error(ERROR_MACRO_MISSING_OPENING_PAREN, current().span).raise();
@@ -867,7 +851,7 @@ std::shared_ptr<ast::Node> Parser::parseMacro(const ast::Node::AttributeList& at
 
   auto body = parseBlock(true);
 
-  return ast::Macro::create(span + previous().span, id, args, body);
+  return ast::Macro::create(span + previous().span, lexicalScope, id, args, body);
 }
 
 ast::Match::Arm Parser::parseMatchArm() {
@@ -929,7 +913,7 @@ std::shared_ptr<ast::Node> Parser::parseMatch() {
     Error(ERROR_MATCH_MISSING_CLOSING_BRACE, current().span).raise();
   }
 
-  return ast::Match::create(span + previous().span, expr, arms);
+  return ast::Match::create(span + previous().span, lexicalScope, expr, arms);
 }
 
 std::shared_ptr<ast::Node> Parser::parseStmt(bool parseTopLevel) {
@@ -970,7 +954,7 @@ std::shared_ptr<ast::Node> Parser::parseAssignment() {
     Token op = previous();
     auto rhs = parseLogicAndBitOps();
     if (expr->isAnyOf(ast::AST_EXPR_IDENTIFIER, ast::AST_EXPR_UNARY, ast::AST_EXPR_SUBSCRIPT, ast::AST_EXPR_MEMBER_ACCESS)) {
-      expr = ast::Assign::create(expr->span + rhs->span, op, expr, rhs);
+      expr = ast::Assign::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
     } else {
       Error(ERROR_INVALID_LHS_FOR_ASSIGNMENT, expr->span, "{} is not valid for LHS in assignment", ast::Node::typeToHumanReadableString(expr->type)).raise();
     }
@@ -985,7 +969,7 @@ std::shared_ptr<ast::Node> Parser::parseLogicAndBitOps() {
   while (checkAdvanceAnyOf(TOKEN_AND, TOKEN_OR, TOKEN_AMP, TOKEN_VERTICAL_LINE)) {
     Token op = previous();
     auto rhs = parseEquality();
-    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
   }
 
   return expr;
@@ -997,7 +981,7 @@ std::shared_ptr<ast::Node> Parser::parseEquality() {
   while (checkAdvanceAnyOf(TOKEN_EQUALS_EQUALS, TOKEN_NOT_EQUALS)) {
     Token op = previous();
     auto rhs = parseComparison();
-    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
   }
 
   return expr;
@@ -1010,7 +994,7 @@ std::shared_ptr<ast::Node> Parser::parseComparison() {
                                TOKEN_LESS, TOKEN_LESS_EQUALS)) {
     Token op = previous();
     auto rhs = parseTerm();
-    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
   }
 
   return expr;
@@ -1022,7 +1006,7 @@ std::shared_ptr<ast::Node> Parser::parseTerm() {
   while (checkAdvanceAnyOf(TOKEN_MINUS, TOKEN_PLUS)) {
     Token op = previous();
     auto rhs = parseFactor();
-    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
   }
 
   return expr;
@@ -1031,11 +1015,11 @@ std::shared_ptr<ast::Node> Parser::parseTerm() {
 std::shared_ptr<ast::Node> Parser::parseFactor() {
   auto expr = parseCast();
 
-  // TODO: %
+  // TODO: Parse modulo ('%')
   while (checkAdvanceAnyOf(TOKEN_SLASH, TOKEN_STAR)) {
     Token op = previous();
     auto rhs = parseCast();
-    expr = ast::Binary::create(expr->span + rhs->span, op, expr, rhs);
+    expr = ast::Binary::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
   }
 
   return expr;
@@ -1046,7 +1030,7 @@ std::shared_ptr<ast::Node> Parser::parseCast() {
 
   if (checkAdvance(TOKEN_AS)) {
     auto type = parseType();
-    return ast::Cast::create(expr->span + type->span, expr, type);
+    return ast::Cast::create(expr->span + type->span, lexicalScope, expr, type);
   }
 
   return expr;
@@ -1057,7 +1041,7 @@ std::shared_ptr<ast::Node> Parser::parseUnary() {
                         TOKEN_AMP, TOKEN_STAR)) {
     Token op = previous();
     auto rhs = parseUnary();
-    return ast::Unary::create(op.span + rhs->span, op, rhs);
+    return ast::Unary::create(op.span + rhs->span, lexicalScope, op, rhs);
   }
 
   return parseSubscript();
@@ -1069,7 +1053,7 @@ std::shared_ptr<ast::Node> Parser::parseSubscript() {
   while (checkAdvance(TOKEN_LEFT_SQUARE_BRACE)) {
     auto rhs = parseExpr();
     assertRaise(checkAdvance(TOKEN_RIGHT_SQUARE_BRACE), Error(ERROR_SUBSCRIPT_MISSING_CLOSING_BRACE, rhs->span.pointPastLast()));
-    lhs = ast::Subscript::create(lhs->span + rhs->span, lhs, rhs);
+    lhs = ast::Subscript::create(lhs->span + rhs->span, lexicalScope, lhs, rhs);
   }
 
   return lhs;
@@ -1080,12 +1064,12 @@ std::shared_ptr<ast::Node> Parser::parseNumber() {
   auto        span  = previous().span;
 
   if (value.find('.') != std::string::npos) {
-    return ast::Number::createFloating(span, std::stod(value));
+    return ast::Number::createFloating(span, lexicalScope, std::stod(value));
   }
 
   auto res = util::determineBase(value);
 
-  return ast::Number::createInteger(span, std::stol(res.value, nullptr, res.base));
+  return ast::Number::createInteger(span, lexicalScope, std::stol(res.value, nullptr, res.base));
 }
 
 std::shared_ptr<ast::Node> Parser::parseRvalue() {
@@ -1094,11 +1078,11 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
   }
 
   if (checkAdvance(TOKEN_STRING)) {
-    return ast::String::create(previous().span, previous().value);
+    return ast::String::create(previous().span, lexicalScope, previous().value);
   }
 
   if (checkAdvance(TOKEN_CHAR)) {
-    return ast::Number::createInteger(previous().span, previous().value[0]);
+    return ast::Number::createInteger(previous().span, lexicalScope, previous().value[0]);
   }
 
   if (checkAdvance(TOKEN_DOLLAR_SIGN)) {
@@ -1128,7 +1112,7 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
       assertRaise(!str_val.empty(), Error(ERROR_NO_ENV_VARIABLE, id.span, "'{}'", id.value));
     }
 
-    return ast::String::create(span + id.span, str_val);
+    return ast::String::create(span + id.span, lexicalScope, str_val);
   }
 
   if (checkAdvance(TOKEN_LEFT_PAREN)) {
@@ -1204,7 +1188,7 @@ std::shared_ptr<ast::Node> Parser::parseLambda() {
   if (checkAdvance(TOKEN_RIGHT_ARROW)) {
     return_type = parseType();
   } else {
-    return_type = ast::Type::create(previous().span, ast::Identifier::create(previous().span, "void"));;
+    return_type = ast::Type::create(previous().span, lexicalScope, ast::Identifier::create(previous().span, lexicalScope, "void"));;
   }
 
   if (!check(TOKEN_LEFT_BRACE)) {
@@ -1213,7 +1197,7 @@ std::shared_ptr<ast::Node> Parser::parseLambda() {
 
   auto body = parseBlock();
 
-  return ast::Lambda::create(span + previous().span, captures, args, return_type, body, is_variadic);
+  return ast::Lambda::create(span + previous().span, lexicalScope, captures, args, return_type, body, is_variadic);
 }
 
 std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {
@@ -1241,7 +1225,7 @@ std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue(std::shared_ptr<ast
   auto span = current().span;
 
   if (!id) {
-    id = parseScopedIdentifier("for lvalue", true);
+    id = parseScopedIdentifier("for lvalue");
   }
 
   std::shared_ptr<ast::Node> expr = id;
@@ -1254,8 +1238,8 @@ std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue(std::shared_ptr<ast
     auto field = parseIdentifier("for member access");
 
     expr = is_pointer
-      ? ast::MemberAccess::createByPointer(span + previous().span, expr, field)
-      : ast::MemberAccess::createByValue(span + previous().span, expr, field);
+      ? ast::MemberAccess::createByPointer(span + previous().span, lexicalScope, expr, field)
+      : ast::MemberAccess::createByValue(span + previous().span, lexicalScope, expr, field);
   }
 
   /* Method Call */
@@ -1298,10 +1282,10 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   }
 
   if (isMacro) {
-    return ast::MacroCall::create(callee->span + previous().span, ast::Node::cast<ast::Identifier>(callee), args);
+    return ast::MacroCall::create(callee->span + previous().span, lexicalScope, ast::Node::cast<ast::Identifier>(callee), args);
   }
 
-  return ast::Call::create(callee->span + previous().span, callee, args);
+  return ast::Call::create(callee->span + previous().span, lexicalScope, callee, args);
 }
 
 std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identifier> typeName) {
@@ -1324,7 +1308,7 @@ std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identif
         // If set to true - will wrap type into an array in ast::Initializer::generateType
         has_square_braces = false;
 
-        type = ast::Type::createTuple(span, {type});
+        type = ast::Type::createTuple(span, lexicalScope, {type});
 
         while (checkAdvance(TOKEN_COMMA)) {
           type->as<ast::Type>()->tuple.members.push_back(parseType());
@@ -1338,7 +1322,7 @@ std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identif
       }
     }
   } else {
-    type = ast::Type::create(typeName->span, typeName);
+    type = ast::Type::create(typeName->span, lexicalScope, typeName);
   }
 
   span = previous().span;
@@ -1371,7 +1355,7 @@ std::shared_ptr<ast::Node> Parser::parseInitializer(std::shared_ptr<ast::Identif
   }
 
   return ast::Initializer::create(
-    span + previous().span, type, values, has_square_braces
+    span + previous().span, lexicalScope, type, values, has_square_braces
   );
 }
 
@@ -1457,10 +1441,10 @@ IncludedModule Parser::includeModuleFromPath(
     auto parser = Parser(file, tokens, true);
 
     if (scoped) {
-      parser.module.stack = module.stack;
+      parser.lexicalScope = lexicalScope;
     }
 
-    parser.module.stack.push_back(name);
+    parser.lexicalScope.push_back(name);
     parser.module.searchPaths = module.searchPaths;
     parser.module.included    = module.included;
 
@@ -1470,7 +1454,7 @@ IncludedModule Parser::includeModuleFromPath(
 
     ModuleCache::set(name, result);
 
-    parser.module.stack.pop_back();
+    parser.lexicalScope.pop_back();
 
     // Copy list of already included modules over to current parser
     module.included.merge(parser.module.included);
@@ -1510,12 +1494,12 @@ void Parser::updateModAliases(
   }
 
   for (auto& symbol : symbols) {
-    mod->addAttribute({"__xcc_tag_use_alias", { ast::String::create(symbol->span, symbol->name()) }, symbol->span});
+    mod->addAttribute({"__xcc_tag_use_alias", { ast::String::create(symbol->span, lexicalScope, symbol->name()) }, symbol->span});
   }
 }
 
 std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_ptr<ast::Block>& body) {
-  auto result = ast::Block::create({}, {});
+  auto result = ast::Block::create({}, lexicalScope, {});
 
   for (auto & node : body->body) {
     if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL, ast::AST_MACRO, ast::AST_CONST_DECL)) {
@@ -1612,7 +1596,7 @@ std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::
 Parser::Parser(FileId fileId, const std::vector<Token>& tokens, bool isModule) : fileId(fileId), tokens(tokens), current_idx(0), isModule(isModule) {}
 
 std::shared_ptr<ast::Block> Parser::parse(bool isRepl) {
-  auto block = ast::Block::create({}, {});
+  auto block = ast::Block::create({}, lexicalScope, {});
 
   while (!isAtEnd()) {
     block->body.push_back(parseOneTopLevelNode(isRepl, {}));

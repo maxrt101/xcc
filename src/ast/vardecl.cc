@@ -7,11 +7,12 @@ using namespace xcc::ast;
 
 VarDecl::VarDecl(
   SourceSpan                  span,
+  LexicalScope                scope,
   std::shared_ptr<Identifier> name,
   std::shared_ptr<Node>       type,
   std::shared_ptr<Node>       value,
   bool                        global
-) : Node(AST_VAR_DECL, span),
+) : Node(AST_VAR_DECL, span, scope),
     name(std::move(name)),
     type(std::move(type)),
     value(std::move(value)),
@@ -19,16 +20,17 @@ VarDecl::VarDecl(
 
 std::shared_ptr<VarDecl> VarDecl::create(
   SourceSpan                  span,
+  LexicalScope                scope,
   std::shared_ptr<Identifier> name,
   std::shared_ptr<Node>       type,
   std::shared_ptr<Node>       value,
   bool                        global
 ) {
-  return std::make_shared<VarDecl>(span, std::move(name), std::move(type), std::move(value), global);
+  return std::make_shared<VarDecl>(span, scope, std::move(name), std::move(type), std::move(value), global);
 }
 
 std::shared_ptr<Node> VarDecl::clone() {
-  return withAttrs(create(span,
+  return withAttrs(create(span, scope,
     cast<Identifier>(name->clone()),
     type ? type->clone() : nullptr,
     value ? value->clone() : nullptr,
@@ -121,6 +123,8 @@ llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_pt
 }
 
 llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload) {
+  auto id = getMangledName(name->value);
+
   auto llvm_type = meta_type->getLLVMType(ctx);
   auto constant  = (llvm::Constant *)(
     value
@@ -128,7 +132,7 @@ llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_p
       : meta_type->getDefault(ctx)
   );
 
-  ctx.globalContext.globals[name->name()] = meta_type;
+  ctx.globalContext.globals[id] = meta_type;
 
   [[maybe_unused]] auto global = new llvm::GlobalVariable(
       *ctx.globalContext.globalModule->llvm.module,
@@ -136,18 +140,18 @@ llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_p
       false,
       llvm::GlobalValue::ExternalLinkage,
       constant,
-      name->name()
+      id
   );
 
   auto extern_global = llvm::cast<llvm::GlobalVariable>(
-    ctx.llvm.module->getOrInsertGlobal(name->name(), llvm_type));
+    ctx.llvm.module->getOrInsertGlobal(id, llvm_type));
 
   extern_global->print(llvm::outs());
 
   auto di_global = ctx.globalContext.di_builder->createTempGlobalVariableFwdDecl(
     ctx.currentDIScope(),
-    name->name(),
-    name->name(),
+    id,
+    id,
     ctx.globalContext.getCurrentDIFile(),
     span.start().line,
     (meta_type->isEnum() ? meta_type->getEnumElementType() : meta_type)->getDIType(ctx),

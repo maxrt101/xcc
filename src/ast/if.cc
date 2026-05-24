@@ -6,15 +6,15 @@
 
 using namespace xcc::ast;
 
-If::If(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch)
-  : Node(AST_IF, span), condition(std::move(condition)), then_branch(std::move(then_branch)), else_branch(std::move(else_branch)) {}
+If::If(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch)
+  : Node(AST_IF, span, scope), condition(std::move(condition)), then_branch(std::move(then_branch)), else_branch(std::move(else_branch)) {}
 
-std::shared_ptr<If> If::create(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch) {
-  return std::make_shared<If>(span, std::move(condition), std::move(then_branch), std::move(else_branch));
+std::shared_ptr<If> If::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> condition, std::shared_ptr<Node> then_branch, std::shared_ptr<Node> else_branch) {
+  return std::make_shared<If>(span, scope, std::move(condition), std::move(then_branch), std::move(else_branch));
 }
 
 std::shared_ptr<Node> If::clone() {
-  return withAttrs(create(span, condition->clone(), then_branch->clone(), else_branch ? else_branch->clone() : nullptr));
+  return withAttrs(create(span, scope, condition->clone(), then_branch->clone(), else_branch ? else_branch->clone() : nullptr));
 }
 
 void If::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

@@ -24,6 +24,7 @@ public:
 public:
   Match(
     SourceSpan            span,
+    LexicalScope          scope,
     std::shared_ptr<Node> value,
     std::vector<Arm>      arms
   );
@@ -32,6 +33,7 @@ public:
 
   static std::shared_ptr<Match> create(
     SourceSpan            span,
+    LexicalScope          scope,
     std::shared_ptr<Node> value,
     std::vector<Arm>      arms
   );

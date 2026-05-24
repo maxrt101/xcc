@@ -10,10 +10,10 @@ public:
   std::shared_ptr<Node> body;
 
 public:
-  While(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
+  While(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
   ~While() override = default;
 
-  static std::shared_ptr<While> create(SourceSpan span, std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
+  static std::shared_ptr<While> create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> condition, std::shared_ptr<Node> body);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

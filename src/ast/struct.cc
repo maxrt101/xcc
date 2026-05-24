@@ -1,25 +1,18 @@
 #include "xcc/ast/struct.h"
 #include "xcc/codegen.h"
+#include "xcc/util/log.h"
 
 using namespace xcc;
 using namespace xcc::ast;
 
-Struct::Payload::Payload(std::string name)
-  : Node::Payload(AST_STRUCT), name(std::move(name)) {}
-
-std::shared_ptr<Node::Payload> Struct::Payload::create(std::string name) {
-  return std::dynamic_pointer_cast<Node::Payload>(
-      std::make_shared<Struct::Payload>(std::move(name))
-  );
-}
-
 Struct::Struct(
     SourceSpan                                    span,
+    LexicalScope                                  scope,
     std::shared_ptr<Identifier>                   name,
     NodeList                                      genericTypes,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
     NodeList                                      methods
-) : Node(AST_STRUCT, span),
+) : Node(AST_STRUCT, span, scope),
     name(std::move(name)),
     genericTypes(std::move(genericTypes)),
     fields(std::move(fields)),
@@ -27,12 +20,13 @@ Struct::Struct(
 
 std::shared_ptr<Struct> Struct::create(
     SourceSpan                                    span,
+    LexicalScope                                  scope,
     std::shared_ptr<Identifier>                   name,
     NodeList                                      genericTypes,
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
     NodeList                                      methods
 ) {
-  return std::make_shared<Struct>(span, std::move(name), std::move(genericTypes), std::move(fields), std::move(methods));
+  return std::make_shared<Struct>(span, scope, std::move(name), std::move(genericTypes), std::move(fields), std::move(methods));
 }
 
 bool Struct::isGeneric() const {
@@ -40,7 +34,7 @@ bool Struct::isGeneric() const {
 }
 
 std::shared_ptr<Node> Struct::clone() {
-  return withAttrs(create(span, cast<Identifier>(name->clone()), cloneVector(genericTypes), cloneVector(fields), cloneVector(methods)));
+  return withAttrs(create(span, scope, cast<Identifier>(name->clone()), cloneVector(genericTypes), cloneVector(fields), cloneVector(methods)));
 }
 
 void Struct::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -89,13 +83,7 @@ std::shared_ptr<meta::Type> Struct::generateType(codegen::ModuleContext &ctx, Pa
 }
 
 std::shared_ptr<meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto id = name->name();
-
-  if (auto gp = selectPayloadFirst(payload)) {
-    if (auto p = gp->as<Struct::Payload>()) {
-      id = p->name;
-    }
-  }
+  auto id = getMangledName(name->value);
 
   bool packed = false;
 
@@ -106,13 +94,13 @@ std::shared_ptr<meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::Mod
   std::shared_ptr<meta::Type> type;
 
   if (meta::Type::hasCustomType(id)) {
-    type = meta::Type::getCustomType(id);
-  } else {
-    type = meta::Type::createStruct(id, {}, packed);
-
-    // Create an empty struct type, to allow self-referential types
-    meta::Type::registerCustomType(id, type);
+    return meta::Type::getCustomType(id);
   }
+
+  type = meta::Type::createStruct(id, {}, packed);
+
+  // Create an empty struct type, to allow self-referential types
+  meta::Type::registerCustomType(id, type);
 
   for (auto & field : fields) {
     type->addMember(field->name->name(), field->generateType(ctx, payload));

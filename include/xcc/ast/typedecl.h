@@ -10,10 +10,10 @@ public:
   std::shared_ptr<Node> value;
 
 public:
-  explicit TypeDecl(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> value);
+  explicit TypeDecl(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, std::shared_ptr<Node> value);
   ~TypeDecl() override = default;
 
-  static std::shared_ptr<TypeDecl> create(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> value);
+  static std::shared_ptr<TypeDecl> create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, std::shared_ptr<Node> value);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

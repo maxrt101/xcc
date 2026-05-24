@@ -11,16 +11,6 @@ namespace xcc::ast {
 
 class Struct : public Node, public std::enable_shared_from_this<Struct> {
 public:
-  struct Payload : Node::Payload {
-    // Used by generic instantiation
-    std::string name;
-
-    explicit Payload(std::string name);
-    ~Payload() override = default;
-
-    static std::shared_ptr<Node::Payload> create(std::string name);
-  };
-
   std::shared_ptr<Identifier>                   name;
   NodeList                                      genericTypes;
   std::vector<std::shared_ptr<TypedIdentifier>> fields;
@@ -29,6 +19,7 @@ public:
 public:
   Struct(
       SourceSpan                                    span,
+      LexicalScope                                  scope,
       std::shared_ptr<Identifier>                   name,
       NodeList                                      genericTypes = {},
       std::vector<std::shared_ptr<TypedIdentifier>> fields       = {},
@@ -39,6 +30,7 @@ public:
 
   static std::shared_ptr<Struct> create(
       SourceSpan                                    span,
+      LexicalScope                                  scope,
       std::shared_ptr<Identifier>                   name,
       NodeList                                      genericTypes = {},
       std::vector<std::shared_ptr<TypedIdentifier>> fields       = {},

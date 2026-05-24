@@ -2,6 +2,7 @@
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
 #include "xcc/util/string.h"
+#include "xcc/util/util.h"
 
 using namespace xcc;
 using namespace xcc::meta;
@@ -687,7 +688,7 @@ std::shared_ptr<Type> Type::getMemberType(const std::string& name) const {
     }
   }
 
-  Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '" + toString() + "' has no member '" + name + "'").raise();
+  Error(ERROR_UNKNOWN_MEMBER, {}, "Struct '{}' has no member '{}'", toString(), name).raise();
 }
 
 std::string Type::getMemberName(size_t index) const {
@@ -879,29 +880,29 @@ llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
   }
 }
 
-std::shared_ptr<ast::Node> Type::toAst(SourceSpan span) const {
+std::shared_ptr<ast::Node> Type::toAst(SourceSpan span, ast::LexicalScope lexicalScope) const {
   switch (tag) {
-    case TypeTag::VOID:  return ast::Type::create(span, ast::Identifier::create(span, "void"));
-    case TypeTag::BOOL:  return ast::Type::create(span, ast::Identifier::create(span, "bool"));
-    case TypeTag::U8:    return ast::Type::create(span, ast::Identifier::create(span, "u8"));
-    case TypeTag::U16:   return ast::Type::create(span, ast::Identifier::create(span, "u16"));
-    case TypeTag::U32:   return ast::Type::create(span, ast::Identifier::create(span, "u32"));
-    case TypeTag::U64:   return ast::Type::create(span, ast::Identifier::create(span, "u64"));
-    case TypeTag::I8:    return ast::Type::create(span, ast::Identifier::create(span, "i8"));
-    case TypeTag::I16:   return ast::Type::create(span, ast::Identifier::create(span, "i16"));
-    case TypeTag::I32:   return ast::Type::create(span, ast::Identifier::create(span, "i32"));
-    case TypeTag::I64:   return ast::Type::create(span, ast::Identifier::create(span, "i64"));
-    case TypeTag::F32:   return ast::Type::create(span, ast::Identifier::create(span, "f32"));
-    case TypeTag::F64:   return ast::Type::create(span, ast::Identifier::create(span, "f64"));
-    case TypeTag::ISIZE: return ast::Type::create(span, ast::Identifier::create(span, "isize"));
-    case TypeTag::USIZE: return ast::Type::create(span, ast::Identifier::create(span, "usize"));
-    case TypeTag::PTR:   return ast::Type::createPointer(span, ptr.pointedType->toAst());
+    case TypeTag::VOID:  return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "void"));
+    case TypeTag::BOOL:  return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "bool"));
+    case TypeTag::U8:    return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "u8"));
+    case TypeTag::U16:   return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "u16"));
+    case TypeTag::U32:   return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "u32"));
+    case TypeTag::U64:   return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "u64"));
+    case TypeTag::I8:    return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "i8"));
+    case TypeTag::I16:   return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "i16"));
+    case TypeTag::I32:   return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "i32"));
+    case TypeTag::I64:   return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "i64"));
+    case TypeTag::F32:   return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "f32"));
+    case TypeTag::F64:   return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "f64"));
+    case TypeTag::ISIZE: return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "isize"));
+    case TypeTag::USIZE: return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, "usize"));
+    case TypeTag::PTR:   return ast::Type::createPointer(span, lexicalScope, ptr.pointedType->toAst());
 
     case TypeTag::ARRAY: {
       return ast::Type::createArray(
-        span,
+        span, lexicalScope,
         arr.elementType->toAst(),
-        ast::Number::createInteger(span, arr.size)
+        ast::Number::createInteger(span, lexicalScope, arr.size)
       );
     }
 
@@ -912,7 +913,7 @@ std::shared_ptr<ast::Node> Type::toAst(SourceSpan span) const {
         args.push_back(arg->toAst());
       }
 
-      return ast::Type::createFunction(span, fn.returnType->toAst(), args, fn.isVariadic);
+      return ast::Type::createFunction(span, lexicalScope, fn.returnType->toAst(), args, fn.isVariadic);
     }
 
     case TypeTag::LAMBDA: {
@@ -926,7 +927,7 @@ std::shared_ptr<ast::Node> Type::toAst(SourceSpan span) const {
         args.push_back(arg->toAst());
       }
 
-      return ast::Type::createLambda(span, captures, lambda.fn->fn.returnType->toAst(), args, lambda.fn->fn.isVariadic);
+      return ast::Type::createLambda(span, lexicalScope, captures, lambda.fn->fn.returnType->toAst(), args, lambda.fn->fn.isVariadic);
     }
 
     case TypeTag::ENUM: {
@@ -934,12 +935,12 @@ std::shared_ptr<ast::Node> Type::toAst(SourceSpan span) const {
 
       for (auto& field : _enum.members) {
         fields.emplace_back(
-          ast::Identifier::create(span, field.name),
-          ast::Number::createInteger(span, field.value)
+          ast::Identifier::create(span, lexicalScope, field.name),
+          ast::Number::createInteger(span, lexicalScope, field.value)
         );
       }
 
-      return ast::Enum::create(span, ast::Identifier::create(span, _enum.name), _enum.base->toAst(span), fields);
+      return ast::Enum::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, _enum.name), _enum.base->toAst(span), fields);
     }
 
     case TypeTag::TUPLE: {
@@ -949,11 +950,11 @@ std::shared_ptr<ast::Node> Type::toAst(SourceSpan span) const {
         members.push_back(member->toAst());
       }
 
-      return ast::Type::createTuple(span, members);
+      return ast::Type::createTuple(span, lexicalScope, members);
     }
 
     case TypeTag::STRUCT: {
-      return ast::Type::create(span, ast::Identifier::create(span, _struct.name));
+      return ast::Type::create(span, lexicalScope, ast::Identifier::create(span, lexicalScope, _struct.name));
     }
 
     default:
@@ -1152,7 +1153,15 @@ bool Type::hasCustomType(const std::string& name) {
 }
 
 std::shared_ptr<Type> Type::getCustomType(const std::string& name) {
-  return customTypes[name];
+  if (hasCustomType(name)) {
+    return customTypes[name];
+  }
+
+  return nullptr;
+}
+
+bool Type::isBuiltIn(const std::string& name) {
+  return oneOf(name, "void", "bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64", "isize", "usize");
 }
 
 std::shared_ptr<Type> Type::alignTypes(std::shared_ptr<Type> lhs, std::shared_ptr<Type> rhs) {

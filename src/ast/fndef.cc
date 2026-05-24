@@ -9,18 +9,18 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-static auto logger = xcc::util::log::Logger("FNDEF", util::log::Flag::SPLIT_ON_NEWLINE);
+static auto& logger = xcc::log::Logger::get("FNDEF", log::Flag::SPLIT_ON_NEWLINE);
 
-FnDef::FnDef(SourceSpan span, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body)
-  : Node(AST_FUNCTION_DEF, span), decl(std::move(decl)), body(std::move(body)) {}
+FnDef::FnDef(SourceSpan span, LexicalScope scope, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body)
+  : Node(AST_FUNCTION_DEF, span, scope), decl(std::move(decl)), body(std::move(body)) {}
 
-std::shared_ptr<FnDef> FnDef::create(SourceSpan span, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body) {
-  return std::make_shared<FnDef>(span, std::move(decl), std::move(body));
+std::shared_ptr<FnDef> FnDef::create(SourceSpan span, LexicalScope scope, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body) {
+  return std::make_shared<FnDef>(span, scope, std::move(decl), std::move(body));
 }
 
 std::shared_ptr<Node> FnDef::clone() {
   return withAttrs(create(
-    span,
+    span, scope,
     cast<FnDecl>(decl->clone()),
     cast<Block>(body->clone())
   ));
@@ -47,6 +47,10 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 
   if (!fn) {
     Error(ERROR_INTERNAL_FAILURE, decl->span, "Error generating Function object for '{}'", fn->getName().str()).raiseFromNode(this);
+  }
+
+  if (!gen_fn->isDeclaration()) {
+    return gen_fn;
   }
 
   auto di_fn = ctx.globalContext.di_builder->createFunction(

@@ -6,11 +6,12 @@ using namespace xcc::ast;
 
 Enum::Enum(
   SourceSpan                  span,
+  LexicalScope                scope,
   std::shared_ptr<Identifier> name,
   std::shared_ptr<Node>       type,
   FieldList                   fields,
   NodeList                    methods
-) : Node(AST_ENUM, span),
+) : Node(AST_ENUM, span, scope),
     name(std::move(name)),
     type(std::move(type)),
     fields(std::move(fields)),
@@ -18,12 +19,13 @@ Enum::Enum(
 
 std::shared_ptr<Enum> Enum::create(
   SourceSpan                  span,
+  LexicalScope                scope,
   std::shared_ptr<Identifier> name,
   std::shared_ptr<Node>       type,
   FieldList                   fields,
   NodeList                    methods
 ) {
-  return std::make_shared<Enum>(span, std::move(name), std::move(type), std::move(fields), std::move(methods));
+  return std::make_shared<Enum>(span, scope, std::move(name), std::move(type), std::move(fields), std::move(methods));
 }
 
 std::shared_ptr<Node> Enum::clone() {
@@ -33,7 +35,7 @@ std::shared_ptr<Node> Enum::clone() {
     fields.emplace_back(cast<Identifier>(f.first->clone()), f.second->clone());
   }
 
-  return withAttrs(create(span, cast<Identifier>(name->clone()), type->clone(), fields, cloneVector(methods)));
+  return withAttrs(create(span, scope, cast<Identifier>(name->clone()), type->clone(), fields, cloneVector(methods)));
 }
 
 void Enum::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -89,7 +91,7 @@ std::shared_ptr<meta::Type> Enum::generateType(codegen::ModuleContext &ctx, Payl
 }
 
 std::shared_ptr<meta::Type> Enum::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  auto id = name->name();
+  auto id = getMangledName(name->value);
 
   if (meta::Type::hasCustomType(id)) {
     return meta::Type::getCustomType(id);

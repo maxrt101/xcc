@@ -18,15 +18,15 @@ static std::unordered_map<TokenType, TokenType> s_equal_to_op = {
   {TOKEN_LOGICAL_OR_EQUALS,   TOKEN_OR},
 };
 
-Assign::Assign(SourceSpan span, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
-  : Node(AST_EXPR_ASSIGN, span), kind(std::move(kind)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
+Assign::Assign(SourceSpan span, LexicalScope scope, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
+  : Node(AST_EXPR_ASSIGN, span, scope), kind(std::move(kind)), lhs(std::move(lhs)), rhs(std::move(rhs)) {}
 
-std::shared_ptr<Assign> Assign::create(SourceSpan span, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
-  return std::make_shared<Assign>(span, std::move(kind), std::move(lhs), std::move(rhs));
+std::shared_ptr<Assign> Assign::create(SourceSpan span, LexicalScope scope, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs) {
+  return std::make_shared<Assign>(span, scope, std::move(kind), std::move(lhs), std::move(rhs));
 }
 
 std::shared_ptr<Node> Assign::clone() {
-  return withAttrs(create(span, kind, lhs->clone(), rhs->clone()));
+  return withAttrs(create(span, scope, kind, lhs->clone(), rhs->clone()));
 }
 
 void Assign::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -49,7 +49,7 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   if (kind.type == TOKEN_EQUALS) {
     value = rhs->generateValue(ctx, payload);
   } else if (s_equal_to_op.find(kind.type) != s_equal_to_op.end()) {
-    value = Binary::create(span, kind.clone(s_equal_to_op[kind.type]), lhs, rhs)->generateValue(ctx, payload);
+    value = Binary::create(span, scope, kind.clone(s_equal_to_op[kind.type]), lhs, rhs)->generateValue(ctx, payload);
   } else {
     Error(ERROR_INVALID_ASSIGNMENT_OP, kind.span, "{}", Token::typeToString(kind.type)).raiseFromNode(this);
   }

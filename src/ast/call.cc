@@ -5,15 +5,15 @@
 
 using namespace xcc::ast;
 
-Call::Call(SourceSpan span, std::shared_ptr<Node> callee, NodeList args)
-    : Node(AST_EXPR_CALL, span), callee(std::move(callee)), args(std::move(args)) {}
+Call::Call(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> callee, NodeList args)
+    : Node(AST_EXPR_CALL, span, scope), callee(std::move(callee)), args(std::move(args)) {}
 
-std::shared_ptr<Call> Call::create(SourceSpan span, std::shared_ptr<Node> name, NodeList args) {
-  return std::make_shared<Call>(span, std::move(name), std::move(args));
+std::shared_ptr<Call> Call::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, NodeList args) {
+  return std::make_shared<Call>(span, scope, std::move(name), std::move(args));
 }
 
 std::shared_ptr<Node> Call::clone() {
-  return withAttrs(create(span, callee->clone(), cloneVector(args)));
+  return withAttrs(create(span, scope, callee->clone(), cloneVector(args)));
 }
 
 void Call::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

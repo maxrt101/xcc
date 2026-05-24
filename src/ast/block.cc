@@ -46,15 +46,15 @@ std::shared_ptr<Node::Payload> Block::Payload::create(std::shared_ptr<meta::Type
   );
 }
 
-Block::Block(SourceSpan span, NodeList body)
-  : Node(AST_BLOCK, span), body(std::move(body)) {}
+Block::Block(SourceSpan span, LexicalScope scope, NodeList body)
+  : Node(AST_BLOCK, span, scope), body(std::move(body)) {}
 
-std::shared_ptr<Block> Block::create(SourceSpan span, NodeList body) {
-  return std::make_shared<Block>(span, std::move(body));
+std::shared_ptr<Block> Block::create(SourceSpan span, LexicalScope scope, NodeList body) {
+  return std::make_shared<Block>(span, scope, std::move(body));
 }
 
 std::shared_ptr<Node> Block::clone() {
-  return withAttrs(create(span, cloneVector(body)));
+  return withAttrs(create(span, scope, cloneVector(body)));
 }
 
 void Block::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

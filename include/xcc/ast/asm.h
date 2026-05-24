@@ -14,6 +14,7 @@ public:
 public:
   Asm(
     SourceSpan            span,
+    LexicalScope          scope,
     std::shared_ptr<Node> code,
     std::shared_ptr<Node> constraints,
     NodeList args
@@ -23,6 +24,7 @@ public:
 
   static std::shared_ptr<Asm> create(
     SourceSpan            span,
+    LexicalScope          scope,
     std::shared_ptr<Node> code,
     std::shared_ptr<Node> constraints,
     NodeList              args

@@ -6,18 +6,20 @@ using namespace xcc::ast;
 
 Match::Match(
   SourceSpan            span,
+  LexicalScope          scope,
   std::shared_ptr<Node> value,
   std::vector<Arm>      arms
-) : Node(AST_MATCH, span),
+) : Node(AST_MATCH, span, scope),
     value(std::move(value)),
     arms(std::move(arms)) {}
 
 std::shared_ptr<Match> Match::create(
   SourceSpan            span,
+  LexicalScope          scope,
   std::shared_ptr<Node> value,
   std::vector<Arm>      arms
 ) {
-  return std::make_shared<Match>(span, std::move(value), std::move(arms));
+  return std::make_shared<Match>(span, scope, std::move(value), std::move(arms));
 }
 
 std::shared_ptr<Node> Match::clone() {
@@ -33,7 +35,7 @@ std::shared_ptr<Node> Match::clone() {
     arms_copy.push_back({p, arm.then->clone()});
   }
 
-  return withAttrs(create(span, value->clone(), arms_copy));
+  return withAttrs(create(span, scope, value->clone(), arms_copy));
 }
 
 void Match::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
@@ -214,5 +216,5 @@ std::shared_ptr<Node> Match::findOrCreateDefault() {
     }
   }
 
-  return Block::create(span, {});
+  return Block::create(span, scope, {});
 }

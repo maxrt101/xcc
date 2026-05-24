@@ -12,10 +12,10 @@ public:
   std::shared_ptr<Node> rhs;
 
 public:
-  Assign(SourceSpan span, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
+  Assign(SourceSpan span, LexicalScope scope, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
   ~Assign() override = default;
 
-  static std::shared_ptr<Assign> create(SourceSpan span, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
+  static std::shared_ptr<Assign> create(SourceSpan span, LexicalScope scope, Token kind, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

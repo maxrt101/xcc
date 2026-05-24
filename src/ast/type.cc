@@ -3,52 +3,40 @@
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
 #include "xcc/meta/type.h"
+#include "xcc/util/log.h"
 
 using namespace xcc::ast;
 
-Type::Payload::Payload(meta::SubstitutionMap sub)
-  : Node::Payload(AST_EXPR_TYPE), substitutions(std::move(sub)) {}
+static auto& logger = xcc::log::Logger::get("GENERICS");
 
-std::shared_ptr<Node::Payload> Type::Payload::create(meta::SubstitutionMap sub) {
-  return std::dynamic_pointer_cast<Node::Payload>(
-      std::make_shared<Type::Payload>(std::move(sub))
-  );
+Type::Type(SourceSpan span, LexicalScope scope, Kind kind, std::shared_ptr<Node> name)
+  : Node(AST_EXPR_TYPE, span, scope), kind(kind), name(std::move(name)) {}
+
+std::shared_ptr<Type> Type::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name) {
+  return std::make_shared<Type>(span, scope, NORMAL, std::move(name));
 }
 
-Type::Type(SourceSpan span, Kind kind, std::shared_ptr<Node> name)
-  : Node(AST_EXPR_TYPE, span), kind(kind), name(std::move(name)) {}
-
-std::shared_ptr<Type> Type::create(SourceSpan span, std::shared_ptr<Node> name) {
-  return std::make_shared<Type>(span, NORMAL, std::move(name));
+std::shared_ptr<Type> Type::createPointer(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name) {
+  return std::make_shared<Type>(span, scope, POINTER, std::move(name));
 }
 
-std::shared_ptr<Type> Type::createGeneric(SourceSpan span, std::shared_ptr<Node> name, NodeList genericArgs) {
-  auto t = std::make_shared<Type>(span, NORMAL, std::move(name));
-  t->genericArgs = std::move(genericArgs);
-  return t;
-}
-
-std::shared_ptr<Type> Type::createPointer(SourceSpan span, std::shared_ptr<Node> name) {
-  return std::make_shared<Type>(span, POINTER, std::move(name));
-}
-
-std::shared_ptr<Type> Type::createArray(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> size) {
-  auto t = std::make_shared<Type>(span, ARRAY, nullptr);
+std::shared_ptr<Type> Type::createArray(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, std::shared_ptr<Node> size) {
+  auto t = std::make_shared<Type>(span, scope, ARRAY, nullptr);
   t->name       = std::move(name);
   t->array.size = std::move(size);
   return t;
 }
 
-std::shared_ptr<Type> Type::createFunction(SourceSpan span, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic) {
-  auto t = std::make_shared<Type>(span, FUNCTION, nullptr);
+std::shared_ptr<Type> Type::createFunction(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic) {
+  auto t = std::make_shared<Type>(span, scope, FUNCTION, nullptr);
   t->fn.returnType = std::move(returnType);
   t->fn.args       = std::move(args);
   t->fn.isVariadic = isVariadic;
   return t;
 }
 
-std::shared_ptr<Type> Type::createLambda(SourceSpan span, NodeList captures, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic) {
-  auto t = std::make_shared<Type>(span, LAMBDA, nullptr);
+std::shared_ptr<Type> Type::createLambda(SourceSpan span, LexicalScope scope, NodeList captures, std::shared_ptr<Node> returnType, NodeList args, bool isVariadic) {
+  auto t = std::make_shared<Type>(span, scope, LAMBDA, nullptr);
   t->lambda.captures = std::move(captures);
   t->fn.returnType   = std::move(returnType);
   t->fn.args         = std::move(args);
@@ -56,31 +44,27 @@ std::shared_ptr<Type> Type::createLambda(SourceSpan span, NodeList captures, std
   return t;
 }
 
-std::shared_ptr<Type> Type::createTuple(SourceSpan span, NodeList members) {
-  auto t = std::make_shared<Type>(span, TUPLE, nullptr);
+std::shared_ptr<Type> Type::createTuple(SourceSpan span, LexicalScope scope, NodeList members) {
+  auto t = std::make_shared<Type>(span, scope, TUPLE, nullptr);
   t->tuple.members = std::move(members);
   return t;
-}
-
-bool Type::isGeneric() const {
-  return !genericArgs.empty();
 }
 
 std::shared_ptr<Node> Type::clone() {
   switch (kind) {
     case POINTER:
-      return withAttrs(createPointer(span, name->clone()));
+      return withAttrs(createPointer(span, scope, name->clone()));
     case ARRAY:
-      return withAttrs(createArray(span, name->clone(), array.size->clone()));
+      return withAttrs(createArray(span, scope, name->clone(), array.size->clone()));
     case FUNCTION:
-      return withAttrs(createFunction(span, cast<Type>(fn.returnType->clone()), cloneVector(fn.args), fn.isVariadic));
+      return withAttrs(createFunction(span, scope, cast<Type>(fn.returnType->clone()), cloneVector(fn.args), fn.isVariadic));
     case LAMBDA:
-      return withAttrs(createLambda(span, cloneVector(lambda.captures), cast<Type>(fn.returnType->clone()), cloneVector(fn.args), fn.isVariadic));
+      return withAttrs(createLambda(span, scope, cloneVector(lambda.captures), cast<Type>(fn.returnType->clone()), cloneVector(fn.args), fn.isVariadic));
     case TUPLE:
-      return withAttrs(createTuple(span, cloneVector(tuple.members)));
+      return withAttrs(createTuple(span, scope, cloneVector(tuple.members)));
     case NORMAL:
     default:
-      return withAttrs(isGeneric() ? createGeneric(span, name->clone(), cloneVector(genericArgs)) : create(span, name->clone()));
+      return withAttrs(create(span, scope, name->clone()));
   }
 }
 
@@ -107,11 +91,6 @@ void Type::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::ve
     case POINTER:
     default: {
       callVisitor(globalContext, name, visitor, ignoreSubtree);
-      if (isGeneric()) {
-        for (auto& node : genericArgs) {
-          callVisitor(globalContext, node, visitor, ignoreSubtree);
-        }
-      }
       break;
     }
   }
@@ -162,17 +141,6 @@ std::string Type::toString(Node * grandparent, Node * parent, int indent, bool n
   }
 
   res += name->toString(parent, this, indent, false);
-
-  if (isGeneric()) {
-    res += "<";
-    for (size_t i = 0; i < genericArgs.size(); ++i) {
-      res += genericArgs[i]->toString(parent, this, indent, false);
-      if (i + 1 < genericArgs.size()) {
-        res += ", ";
-      }
-    }
-    res += ">";
-  }
 
   if (kind == ARRAY) {
     res += std::format("[{}]", array.size->toString(parent, this, indent, false));
@@ -242,94 +210,74 @@ std::shared_ptr<xcc::meta::Type> Type::generateType(codegen::ModuleContext& ctx,
 }
 
 std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (name->is(AST_EXPR_IDENTIFIER)) {
-    auto id = name->as<Identifier>()->name();
+  if (!name->isAnyOf(AST_EXPR_IDENTIFIER)) {
+    return name->generateType(ctx, payload);
+  }
 
-    if (isGeneric() && codegen::GenericsCache::has(id)) {
-      auto generic = codegen::GenericsCache::get(id);
+  auto ident = name->as<Identifier>();
 
-      auto original_id = id;
+  // Generic name ('test::Container', or really 'test_Container', since it's mangled)
+  std::string id = ident->getResolvedName(ctx);
 
-      // Create a new instantiated/mangled type name ('mod::Struct<T>' -> 'mod_Struct_i32')
-      id = name->as<Identifier>()->fullName(ctx, payload, false, genericArgs);
+  if (!ident->genericArgs.empty()) {
+    // Build concrete, mangled name ('test::Container<T>' -> 'test_Container_i32')
+    std::string concrete_name = ident->getConcreteName(ctx, id);
 
-      // Don't generate if already generated
-      if (meta::Type::hasCustomType(id)) {
-        return meta::Type::getCustomType(id);
-      }
+    logger.debug("Instantiation request for '{}' ('{}')", id, concrete_name);
 
-      // Create and register new custom type, needed at this stage for correct macro expansion
-      // as method may contain a macro call, which may need to know concrete type for generic struct
-      auto type = meta::Type::createStruct(id, {}, generic->hasAttribute("packed"));
-      meta::Type::registerCustomType(id, type);
-
-      assertRaiseFromNode(generic->is(AST_STRUCT), Error(ERROR_UNIMPLEMENTED, generic->span, "Only generic structs are supported"), this);
-
-      // Clone generic struct declaration. This is needed, as FnDecl will
-      // modify itself, if payload with concrete struct name is passed to it
-      generic = generic->clone();
-
-      std::vector<std::string> genericTypes;
-
-      // Extract generic type names
-      for (auto& g : generic->as<Struct>()->genericTypes) {
-        assertRaiseFromNode(g->is(AST_EXPR_IDENTIFIER), Error(ERROR_UNIMPLEMENTED, g->span, "Only an identifier can be a generic type"), this);
-        genericTypes.push_back(g->as<Identifier>()->name());
-      }
-
-      // TODO: Don't forget to change this assert, when default generic types are implemented
-      assertRaiseFromNode(genericTypes.size() == genericArgs.size(), Error(ERROR_GENERIC_COUNT_MISMATCH, span), this);
-
-      // Initialize substitution map (generic arg -> meta type) with generalized
-      // name -> concrete type ('Container' -> 'meta::Type("Container_i32" for T=i32)')
-      meta::SubstitutionMap substitutions = {{original_id, create(name->span, Identifier::create(name->span, id))->generateType(ctx, payload)}};
-
-      // Generate substitures for each generic type
-      for (size_t i = 0; i < genericTypes.size(); ++i) {
-        substitutions[genericTypes[i]] = genericArgs[i]->generateType(ctx, payload);
-      }
-
-      // Create Type::Payload with substitutions, will be
-      // referred to each time a generic type is requested
-      payload.push_back(Type::Payload::create(substitutions));
-
-      // Create a Struct::Payload, with new concrete name
-      payload.push_back(Struct::Payload::create(id));
-
-      auto struct_type = generic->generateType(ctx, payload);
-
-      llvm::IRBuilder<>::InsertPointGuard ir_guard(*ctx.ir_builder);
-
-      for (auto& method : generic->as<Struct>()->methods) {
-        // Sequentially generate all methods, adding FnDecl::Payload
-        // with generic struct name -> concrete name substitution
-        // TODO: This could be added once along with other payloads
-        method->generateFunction(ctx, extendPayload(payload, FnDecl::Payload::create(original_id, id)));
-      }
-
-      return struct_type;
+    // Return if already generated
+    if (meta::Type::hasCustomType(concrete_name)) {
+      logger.debug("Found instantiated type '{}'", concrete_name);
+      return meta::Type::getCustomType(concrete_name);
     }
 
-    if (auto p = selectPayloadFirst(payload)) {
-      auto sub = p->as<Type::Payload>();
+    assertRaiseFromNode(codegen::GenericsCache::has(id), Error(ERROR_INTERNAL_FAILURE, span, "No such generic struct: '{}'", id), this);
 
-      // Check substitution map, if payload is present
-      if (sub->substitutions.contains(id)) {
-        return sub->substitutions[id];
-      }
-    }
+    auto generic = codegen::GenericsCache::get(id);
 
-    return meta::Type::fromTypeName(
+    auto concrete = generic->clone();
+
+    auto mm = Monomorphizer(
       ctx.globalContext,
-      ctx.globalContext.aliased(id),
-      name->span
+      ident->value,                              // baseName
+      id,                                        // genericName
+      concrete_name,                             // concreteName
+      ident->getConcreteName(ctx, ident->value), // concreteUnqualifiedName
+      generic->as<Struct>()->genericTypes,
+      ident->genericArgs
     );
+
+    mm.apply(concrete);
+
+    concrete->as<Struct>()->name->value = ident->getConcreteName(ctx, ident->value);
+    concrete->as<Struct>()->genericTypes.clear();
+
+    std::shared_ptr<meta::Type> type;
+
+    logger.debug("Instantiating Generic Type '{}' from '{}'", concrete_name, id);
+
+    try {
+      type = concrete->generateType(ctx, {});
+
+      for (auto& method : concrete->as<Struct>()->methods) {
+        logger.debug("Instantiating Generic Method '{}' for '{}' ('{}')", method->as<FnDef>()->decl->name->name(), concrete_name, id);
+
+        auto fn = method->generateFunction(ctx, payload);
+
+        fn->setLinkage(llvm::Function::LinkOnceODRLinkage);
+
+        llvm::Triple target(ctx.llvm.module->getTargetTriple());
+
+        if (target.supportsCOMDAT()) {
+          fn->setComdat(ctx.llvm.module->getOrInsertComdat(fn->getName())); // Needed for linux & windows linker to know which
+        }
+      }
+    } catch (CompilationException& ex) {
+      ex.error.note(generic->span, "During instantiation of '{}'", id).raiseFromNode(this);
+    }
+
+    return type;
   }
 
-  /* Recursive type - type + optional pointer */
-  if (name->is(AST_EXPR_TYPE)) {
-    return name->as<Type>()->generateType(ctx, payload);
-  }
-
-  Error(ERROR_INTERNAL_UNEXPECTED_NODE, name->span, "Unexpected {} at type", typeToHumanReadableString(name->type)).raiseFromNode(this);
+  return meta::Type::fromTypeName(ctx.globalContext, id, name->span);
 }

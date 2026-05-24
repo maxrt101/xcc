@@ -3,15 +3,15 @@
 
 using namespace xcc::ast;
 
-TypedIdentifier::TypedIdentifier(SourceSpan span, std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value)
-  : Node(AST_EXPR_TYPED_IDENTIFIER, span), name(std::move(name)), value_type(std::move(type)), value(std::move(value)) {}
+TypedIdentifier::TypedIdentifier(SourceSpan span, LexicalScope scope, std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value)
+  : Node(AST_EXPR_TYPED_IDENTIFIER, span, scope), name(std::move(name)), value_type(std::move(type)), value(std::move(value)) {}
 
-std::shared_ptr<TypedIdentifier> TypedIdentifier::create(SourceSpan span, std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value) {
-  return std::make_shared<TypedIdentifier>(span, std::move(name), std::move(type), std::move(value));
+std::shared_ptr<TypedIdentifier> TypedIdentifier::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Identifier> name, std::shared_ptr<Node> type, std::shared_ptr<Node> value) {
+  return std::make_shared<TypedIdentifier>(span, scope, std::move(name), std::move(type), std::move(value));
 }
 
 std::shared_ptr<Node> TypedIdentifier::clone() {
-  return withAttrs(create(span, cast<Identifier>(
+  return withAttrs(create(span, scope, cast<Identifier>(
     name->clone()),
     value_type ? cast<Type>(value_type->clone()) : nullptr,
     value ? value->clone() : nullptr

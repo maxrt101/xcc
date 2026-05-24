@@ -21,6 +21,7 @@ public:
 public:
   explicit Enum(
       SourceSpan                  span,
+      LexicalScope                scope,
       std::shared_ptr<Identifier> name,
       std::shared_ptr<Node>       type,
       FieldList                   fields = {},
@@ -31,6 +32,7 @@ public:
 
   static std::shared_ptr<Enum> create(
       SourceSpan                  span,
+      LexicalScope                scope,
       std::shared_ptr<Identifier> name,
       std::shared_ptr<Node>       type,
       FieldList                   fields = {},

@@ -4,14 +4,14 @@
 
 using namespace xcc::ast;
 
-String::String(SourceSpan span, std::string value) : Node(AST_EXPR_STRING, span), value(std::move(value)) {}
+String::String(SourceSpan span, LexicalScope scope, std::string value) : Node(AST_EXPR_STRING, span, scope), value(std::move(value)) {}
 
-std::shared_ptr<String> String::create(SourceSpan span, std::string value) {
-  return std::make_shared<String>(span, std::move(value));
+std::shared_ptr<String> String::create(SourceSpan span, LexicalScope scope, std::string value) {
+  return std::make_shared<String>(span, scope, std::move(value));
 }
 
 std::shared_ptr<Node> String::clone() {
-  return withAttrs(create(span, value));
+  return withAttrs(create(span, scope, value));
 }
 
 void String::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}

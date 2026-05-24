@@ -5,22 +5,24 @@ using namespace xcc::ast;
 
 Asm::Asm(
   SourceSpan            span,
+  LexicalScope          scope,
   std::shared_ptr<Node> code,
   std::shared_ptr<Node> constraints,
   NodeList              args
-) : Node(AST_ASM, span), code(std::move(code)), constraints(std::move(constraints)), args(std::move(args)) {}
+) : Node(AST_ASM, span, scope), code(std::move(code)), constraints(std::move(constraints)), args(std::move(args)) {}
 
 std::shared_ptr<Asm> Asm::create(
   SourceSpan            span,
+  LexicalScope          scope,
   std::shared_ptr<Node> code,
   std::shared_ptr<Node> constraints,
   NodeList              args
 ) {
-  return std::make_shared<Asm>(span, std::move(code), std::move(constraints), std::move(args));
+  return std::make_shared<Asm>(span, scope, std::move(code), std::move(constraints), std::move(args));
 }
 
 std::shared_ptr<Node> Asm::clone() {
-  return withAttrs(create(span, code->clone(), constraints->clone(), cloneVector(args)));
+  return withAttrs(create(span, scope, code->clone(), constraints->clone(), cloneVector(args)));
 }
 
 void Asm::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

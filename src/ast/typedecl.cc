@@ -5,15 +5,15 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-TypeDecl::TypeDecl(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> value)
-  : Node(AST_TYPE_DECL, span), name(std::move(name)), value(std::move(value)) {}
+TypeDecl::TypeDecl(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, std::shared_ptr<Node> value)
+  : Node(AST_TYPE_DECL, span, scope), name(std::move(name)), value(std::move(value)) {}
 
-std::shared_ptr<TypeDecl> TypeDecl::create(SourceSpan span, std::shared_ptr<Node> name, std::shared_ptr<Node> value) {
-  return std::make_shared<TypeDecl>(span, std::move(name), std::move(value));
+std::shared_ptr<TypeDecl> TypeDecl::create(SourceSpan span, LexicalScope scope, std::shared_ptr<Node> name, std::shared_ptr<Node> value) {
+  return std::make_shared<TypeDecl>(span, scope, std::move(name), std::move(value));
 }
 
 std::shared_ptr<Node> TypeDecl::clone() {
-  return withAttrs(create(span, name->clone(), value->clone()));
+  return withAttrs(create(span, scope, name->clone(), value->clone()));
 }
 
 void TypeDecl::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

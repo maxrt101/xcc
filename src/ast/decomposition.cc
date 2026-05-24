@@ -7,20 +7,22 @@ using namespace xcc::ast;
 
 Decomposition::Decomposition(
   SourceSpan            span,
+  LexicalScope          scope,
   NodeList              pieces,
   std::shared_ptr<Node> value
-) : Node(AST_DECOMPOSITION_DECL, span), pieces(std::move(pieces)), value(std::move(value)) {}
+) : Node(AST_DECOMPOSITION_DECL, span, scope), pieces(std::move(pieces)), value(std::move(value)) {}
 
 std::shared_ptr<Decomposition> Decomposition::create(
   SourceSpan            span,
+  LexicalScope          scope,
   NodeList              pieces,
   std::shared_ptr<Node> value
 ) {
-  return std::make_shared<Decomposition>(span, std::move(pieces), std::move(value));
+  return std::make_shared<Decomposition>(span, scope, std::move(pieces), std::move(value));
 }
 
 std::shared_ptr<Node> Decomposition::clone() {
-  return withAttrs(create(span, cloneVector(pieces), value->clone()));
+  return withAttrs(create(span, scope, cloneVector(pieces), value->clone()));
 }
 
 void Decomposition::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {

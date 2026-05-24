@@ -48,15 +48,15 @@ private:
   FileId                    fileId;
   const std::vector<Token>& tokens;       /** Token stream */
   size_t                    current_idx;  /** Index into `tokens` */
-  std::vector<std::string>  structStack;  /** Stack of currently parsing struct definitions */
   bool                      isModule;     /** Set to @c true if currently parsing a module */
 
   struct {
     std::vector<std::string> searchPaths; /** List of module search paths */
     std::set<std::string>    included;    /** List of already included modules (avoid circular includes) */
-    std::vector<std::string> stack;       /** Stack of currently parsing recursive mod definitions */
     std::vector<std::string> typeAliases; /** List of declared type aliases in current module */
   } module;
+
+  ast::LexicalScope lexicalScope;
 
 private:
   /**
@@ -130,22 +130,6 @@ private:
   std::shared_ptr<ast::Identifier> parseIdentifier(const std::string& ex_msg);
 
   /**
-   * Parse a single-token identifier, appending current module stack as it's scope
-   *
-   * So, if parser encounters this:
-   * @code
-   * mod test {
-   *   fn do_stuff() {}
-   * }
-   * @endcode
-   *
-   * Name of function will be `test::do_stuff`
-   *
-   * @param ex_msg Message to append to "Expected identifier " if parsing fails
-   */
-  std::shared_ptr<ast::Identifier> parseIdentifierWithCurrentScope(const std::string& ex_msg);
-
-  /**
    * Parse a scoped identifier, e.g. `test::do_stuff`
    *
    * @param ex_msg Message to append to "Expected identifier " if parsing fails
@@ -160,7 +144,7 @@ private:
   /**
    * Parses a value declaration, e.g. `a: b = c`
    */
-  std::shared_ptr<ast::TypedIdentifier> parseValueDecl(const std::string& err_msg, bool scoped = false);
+  std::shared_ptr<ast::TypedIdentifier> parseValueDecl(const std::string& err_msg);
 
   /**
    * Parse value decomposition (`[a, b]` part of `var [a, b] = c;`)

@@ -7,25 +7,27 @@ using namespace xcc::ast;
 
 ConstDecl::ConstDecl(
   SourceSpan                  span,
+  LexicalScope                scope,
   std::shared_ptr<Identifier> name,
   std::shared_ptr<Node>       type,
   std::shared_ptr<Node>       value
-) : Node(AST_CONST_DECL, span),
+) : Node(AST_CONST_DECL, span, scope),
     name(std::move(name)),
     type(std::move(type)),
     value(std::move(value)) {}
 
 std::shared_ptr<ConstDecl> ConstDecl::create(
   SourceSpan                  span,
+  LexicalScope                scope,
   std::shared_ptr<Identifier> name,
   std::shared_ptr<Node>       type,
   std::shared_ptr<Node>       value
 ) {
-  return std::make_shared<ConstDecl>(span, std::move(name), std::move(type), std::move(value));
+  return std::make_shared<ConstDecl>(span, scope, std::move(name), std::move(type), std::move(value));
 }
 
 std::shared_ptr<Node> ConstDecl::clone() {
-  return withAttrs(create(span,
+  return withAttrs(create(span, scope,
     cast<Identifier>(name->clone()),
     type ? type->clone() : nullptr,
     value ? value->clone() : nullptr

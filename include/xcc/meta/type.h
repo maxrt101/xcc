@@ -330,7 +330,7 @@ public:
   /**
    * Generate AST Type Node from meta type
    */
-  std::shared_ptr<ast::Node> toAst(SourceSpan span = SourceSpan::builtin()) const;
+  std::shared_ptr<ast::Node> toAst(SourceSpan span = SourceSpan::builtin(), ast::LexicalScope lexicalScope = {}) const;
 
   /**
    * Create an empty type tagged with `tag`
@@ -390,6 +390,11 @@ public:
    * Return custom type by name (or nullptr if not found)
    */
   static std::shared_ptr<Type> getCustomType(const std::string& name);
+
+  /**
+   * Check if `name` represents a built-in type
+   */
+  static bool isBuiltIn(const std::string& name);
 
   /**
    * Compares tag of lhs & rhs and returns 'bigger' type to avoid implicit downcasts

@@ -34,7 +34,47 @@
 #include "xcc/ast/vardecl.h"
 #include "xcc/ast/while.h"
 
+namespace xcc::codegen {
+class GlobalContext;
+}
+
 namespace xcc::ast {
+
+/**
+ * Class that implements generic monomorphization, namely replaces all occurances of generalized named with concrete ones
+ */
+class Monomorphizer {
+public:
+  codegen::GlobalContext& globalContext;
+
+  /**
+   * baseName - Unqualified generalized name (e.g. 'Container' for 'test::Container<T>')
+   * genericName - Qualified generalized name (e.g. 'test_Container' for 'test::Container<T>')
+   * concreteName - Qualified specific/concrete name (e.g. 'test_Container_i32' for 'test::Container<i32>')
+   * concreteUnqualifiedName - Unqualified specific/concrete name (e.g. 'Container_i32' for 'test::Container<i32>')
+   */
+  std::string baseName, genericName, concreteName, concreteUnqualifiedName;
+
+  /// Map of generic param name ('T') to concrete type name ('i32')
+  std::unordered_map<std::string, std::shared_ptr<Node>> substitutions;
+
+  Monomorphizer(
+    codegen::GlobalContext& ctx,
+    const std::string&      baseName,
+    const std::string&      genericName,
+    const std::string&      concreteName,
+    const std::string&      concreteUnqualifiedName,
+    const NodeList&         params,
+    const NodeList&         args
+  );
+
+  /**
+   * Performs replacement of generic names to concrete ones
+   *
+   * @param node Struct definition. Should be deep-copied via Node::clone from generic template
+   */
+  void apply(const std::shared_ptr<Node>& node);
+};
 
 /**
  * Return true if `node` is of `type` type,

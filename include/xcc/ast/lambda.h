@@ -20,6 +20,7 @@ public:
 public:
   Lambda(
       SourceSpan                                    span,
+      LexicalScope                                  scope,
       NodeList                                      captures,
       std::vector<std::shared_ptr<TypedIdentifier>> args,
       std::shared_ptr<Node>                         return_type,
@@ -31,6 +32,7 @@ public:
 
   static std::shared_ptr<Lambda> create(
       SourceSpan                                    span,
+      LexicalScope                                  scope,
       NodeList                                      captures,
       std::vector<std::shared_ptr<TypedIdentifier>> args,
       std::shared_ptr<Node>                         return_type,
