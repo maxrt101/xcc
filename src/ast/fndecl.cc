@@ -6,7 +6,7 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-static auto& logger = xcc::log::Logger::get("FNDECL");
+static auto& logger = xcc::log::Logger::get("FN");
 static auto& alias_logger = xcc::log::Logger::get("ALIAS");
 
 FnDecl::FnDecl(
