@@ -305,12 +305,12 @@ public:
    * enables some stack-space optimization later on
    */
   struct Scope {
-    SourceSpan                                                         span;
-    llvm::DIScope *                                                    di_scope;
-    std::unordered_map<std::string, std::shared_ptr<meta::TypedValue>> locals;
-    bool                                                               cleared = false;
+    SourceSpan                                                 span;
+    llvm::DIScope *                                            di_scope;
+    OrderedMap<std::string, std::shared_ptr<meta::TypedValue>> locals;
+    bool                                                       cleared = false;
 
-    void clear(ModuleContext& ctx);
+    void clear(ModuleContext& ctx, bool force = false);
   };
 
 public:
@@ -380,11 +380,12 @@ public:
   /** Create new lexical scope and push it to scope stack. `scope` can be used to override default DIScope creation */
   void pushScope(SourceSpan span, llvm::DIScope * scope = nullptr);
 
-  /** Pop lexical scope from scope stack */
-  void popScope();
+  /** Pop lexical scope from scope stack. no_clear prevents scope from being cleared */
+  void popScope(bool no_clear = false);
 
-  /** Clear all scopes. Very dangerous, can break everything if called in the wrong place */
-  void clearScopes();
+  /** Clear all scopes. Very dangerous, can break everything if called in the wrong place.
+   * force - clears scope disregarding cleared flag in scope */
+  void clearScopes(bool force = false);
 
   /**
    * Returns a reference to current Scope

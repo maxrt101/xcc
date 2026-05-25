@@ -16,6 +16,7 @@ using namespace xcc::codegen;
 constexpr char ANONYMOUS_EXPR_FN_NAME[] = "__anonymous__";
 
 static auto& logger = xcc::log::Logger::get("CODEGEN");
+static auto& alias_logger = xcc::log::Logger::get("ALIAS");
 
 std::unordered_map<std::string, std::shared_ptr<ast::Node>> GenericsCache::cache;
 
@@ -211,7 +212,7 @@ void GlobalContext::addAlias(const std::string& name, const std::string& value, 
     Error(ERROR_ALIAS_EXISTS, span, "'{}'", name).raise();
   }
 
-  logger.debug("Adding alias '{}' -> '{}'", name, value);
+  alias_logger.debug("Adding alias '{}' -> '{}'", name, value);
   aliases[name] = value;
 }
 
@@ -346,27 +347,40 @@ void ModuleContext::PhantomScope::add(const std::string& name, std::shared_ptr<m
   module.phantomScopes.back()[name] = std::move(type);
 }
 
-void ModuleContext::Scope::clear(ModuleContext& ctx) {
-  if (cleared) return;
+void ModuleContext::Scope::clear(ModuleContext& ctx, bool force) {
+  if (!force && cleared) return;
 
   auto lifetime_end = llvm::Intrinsic::getOrInsertDeclaration(ctx.llvm.module.get(), llvm::Intrinsic::lifetime_end, {ctx.ir_builder->getPtrTy()});
 
   auto dl = ctx.llvm.module->getDataLayout();
 
-  for (auto& [name, tv] : locals) {
-    auto size = dl.getTypeAllocSize(tv->type->getLLVMType(ctx));
+  for (auto it = locals.rbegin(); it != locals.rend(); ++it) {
+    auto& tv = locals[*it];
 
+    if (tv->type->isStruct() && tv->type->isDrop()) {
+      llvm::Function * drop_fn = ctx.getFunction(tv->type->getDropMethodName());
+
+      if (drop_fn) {
+        ctx.ir_builder->CreateCall(drop_fn, {tv->value});
+      } else {
+        Warning(WARNING_STRUCT_DROP_NO_FN, {}, "'{}'", tv->type->getName()).emit();
+      }
+    }
+
+    auto size = dl.getTypeAllocSize(tv->type->getLLVMType(ctx));
     ctx.ir_builder->CreateCall(lifetime_end, {ctx.ir_builder->getInt64(size), tv->value});
   }
 
-  cleared = true;
+  if (!force) {
+    cleared = true;
+  }
 }
 
 ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, util::Target * target) : name(name), globalContext(global) {
   llvm.ctx = globalContext.tsc.getContext();
   llvm.module = std::make_unique<llvm::Module>(name, *llvm.ctx);
 
-  llvm.module->setDataLayout(target   ? target->machine->createDataLayout() : globalContext.globalModule->llvm.module->getDataLayout());
+  llvm.module->setDataLayout(  target ? target->machine->createDataLayout() : globalContext.globalModule->llvm.module->getDataLayout());
   llvm.module->setTargetTriple(target ? target->target_triple               : globalContext.globalModule->llvm.module->getTargetTriple());
 
   ir_builder = std::make_unique<llvm::IRBuilder<>>(*llvm.ctx);
@@ -437,7 +451,7 @@ std::shared_ptr<meta::Type> ModuleContext::getPhantomType(const std::string& nam
 
 bool ModuleContext::hasLocal(const std::string& name) {
   for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
-    if (scope->locals.find(name) != scope->locals.end()) {
+    if (scope->locals.has(name)) {
       return true;
     }
   }
@@ -447,8 +461,8 @@ bool ModuleContext::hasLocal(const std::string& name) {
 
 llvm::AllocaInst * ModuleContext::getLocalValue(const std::string& name) {
   for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
-    if (scope->locals.find(name) != scope->locals.end()) {
-      return scope->locals.at(name)->value;
+    if (scope->locals.has(name)) {
+      return scope->locals[name]->value;
     }
   }
 
@@ -457,8 +471,8 @@ llvm::AllocaInst * ModuleContext::getLocalValue(const std::string& name) {
 
 std::shared_ptr<meta::Type> ModuleContext::getLocalType(const std::string& name) {
   for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
-    if (scope->locals.find(name) != scope->locals.end()) {
-      return scope->locals.at(name)->type;
+    if (scope->locals.has(name)) {
+      return scope->locals[name]->type;
     }
   }
 
@@ -503,20 +517,23 @@ void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
   scopes.emplace_back(span, scope);
 }
 
-void ModuleContext::popScope() {
+void ModuleContext::popScope(bool no_clear) {
   if (!scopes.empty()) {
     auto end = scopes.back().span.end();
 
     ir_builder->SetCurrentDebugLocation(end.getDILocation(*this));
   }
 
-  scopes.back().clear(*this);
+  if (!no_clear) {
+    scopes.back().clear(*this);
+  }
+
   scopes.pop_back();
 }
 
-void ModuleContext::clearScopes() {
+void ModuleContext::clearScopes(bool force) {
   for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
-    scope->clear(*this);
+    scope->clear(*this, force);
   }
 }
 
