@@ -68,7 +68,7 @@ static int help() {
   fprintf(stderr, "  -t, --target TARGET     - Specify target triple (use 'list' to see all)\n");
   fprintf(stderr, "  -m, --machine MACHINE   - Specify target machine (cpu) (use 'list' to see all)\n");
   fprintf(stderr, "  -o, --output OUT_FILE   - Set output file name\n");
-  fprintf(stderr, "  --log LOG_MODULE_NAME   - Enable logger for module ('*'/'_'/'all' to enable for every module)\n");
+  fprintf(stderr, "  --log LOG_MODULE_NAME   - Enable logger for module ('*'/'_'/'all' to enable for every module) ('list' to see all loggers)\n");
   fprintf(stderr, "  --log-file FILE         - Put logs into a file, alongside stdout/stderr\n");
   fprintf(stderr, "  --log-stderr            - Use stderr instead of default stdout for log output\n");
   fprintf(stderr, "  IN_FILE...              - Input (source/object) files\n");
@@ -267,6 +267,13 @@ static int xcc_main(int argc, char ** argv) {
   // Setup secondary (file) log outputs
   for (auto& file : args.log_files) {
     xcc::log::registerOutput(xcc::log::outputs::OutputFile::get(file));
+  }
+
+  if (XCC_VECTOR_CONTAINS(args.loggers, "list")) {
+    for (auto& name : xcc::log::getModuleNames()) {
+      printf("%s\n", name.c_str());
+    }
+    return 0;
   }
 
   if (XCC_VECTOR_CONTAINS(args.loggers, "*") || XCC_VECTOR_CONTAINS(args.loggers, "_") || XCC_VECTOR_CONTAINS(args.loggers, "all")) {

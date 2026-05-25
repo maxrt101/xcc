@@ -3,6 +3,8 @@
 #include <cstring>
 #include <llvm/TargetParser/Host.h>
 
+#include "xcc/util/string.h"
+
 #define CHECK_ARG(__i, __argc, __key) \
   if (__i + 1 >= argc) throw std::runtime_error("Expected value for key '" __key "'");
 
@@ -50,7 +52,12 @@ xcc::args::Arguments xcc::args::parse(int argc, char ** argv) {
       args.output = argv[++i];
     } else if (!strcmp(argv[i], "--log")) {
       CHECK_ARG(i, argc, "output");
-      args.loggers.emplace_back(argv[++i]);
+      std::string arg = argv[++i];
+
+      for (auto & name : util::strsplit(arg, ",")) {
+        args.loggers.emplace_back(name);
+      }
+
     } else if (!strcmp(argv[i], "--log-stderr")) {
       args.log_stderr = true;
     } else if (!strcmp(argv[i], "--log-file")) {
