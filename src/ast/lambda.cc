@@ -93,8 +93,8 @@ std::string Lambda::toString(Node * grandparent, Node * parent, int indent, bool
     res += ", ...";
   }
 
-  res += std::format(") -> {}", return_type->toString(parent, this, indent, false));
-  res += body->toString(parent, this, indent + 1, newline);
+  res += std::format(") -> {} ", return_type->toString(parent, this, indent, false));
+  res += body->toString(parent, this, indent, newline);
 
   return res;
 }
