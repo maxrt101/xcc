@@ -949,6 +949,10 @@ std::shared_ptr<ast::Node> Parser::parseStmt(bool parseTopLevel) {
     case TOKEN_MATCH:       return parseMatch();
     case TOKEN_EXTERN:
     case TOKEN_FN: {
+      if (checkNext(TOKEN_LEFT_SQUARE_BRACE)) {
+        return parseLambda();
+      }
+
       assertRaise(parseTopLevel, Error(ERROR_INVALID_TOKEN_FOR_CONTEXT, current().span, "Unexpected 'fn' in current context"));
       return parseFunction(false);
     }
@@ -1181,9 +1185,11 @@ std::shared_ptr<ast::Node> Parser::parseLambda() {
     Error(ERROR_LAMBDA_MISSING_OPENING_SQUARE_BRACE, current().span).raise();
   }
 
-  do {
-    captures.push_back(parseExpr());
-  } while (checkAdvance(TOKEN_COMMA));
+  if (!check(TOKEN_RIGHT_SQUARE_BRACE)) {
+    do {
+      captures.push_back(parseExpr());
+    } while (checkAdvance(TOKEN_COMMA));
+  }
 
   if (!checkAdvance(TOKEN_RIGHT_SQUARE_BRACE)) {
     Error(ERROR_LAMBDA_MISSING_CLOSING_SQUARE_BRACE, current().span).raise();
