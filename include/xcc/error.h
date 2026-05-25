@@ -191,9 +191,10 @@ enum ErrorId {
  * Compiler warning codes
  */
 enum WarningId {
-  WARNING_RESERVED     = 0,
+  WARNING_RESERVED          = 0,
 
-  WARNING_USER_WARNING = 1,
+  WARNING_USER_WARNING      = 1,
+  WARNING_STRUCT_DROP_NO_FN = 2,
 
   WARNING_MAX,
 };

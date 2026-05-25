@@ -176,8 +176,9 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {
-  DESC(WARNING_RESERVED,     "Reserved warning"),
-  DESC(WARNING_USER_WARNING, "Warning triggered by warn! macro"),
+  DESC(WARNING_RESERVED,          "Reserved warning"),
+  DESC(WARNING_USER_WARNING,      "Warning triggered by warn! macro"),
+  DESC(WARNING_STRUCT_DROP_NO_FN, "Struct declared with [drop] attribute has no 'fn drop(self);' method"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
