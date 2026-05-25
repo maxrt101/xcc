@@ -65,7 +65,8 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
   ctx.ir_builder->SetInsertPoint(then_block);
 
   ctx.pushScope(then_branch->span);
-  auto then_val = raiseIfNull(then_branch->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "Error generating 'then' block of 'if' statement (then branch generated NULL)"));
+  // auto then_val = raiseIfNull(then_branch->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, then_branch->span, "Error generating 'then' block of 'if' statement (then branch generated NULL)"));
+  auto then_val = then_branch->generateValue(ctx, payload);
   ctx.popScope();
 
   if (!common_type->isVoid() && then_val) {
@@ -86,7 +87,8 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
 
   if (else_branch) {
     ctx.pushScope(else_branch->span);
-    else_val = raiseIfNull(else_branch->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "Error generating 'then' block of 'if' statement (else branch generated NULL)"));
+    // else_val = raiseIfNull(else_branch->generateValue(ctx, payload), Error(ERROR_INTERNAL_UNEXPECTED_NULL, else_branch->span, "Error generating 'else' block of 'if' statement (else branch generated NULL)"));
+    else_val = else_branch->generateValue(ctx, payload);
     ctx.popScope();
   }
 
