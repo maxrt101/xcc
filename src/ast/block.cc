@@ -4,11 +4,16 @@
 using namespace xcc::ast;
 
 template <typename T>
-static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload, Block& block) {
+static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload, Block& block, bool is_fn_block) {
   if (block.body.empty()) return nullptr;
 
-  ctx.pushScope(block.span);
+  if (!is_fn_block) {
+    ctx.pushScope(block.span);
+  }
+
   ctx.setDebugLocation(block.span);
+
+  payload = Node::excludePayload(payload, AST_BLOCK);
 
   T * val = nullptr;
 
@@ -23,7 +28,7 @@ static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload,
   if (auto p = block.selectPayloadFirst(payload)) {
     // If type hint was passed for AST_BLOCK, repackage it for AST_INIT
     auto t = p->as<Block::Payload>()->type;
-    payload = Node::extendPayload(Node::excludePayload(payload, AST_BLOCK), Initializer::Payload::create(t));
+    payload = Node::extendPayload(payload, Initializer::Payload::create(t));
   }
 
   if constexpr (std::is_same_v<T, llvm::Value>) {
@@ -32,17 +37,19 @@ static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload,
     val = block.body.back()->generateConstant(ctx, payload);
   }
 
-  ctx.popScope();
+  if (!is_fn_block) {
+    ctx.popScope();
+  }
 
   return val;
 }
 
-Block::Payload::Payload(std::shared_ptr<meta::Type> type)
-  : Node::Payload(AST_BLOCK), type(std::move(type)) {}
+Block::Payload::Payload(std::shared_ptr<meta::Type> type, bool is_fn_block)
+  : Node::Payload(AST_BLOCK), type(std::move(type)), is_fn_block(is_fn_block) {}
 
-std::shared_ptr<Node::Payload> Block::Payload::create(std::shared_ptr<meta::Type> type) {
+std::shared_ptr<Node::Payload> Block::Payload::create(std::shared_ptr<meta::Type> type, bool is_fn_block) {
   return std::dynamic_pointer_cast<Node::Payload>(
-      std::make_shared<Block::Payload>(std::move(type))
+      std::make_shared<Block::Payload>(std::move(type), is_fn_block)
   );
 }
 
@@ -95,11 +102,23 @@ std::string Block::toString(Node * grandparent, Node * parent, int indent, bool 
 }
 
 llvm::Constant * Block::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
-  return generate<llvm::Constant>(ctx, payload, *this);
+  bool is_fn_block = false;
+
+  if (auto p = selectPayloadFirst(payload)) {
+    is_fn_block = p->as<Payload>()->is_fn_block;
+  }
+
+  return generate<llvm::Constant>(ctx, payload, *this, is_fn_block);
 }
 
 llvm::Value * Block::generateValue(codegen::ModuleContext &ctx, PayloadList payload) {
-  return generate<llvm::Value>(ctx, payload, *this);
+  bool is_fn_block = false;
+
+  if (auto p = selectPayloadFirst(payload)) {
+    is_fn_block = p->as<Payload>()->is_fn_block;
+  }
+
+  return generate<llvm::Value>(ctx, payload, *this, is_fn_block);
 }
 
 std::shared_ptr<xcc::meta::Type> Block::generateType(codegen::ModuleContext& ctx, PayloadList payload) {

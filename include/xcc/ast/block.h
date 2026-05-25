@@ -11,11 +11,12 @@ class Block : public Node {
 public:
   struct Payload : Node::Payload {
     std::shared_ptr<meta::Type> type;
+    bool                        is_fn_block;
 
-    explicit Payload(std::shared_ptr<meta::Type> type);
+    explicit Payload(std::shared_ptr<meta::Type> type, bool is_fn_block = false);
     ~Payload() override = default;
 
-    static std::shared_ptr<Node::Payload> create(std::shared_ptr<meta::Type> type);
+    static std::shared_ptr<Node::Payload> create(std::shared_ptr<meta::Type> type, bool is_fn_block = false);
   };
 
 public:
