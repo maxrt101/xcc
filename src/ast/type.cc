@@ -4,6 +4,7 @@
 #include "xcc/exceptions.h"
 #include "xcc/meta/type.h"
 #include "xcc/util/log.h"
+#include "xcc/xcc.h"
 
 using namespace xcc::ast;
 
@@ -219,7 +220,15 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
   // Generic name ('test::Container', or really 'test_Container', since it's mangled)
   std::string id = ident->getResolvedName(ctx);
 
-  if (!ident->genericArgs.empty()) {
+  bool is_generic = !ident->genericArgs.empty();
+
+  // Detect generic structs, that have all params defaulted (`struct Test<T = i32>`)
+  if (codegen::GenericsCache::has(ctx.globalContext.aliased(id))) {
+    id = ctx.globalContext.aliased(id);
+    is_generic = true;
+  }
+
+  if (is_generic) {
     assertRaiseFromNode(codegen::GenericsCache::has(id),
       Error(ERROR_NO_SUCH_GENERIC_TYPE, span, "'{}'", id), this);
 
@@ -295,6 +304,8 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
 
     try {
       type = concrete->generateType(ctx, {});
+
+      processMacros(ctx.globalContext, concrete);
 
       for (auto& method : concrete->as<Struct>()->methods) {
         logger.debug("Instantiating Generic Method '{}' for '{}' ('{}')", method->as<FnDef>()->decl->name->name(), concrete_name, id);
