@@ -270,12 +270,12 @@ public:
   /**
    * Same as @ref selectPayload, but allows to specify for which node the payload should be selected
    */
-  PayloadList selectPayloadFor(const PayloadList& payload, NodeType type);
+  static PayloadList selectPayloadFor(const PayloadList& payload, NodeType type);
 
   /**
    * Same as @ref selectPayloadFirst, but allows to specify for which node the payload should be selected
    */
-  std::shared_ptr<Payload> selectPayloadForFirst(const PayloadList& payload, NodeType type);
+  static std::shared_ptr<Payload> selectPayloadForFirst(const PayloadList& payload, NodeType type);
 
   /**
    * Extends provided payload list with new value
@@ -512,16 +512,6 @@ public:
     }
   }
 
-protected:
-  /**
-   * Add attributes from this to node & return node
-   */
-  template <typename T>
-  [[nodiscard]] std::shared_ptr<T> withAttrs(std::shared_ptr<T> node) const {
-    node->attributes = attributes;
-    return node;
-  }
-
   /**
    * Call visitor on all child nodes of node via visit() & call visitor on node
    *
@@ -532,7 +522,7 @@ protected:
    * @param  ignoreSubtree List of NodeTypes that should be ignored
    */
   template <typename T>
-  void callVisitor(
+  static void callVisitor(
     codegen::GlobalContext& globalContext,
     std::shared_ptr<T>&     node,
     Visitor                 visitor,
@@ -547,6 +537,16 @@ protected:
     if (res) {
       node = cast<T>(res);
     }
+  }
+
+protected:
+  /**
+   * Add attributes from this to node & return node
+   */
+  template <typename T>
+  [[nodiscard]] std::shared_ptr<T> withAttrs(std::shared_ptr<T> node) const {
+    node->attributes = attributes;
+    return node;
   }
 };
 
