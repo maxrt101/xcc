@@ -7,6 +7,7 @@ using namespace xcc;
 using namespace xcc::ast;
 
 static auto& logger = xcc::log::Logger::get("FNDECL");
+static auto& alias_logger = xcc::log::Logger::get("ALIAS");
 
 FnDecl::FnDecl(
   SourceSpan                                    span,
@@ -99,7 +100,7 @@ llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadLi
   }
 
   if (!alias_to.empty()) {
-    logger.debug("Aliasing '{}' as '{}'", fn_name, alias_to);
+    alias_logger.debug("Aliasing '{}' as '{}'", fn_name, alias_to);
   }
 
   OrderedMap<std::string, std::shared_ptr<meta::Type>> arg_meta_types;
