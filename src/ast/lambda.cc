@@ -1,9 +1,11 @@
 #include "xcc/ast/lambda.h"
-
+#include "xcc/util/log.h"
 #include "xcc/codegen.h"
 
 using namespace xcc;
 using namespace xcc::ast;
+
+static auto& logger = xcc::log::Logger::get("FN", log::Flag::SPLIT_ON_NEWLINE);
 
 struct CaptureInfo {
   std::string                 name;
@@ -154,9 +156,10 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
   // Backup current insert block to restore it later
   auto * current_block = ctx.ir_builder->GetInsertBlock();
+  auto current_fn = ctx.globalContext.current_function;
 
   auto di_fn = ctx.globalContext.di_builder->createFunction(
-    ctx.currentDIScope(),
+    ctx.globalContext.di_compile_unit,
     lambda_name,
     lambda_name,
     ctx.globalContext.getCurrentDIFile(),
@@ -171,7 +174,9 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
   ctx.setDebugLocation(span, di_fn);
 
-  ctx.pushScope(span);
+  ctx.pushScope(span, di_fn);
+
+  ctx.globalContext.setCurrentFunction(lambda_name);
 
   auto * entry = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", lambda_fn);
   ctx.ir_builder->SetInsertPoint(entry);
@@ -216,9 +221,9 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   }
 
   // Generate actual lambda body
-  auto val = body->generateValue(ctx, payload);
+  auto val = body->generateValue(ctx, extendPayload(payload, Block::Payload::create(t->getReturnType(), true)));
 
-  ctx.popScope();
+  ctx.popScope(isOrIsLastInBlock(body->body.back(), AST_RETURN));
 
   // Create terminator
   if (!body->body.back()->is(AST_RETURN)) {
@@ -230,8 +235,22 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     }
   }
 
+  util::RawStreamCollector collector;
+  if (llvm::verifyFunction(*lambda_fn, collector.stream())) {
+#if USE_PRINT_LLVM_IR_ON_VERIFY_FAIL
+    util::RawStreamCollector fn_collector;
+    lambda_fn->print(*fn_collector.stream());
+    logger.debug("Function '{}' IR:", lambda_name);
+    logger.print("{}", fn_collector.string());
+#endif
+    Error(ERROR_LLVM_ERROR, span, "Function '{}' didn't pass validation", lambda_name)
+      .note("{}", std::string(collector.string()))
+      .raiseFromNode(this);
+  }
+
   // Restore block
   ctx.ir_builder->SetInsertPoint(current_block);
+  ctx.globalContext.setCurrentFunction(current_fn);
 
   ctx.setDebugLocation(span);
 
