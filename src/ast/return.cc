@@ -19,7 +19,7 @@ void Return::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::
 }
 
 std::string Return::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  return attributesToString(indent, newline) + std::format("return {}", value->toString(parent, this, indent, false));
+  return attributesToString(indent, newline) + std::format("return{}", value ? (" " + value->toString(parent, this, indent, false)) : "");
 }
 
 llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -40,10 +40,10 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList pay
       val = castIfNotSame(ctx, val, type->getLLVMType(ctx), value->span);
     }
 
-    ctx.clearScopes();
+    ctx.clearScopes(true);
     ctx.ir_builder->CreateRet(val);
   } else {
-    ctx.clearScopes();
+    ctx.clearScopes(true);
     ctx.ir_builder->CreateRetVoid();
   }
 
