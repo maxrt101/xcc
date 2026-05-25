@@ -100,16 +100,9 @@ void GlobalContext::createCompileUnit(FileId fileId) {
   );
 }
 
-IncludedModule& GlobalContext::getCurrentModule() {
-  assertThrow(!moduleStack.empty(), std::runtime_error("No module declared"));
-  assertThrow(ModuleCache::contains(moduleStack.back()), std::runtime_error("No included module named " + moduleStack.back()));
-
-  return ModuleCache::get(moduleStack.back());
-}
-
 llvm::DIFile * GlobalContext::getCurrentDIFile() {
-  if (!moduleStack.empty() && ModuleCache::contains(moduleStack.back())) {
-    return getCurrentModule().di_file;
+  if (!moduleStack.empty() && !moduleStack.back().second.empty()) {
+    return ModuleCache::get(moduleStack.back().second).di_file;
   }
 
   return di_file;
@@ -163,8 +156,8 @@ std::shared_ptr<meta::Type> GlobalContext::getGlobalType(const std::string& name
   return globals[name];
 }
 
-void GlobalContext::pushModule(const std::string& name) {
-  moduleStack.push_back(name);
+void GlobalContext::pushModule(const std::string& name, const std::string& path) {
+  moduleStack.emplace_back(name, path);
 }
 
 void GlobalContext::popModule() {
@@ -175,7 +168,7 @@ std::string GlobalContext::getModulePrefix() const {
   std::string res;
 
   for (auto& mod : moduleStack) {
-    res += mod + "_";
+    res += mod.first + "_";
   }
 
   return res;
@@ -185,7 +178,7 @@ std::string GlobalContext::getParentModulePrefix() const {
   std::string res;
 
   for (size_t i = 0; i < moduleStack.size() - 1; ++i) {
-    res += moduleStack[i] + "_";
+    res += moduleStack[i].first + "_";
   }
 
   return res;
@@ -224,6 +217,10 @@ std::string GlobalContext::aliased(const std::string& name) {
   }
 
   return res;
+}
+
+bool GlobalContext::isAliased(const std::string& name) {
+  return aliases.contains(name);
 }
 
 void GlobalContext::addConst(const std::string& name, std::shared_ptr<ast::ConstDecl> constant) {

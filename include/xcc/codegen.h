@@ -110,7 +110,7 @@ public:
   std::string current_function;
 
   /* Stack of module in order of processing */
-  std::vector<std::string> moduleStack;
+  std::vector<std::pair<std::string, std::string>> moduleStack;
 
   /* Defined macros */
   std::unordered_map<std::string, std::shared_ptr<ast::Macro>> macros;
@@ -158,14 +158,6 @@ public:
   void createCompileUnit(FileId fileId);
 
   /**
-   * Returns a reference to IncludedModule of currently processed Module
-   *
-   * @warning Will throw an exception if currently in top-level scope
-   * @warning Will throw an exception if no module with such nam is present in ModuleCache
-   */
-  IncludedModule& getCurrentModule();
-
-  /**
    * Return current llvm::DIFIle, returns a file for currently processed module,
    * if in module context, and file of CU if in top-level scope
    */
@@ -207,7 +199,7 @@ public:
   std::shared_ptr<meta::Type> getGlobalType(const std::string& name);
 
   /** Push a module into currently processed module stack */
-  void pushModule(const std::string& name);
+  void pushModule(const std::string& name, const std::string& path);
 
   /** Pop a module from currently processed module stack */
   void popModule();
@@ -233,6 +225,9 @@ public:
 
   /** Recursively search for `name` in alias map, returning 'true' name, or `name` if not found */
   std::string aliased(const std::string& name);
+
+  /** Check if name has an alias */
+  bool isAliased(const std::string& name);
 
   /** Add constant declaration to global const pool */
   void addConst(const std::string& name, std::shared_ptr<ast::ConstDecl> constant);
