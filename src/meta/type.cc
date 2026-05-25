@@ -704,6 +704,24 @@ void Type::addMember(const std::string& name, const std::shared_ptr<Type>& type)
   _struct.members.emplace_back(name, type);
 }
 
+bool Type::isPacked() const {
+  assertThrow(isStruct(), std::runtime_error("Type is not a struct"));
+
+  return _struct.packed;
+}
+
+bool Type::isDrop() const {
+  assertThrow(isStruct(), std::runtime_error("Type is not a struct"));
+
+  return !_struct.dropMethodName.empty();
+}
+
+std::string Type::getDropMethodName() const {
+  assertThrow(isStruct(), std::runtime_error("Type is not a struct"));
+
+  return _struct.dropMethodName;
+}
+
 std::shared_ptr<Type> Type::getReturnType() const {
   assertThrow(isFunction() || isLambda(), std::runtime_error("Type is not a function or a lambda"));
 
@@ -1132,11 +1150,12 @@ std::shared_ptr<Type> Type::createTuple(std::vector<std::shared_ptr<Type>> membe
   return type;
 }
 
-std::shared_ptr<Type> Type::createStruct(std::string name, StructMembers members, bool packed) {
+std::shared_ptr<Type> Type::createStruct(std::string name, StructMembers members, bool packed, const std::string& dropMethodName) {
   auto type = create(TypeTag::STRUCT);
-  type->_struct.name    = std::move(name);
-  type->_struct.members = std::move(members);
-  type->_struct.packed  = packed;
+  type->_struct.name           = std::move(name);
+  type->_struct.members        = std::move(members);
+  type->_struct.packed         = packed;
+  type->_struct.dropMethodName = dropMethodName;
   return type;
 }
 

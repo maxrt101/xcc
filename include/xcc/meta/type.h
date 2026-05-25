@@ -113,6 +113,7 @@ private:
     std::string   name;
     StructMembers members;
     bool          packed;
+    std::string   dropMethodName;
   } _struct;
 
   /** Global static storage for all user-defined types */
@@ -180,6 +181,21 @@ public:
    * Add member to a struct
    */
   void addMember(const std::string& name, const std::shared_ptr<Type>& type);
+
+  /**
+   * If type is a struct - return @c true if it is packed
+   */
+  [[nodiscard]] bool isPacked() const;
+
+  /**
+   * If type is a struct - return @c true if it is drop
+   */
+  [[nodiscard]] bool isDrop() const;
+
+  /**
+   * If type is a struct - return fully qualified method name for drop()
+   */
+  [[nodiscard]] std::string getDropMethodName() const;
 
   /**
    * If type in a function or lambda - get return type
@@ -369,7 +385,8 @@ public:
   static std::shared_ptr<Type> createLambda(std::shared_ptr<Type> fn, std::vector<std::shared_ptr<Type>> captures);
   static std::shared_ptr<Type> createEnum(std::string name, std::shared_ptr<Type> base, std::vector<EnumField> members);
   static std::shared_ptr<Type> createTuple(std::vector<std::shared_ptr<Type>> members);
-  static std::shared_ptr<Type> createStruct(std::string name, StructMembers members, bool packed = false);
+  static std::shared_ptr<Type> createStruct(
+    std::string name, StructMembers members, bool packed = false, const std::string& dropMethodName = "");
 
   /**
    * Try to infer meta::Type from ast::Node
