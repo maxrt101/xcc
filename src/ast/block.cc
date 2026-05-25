@@ -13,7 +13,13 @@ static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload,
 
   ctx.setDebugLocation(block.span);
 
-  payload = Node::excludePayload(payload, AST_BLOCK);
+  // Workaround: stop propagating is_fn_block, without excluding payload
+  // Cannot exclude because ast::Init may depend on it
+  if (is_fn_block) {
+    for (auto& p : Node::selectPayloadFor(payload, AST_BLOCK)) {
+      p->as<Block::Payload>()->is_fn_block = false;
+    }
+  }
 
   T * val = nullptr;
 
@@ -81,7 +87,7 @@ std::string Block::toString(Node * grandparent, Node * parent, int indent, bool 
     res += newline ? getIndent(indent + 1) : " ";
     res += node->toString(parent, this, indent + 1, newline);
 
-    if (!node->isAnyOf(AST_FUNCTION_DEF, AST_STRUCT, AST_MOD, AST_IF, AST_FOR, AST_WHILE, AST_MACRO, AST_BLOCK)) {
+    if (!node->isAnyOf(AST_FUNCTION_DEF, AST_STRUCT, AST_MOD, AST_IF, AST_FOR, AST_WHILE, AST_MACRO, AST_BLOCK, AST_LAMBDA)) {
       res += ";";
     }
 
