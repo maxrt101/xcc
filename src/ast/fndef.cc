@@ -9,7 +9,7 @@
 using namespace xcc;
 using namespace xcc::ast;
 
-static auto& logger = xcc::log::Logger::get("FNDEF", log::Flag::SPLIT_ON_NEWLINE);
+static auto& logger = xcc::log::Logger::get("FN", log::Flag::SPLIT_ON_NEWLINE);
 
 FnDef::FnDef(SourceSpan span, LexicalScope scope, std::shared_ptr<FnDecl> decl, std::shared_ptr<Block> body)
   : Node(AST_FUNCTION_DEF, span, scope), decl(std::move(decl)), body(std::move(body)) {}
@@ -89,7 +89,7 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 #if USE_PRINT_LLVM_IR_ON_VERIFY_FAIL
     util::RawStreamCollector fn_collector;
     fn->print(*fn_collector.stream());
-    logger.debug("Function {} IR:", meta_fn->name);
+    logger.debug("Function '{}' IR:", meta_fn->name);
     logger.print("{}", fn_collector.string());
 #endif
     Error(ERROR_LLVM_ERROR, decl->span, "Function '{}' didn't pass validation", fn->getName().str())
