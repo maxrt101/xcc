@@ -28,9 +28,9 @@ struct IncludedModule {
  */
 class ModuleCache {
 public:
-  static void set(const std::string& name, IncludedModule module);
-  static IncludedModule& get(const std::string& name);
-  static bool contains(const std::string& name);
+  static void set(const std::string& path, IncludedModule module);
+  static IncludedModule& get(const std::string& path);
+  static bool contains(const std::string& path);
 
   static void updateDebugInfo(codegen::GlobalContext& ctx);
 
@@ -296,6 +296,7 @@ private:
   void updateModAliases(
     std::shared_ptr<ast::Module>&                        mod,
     bool                                                 all,
+    std::string                                          target_prefix,
     const std::vector<std::shared_ptr<ast::Identifier>>& symbols,
     SourceSpan                                           span
   );

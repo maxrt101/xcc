@@ -5,22 +5,26 @@
 #include "xcc/util/filemng.h"
 #include "xcc/exceptions.h"
 
+#include <filesystem>
+
+#include "xcc/util/util.h"
+
 using namespace xcc;
 
 static auto& logger = xcc::log::Logger::get("PARSER");
 
 std::unordered_map<std::string, IncludedModule> ModuleCache::modules;
 
-void ModuleCache::set(const std::string& name, IncludedModule module) {
-  modules[name] = std::move(module);
+void ModuleCache::set(const std::string& path, IncludedModule module) {
+  modules[path] = std::move(module);
 }
 
-IncludedModule& ModuleCache::get(const std::string& name) {
-  return modules[name];
+IncludedModule& ModuleCache::get(const std::string& path) {
+  return modules[path];
 }
 
-bool ModuleCache::contains(const std::string& name) {
-  return modules.contains(name);
+bool ModuleCache::contains(const std::string& path) {
+  return modules.contains(path);
 }
 
 void ModuleCache::updateDebugInfo(codegen::GlobalContext& ctx) {
@@ -685,6 +689,7 @@ std::shared_ptr<ast::Node> Parser::parseReturn() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attrs) {
+  std::vector<std::shared_ptr<ast::Identifier>> path_nodes;
   std::vector<std::shared_ptr<ast::Identifier>> symbols;
   bool scoped = false;
   bool all    = false;
@@ -699,28 +704,39 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
     scoped = true;
   }
 
-  auto name = parseIdentifier("for module name");
+  path_nodes.push_back(parseIdentifier("for module name or path"));
 
-  if (checkAdvance(TOKEN_SCOPE)) {
+  while (checkAdvance(TOKEN_SCOPE)) {
     if (checkAdvance(TOKEN_LEFT_BRACE)) {
       do {
-        if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) {
-          break;
-        }
-
+        if (isAtEnd() || check(TOKEN_RIGHT_BRACE)) break;
         symbols.push_back(parseIdentifier("for import symbol"));
       } while (checkAdvance(TOKEN_COMMA));
 
       if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
         Error(ERROR_USE_MISSING_CLOSING_BRACE, current().span).raise();
       }
-    } else {
-      if (checkAdvance(TOKEN_STAR)) {
-        all = true;
-      } else {
-        symbols.push_back(parseIdentifier("for import symbol"));
-      }
+      break;
     }
+
+    if (checkAdvance(TOKEN_STAR)) {
+      all = true;
+      break;
+    }
+
+    path_nodes.push_back(parseIdentifier("for module path or import symbol"));
+  }
+
+  if (symbols.empty() && !all) {
+    if (path_nodes.size() > 1) {
+      symbols.push_back(path_nodes.back());
+      path_nodes.pop_back();
+    }
+  }
+
+  std::string target_prefix = path_nodes[0]->value;
+  for (size_t i = 1; i < path_nodes.size(); ++i) {
+    target_prefix += "_" + path_nodes[i]->value;
   }
 
   if (!checkAdvance(TOKEN_SEMICOLON)) {
@@ -730,6 +746,8 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
   if (all && !symbols.empty()) {
     Error(ERROR_USE_WILDCARD_WITH_SYMBOLS, span + previous().span).raise();
   }
+
+  auto name = path_nodes.front();
 
   auto path_attr = std::find_if(attrs.begin(), attrs.end(), [](auto& a) { return a.name == "path"; });
   std::string path;
@@ -745,22 +763,21 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
 
   // Happens, if module was already included
   if (!res.body) {
-    if (ModuleCache::contains(name->name())) {
-      for (auto& ref : ModuleCache::get(name->name()).references) {
-        updateModAliases(ref, all, symbols, span);
-      }
-    }
+    auto proxy_body = ast::Block::create(span, lexicalScope, {});
+    auto proxy_mod = ast::Module::create(span + previous().span, lexicalScope, name, proxy_body);
 
-    return ast::Empty::create();
+    updateModAliases(proxy_mod, all, target_prefix, symbols, span);
+
+    return proxy_mod;
   }
 
   auto mod = ast::Module::create(span + previous().span, lexicalScope, name, res.body);
 
   mod->addAttribute({"__xcc_tag_used_from", { ast::String::create(span, lexicalScope, res.path) }, span});
 
-  updateModAliases(mod, all, symbols, span);
+  updateModAliases(mod, all, target_prefix, symbols, span);
 
-  ModuleCache::get(name->name()).references.push_back(mod);
+  ModuleCache::get(res.path).references.push_back(mod);
 
   return mod;
 }
@@ -814,7 +831,15 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
 
   body->span = span + previous().span;
 
-  return ast::Module::create(span + previous().span, lexicalScope, name, body);
+  auto mod = ast::Module::create(span + previous().span, lexicalScope, name, body);
+
+  auto prelude_attr = std::find_if(attrs.begin(), attrs.end(), [](auto& a) { return a.name == "prelude"; });
+
+  if (prelude_attr != attrs.end()) {
+    mod->addAttribute({"__xcc_tag_use_alias_prelude", {}, span});
+  }
+
+  return mod;
 }
 
 std::shared_ptr<ast::Node> Parser::parseTypeDeclaration(const ast::Node::AttributeList& attrs) {
@@ -1446,18 +1471,18 @@ IncludedModule Parser::includeModuleFromPath(
 ) {
   IncludedModule result;
 
-  if (std::find(module.included.begin(), module.included.end(), name) != module.included.end()) {
+  if (std::find(module.included.begin(), module.included.end(), path) != module.included.end()) {
     logger.warn("Skipping inclusion of '{}', as it was already included", name);
     return {};
   }
 
-  if (ModuleCache::contains(name)) {
-    logger.info("Using cached module '{}'", name);
-    module.included.emplace(name);
-    return ModuleCache::get(name);
+  if (ModuleCache::contains(path)) {
+    logger.info("Using cached module '{}' ({})", name, path);
+    module.included.emplace(path);
+    return ModuleCache::get(path);
   }
 
-  module.included.emplace(name);
+  module.included.emplace(path);
 
   result.path = path;
   auto file = FileManager::load(result.path);
@@ -1481,7 +1506,7 @@ IncludedModule Parser::includeModuleFromPath(
 
     result.body = moduleReplaceDefinitions(mod);
 
-    ModuleCache::set(name, result);
+    ModuleCache::set(path, result);
 
     parser.lexicalScope.pop_back();
 
@@ -1495,17 +1520,34 @@ IncludedModule Parser::includeModuleFromPath(
 }
 
 std::string Parser::resolveModulePath(const std::string& name, SourceSpan span) {
+  namespace fs = std::filesystem;
+
   auto filename = name + ".xc";
+
+  fs::path current_file(FileManager::get(fileId)->path);
+  fs::path current_dir = current_file.parent_path();
+
+  fs::path sub_target = current_dir / current_file.stem() / filename;
+
+  if (fs::exists(sub_target)) {
+    return sub_target.string();
+  }
+
+  fs::path sibling_target = current_dir / filename;
+
+  if (fs::exists(sibling_target)) {
+    return sibling_target.string();
+  }
 
   if (fs::exists(filename)) {
     return filename;
   }
 
   for (auto& searchPath : module.searchPaths) {
-    auto path = searchPath + "/" + filename;
+    fs::path path = fs::path(searchPath) / filename;
 
     if (fs::exists(path)) {
-      return path;
+      return path.string();
     }
   }
 
@@ -1515,15 +1557,16 @@ std::string Parser::resolveModulePath(const std::string& name, SourceSpan span) 
 void Parser::updateModAliases(
   std::shared_ptr<ast::Module>&                        mod,
   bool                                                 all,
+  std::string                                          target_prefix,
   const std::vector<std::shared_ptr<ast::Identifier>>& symbols,
   SourceSpan                                           span
 ) {
   if (all) {
-    mod->addAttribute({"__xcc_tag_use_alias_all", {}, span});
+    mod->addAttribute({"__xcc_tag_use_alias_all", { ast::String::create(span, mod->scope, "*"), ast::String::create(span, mod->scope, target_prefix) }, span});
   }
 
   for (auto& symbol : symbols) {
-    mod->addAttribute({"__xcc_tag_use_alias", { ast::String::create(symbol->span, lexicalScope, symbol->name()) }, symbol->span});
+    mod->addAttribute({"__xcc_tag_use_alias", { ast::String::create(span, mod->scope, symbol->value), ast::String::create(span, mod->scope, target_prefix) }, symbol->span});
   }
 }
 
@@ -1555,9 +1598,9 @@ std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_p
 
 std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::Node::AttributeList& attrs) {
   if (check(TOKEN_LEFT_SQUARE_BRACE)) {
-    auto new_attrs = parseAttributeList();
-    auto node  = parseOneTopLevelNode(isRepl, new_attrs);
-    node->attributes = new_attrs;
+    auto new_attrs = mergeVectors(parseAttributeList(), attrs);
+    auto node      = parseOneTopLevelNode(isRepl, new_attrs);
+    node->attributes.insert(node->attributes.end(), new_attrs.begin(), new_attrs.end());
     return node;
   }
 
