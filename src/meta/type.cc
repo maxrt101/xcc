@@ -462,10 +462,10 @@ std::string Type::getName() const {
     return _enum.name;
   }
 
-  return toString();
+  return toString(true);
 }
 
-std::string Type::toString() const {
+std::string Type::toString(bool get_name) const {
   switch (tag) {
     case TypeTag::VOID:   return "void";
     case TypeTag::BOOL:   return "bool";
@@ -481,8 +481,8 @@ std::string Type::toString() const {
     case TypeTag::F64:    return "f64";
     case TypeTag::ISIZE:  return "isize";
     case TypeTag::USIZE:  return "usize";
-    case TypeTag::ARRAY:  return std::format("{}[{}]", arr.elementType->toString(), arr.size);
-    case TypeTag::PTR:    return ptr.pointedType->toString() + "*";
+    case TypeTag::ARRAY:  return std::format("{}[{}]", get_name ? arr.elementType->getName() : arr.elementType->toString(), arr.size);
+    case TypeTag::PTR:    return (get_name ? ptr.pointedType->getName() : ptr.pointedType->toString()) + "*";
 
     case TypeTag::FUNCTION: {
       std::string result = "fn (";
@@ -574,7 +574,7 @@ bool Type::isVoid() const {
   return is(TypeTag::VOID);
 }
 
-bool Type::iBool() const {
+bool Type::isBool() const {
   return is(TypeTag::BOOL);
 }
 

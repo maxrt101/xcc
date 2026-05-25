@@ -305,10 +305,10 @@ public:
   /**
    * Generate pretty string for a type
    */
-  [[nodiscard]] std::string toString() const;
+  [[nodiscard]] std::string toString(bool get_name = false) const;
 
   [[nodiscard]] bool isVoid() const;
-  [[nodiscard]] bool iBool() const;
+  [[nodiscard]] bool isBool() const;
   [[nodiscard]] bool isSigned() const;
   [[nodiscard]] bool isUnsigned() const;
   [[nodiscard]] bool isInteger() const;
