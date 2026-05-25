@@ -66,7 +66,24 @@ void Struct::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::
 }
 
 std::string Struct::toString(Node * grandparent, Node * parent, int indent, bool newline) {
-  std::string res =attributesToString(indent, newline) +  std::format("struct {} {{",
+  std::string generics;
+
+  if (!genericParams.empty()) {
+    generics += "<";
+    for (size_t i = 0; i < genericParams.size(); ++i) {
+      generics += genericParams[i].name->toString(parent, this, indent, false);
+      if (genericParams[i].default_value) {
+        generics += " = " + genericParams[i].default_value->toString(parent, this, indent, false);
+      }
+      if (i + 1 < genericParams.size()) {
+        generics += ", ";
+      }
+    }
+    generics += ">";
+  }
+
+  std::string res = attributesToString(indent, newline) +  std::format("struct {}{} {{",
+    generics,
     name->toString(parent, this, indent, false)
   );
 
