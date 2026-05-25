@@ -1,4 +1,4 @@
-mod jmp;
+mod stdc::jmp;
 
 type jmp_buf = u8[40];
 

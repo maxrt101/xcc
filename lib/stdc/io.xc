@@ -1,4 +1,4 @@
-mod io;
+mod stdc::io;
 
 # Alias to opaque FILE struct
 type FILE = void;

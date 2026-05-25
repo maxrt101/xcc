@@ -1,4 +1,4 @@
-mod arg;
+mod stdc::arg;
 
 struct va_list {
     gp_offset:         u32;
