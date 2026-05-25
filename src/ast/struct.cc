@@ -101,19 +101,22 @@ std::shared_ptr<meta::Type> Struct::generateType(codegen::ModuleContext &ctx, Pa
 std::shared_ptr<meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   auto id = getMangledName(name->value);
 
-  bool packed = false;
-
-  if (hasAttribute("packed")) {
-    packed = true;
-  }
-
   std::shared_ptr<meta::Type> type;
 
   if (meta::Type::hasCustomType(id)) {
     return meta::Type::getCustomType(id);
   }
 
-  type = meta::Type::createStruct(id, {}, packed);
+  std::string dropMethodName;
+
+  for (auto& method : methods) {
+    if (method->hasAttribute("drop")) {
+      auto decl = method->is(AST_FUNCTION_DEF) ? method->as<FnDef>()->decl.get() : method->as<FnDecl>();
+      dropMethodName = id + "_" + decl->name->value;
+    }
+  }
+
+  type = meta::Type::createStruct(id, {}, hasAttribute("packed"), dropMethodName);
 
   // Create an empty struct type, to allow self-referential types
   meta::Type::registerCustomType(id, type);
