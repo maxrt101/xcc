@@ -83,8 +83,23 @@ std::string Identifier::getResolvedName(codegen::ModuleContext& ctx) const {
   }
 
   if (!scope.empty()) {
-    std::string explicit_name;
+    std::string base_scope = scope[0];
 
+    if (ctx.globalContext.isAliased(base_scope)) {
+      std::string resolved_base = ctx.globalContext.aliased(base_scope);
+
+      std::string result = resolved_base;
+
+      for (size_t i = 1; i < scope.size(); ++i) {
+        result += "_" + scope[i];
+      }
+
+      result += "_" + value;
+
+      return result;
+    }
+
+    std::string explicit_name;
     for (const auto& s : scope) {
       explicit_name += s + "_";
     }
@@ -99,7 +114,7 @@ std::string Identifier::getConcreteName(codegen::ModuleContext& ctx, const std::
   std::string concrete_name = name;
 
   for (auto& arg : genericArgs) {
-    concrete_name += "_" + arg->generateType(ctx, {})->toString();
+    concrete_name += "_" + arg->generateType(ctx, {})->getName();
   }
 
   util::strreplace(concrete_name, "*", "_ptr");
@@ -142,13 +157,13 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
 }
 
 llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (!genericArgs.empty()) {
-    return ctx.getFunction(resolveStaticMethodName(ctx, payload));
+  // Local variables never have explicit scopes
+  if (ctx.hasLocal(value)) {
+    return ctx.getLocalValue(value);
   }
 
-  // Local variables never have explicit scopes
-  if (scope.empty() && ctx.hasLocal(value)) {
-    return ctx.getLocalValue(value);
+  if (!genericArgs.empty()) {
+    return ctx.getFunction(resolveStaticMethodName(ctx, payload));
   }
 
   std::string search_name = getResolvedName(ctx);
@@ -191,13 +206,28 @@ std::shared_ptr<meta::Type> Identifier::generateType(codegen::ModuleContext& ctx
 }
 
 std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (!genericArgs.empty()) {
-    return ctx.globalContext.getMetaFunctionType(resolveStaticMethodName(ctx, payload));
+  if (ctx.hasLocal(value)) {
+    return ctx.getLocalType(value);
   }
 
-  if (scope.empty()) {
-    if (ctx.hasPhantom(value)) return ctx.getPhantomType(value);
-    if (ctx.hasLocal(value)) return ctx.getLocalType(value);
+  if (!scope.empty()) {
+    std::string scope_target;
+
+    for (size_t i = 0; i < scope.size(); ++i) {
+      scope_target += scope[i] + (i == scope.size() - 1 ? "" : "_");
+    }
+
+    std::string actual_scope_name = ctx.globalContext.aliased(scope_target);
+
+    bool is_generic = codegen::GenericsCache::has(actual_scope_name);
+
+    if (auto _struct = meta::Type::getCustomType(actual_scope_name)) {
+      is_generic |= _struct->isStruct();
+    }
+
+    if (is_generic) {
+      return ctx.globalContext.getMetaFunctionType(resolveStaticMethodName(ctx, payload));
+    }
   }
 
   std::string search_name = getResolvedName(ctx);
@@ -223,18 +253,25 @@ std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen:
 
     std::string actual_enum_name = resolveSymbolName(ctx, enum_target);
 
-    if (meta::Type::hasCustomType(actual_enum_name)) {
-      auto _enum = meta::Type::getCustomType(actual_enum_name);
+    auto _enum = meta::Type::getCustomType(actual_enum_name);
+
+    if (_enum && _enum->isEnum()) {
       assertRaiseFromNode(_enum->hasEnumElement(value), Error(ERROR_ENUM_NO_MEMBER, span, "'{}' in enum '{}'", value, scope.back()), this);
       return _enum;
     }
+  }
+
+  if (ctx.hasPhantom(value)) {
+    return ctx.getPhantomType(value);
   }
 
   generateValueUndeclaredError(search_name);
 }
 
 llvm::Constant * Identifier::checkGenerateEnum(codegen::ModuleContext& ctx, PayloadList payload) {
-  if (scope.empty()) return nullptr;
+  if (scope.empty()) {
+    return nullptr;
+  }
 
   // Reconstruct the explicit enum target name
   std::string enum_target;
@@ -261,12 +298,28 @@ std::string Identifier::resolveStaticMethodName(codegen::ModuleContext& ctx, Pay
 
   for (size_t i = 0; i < scope.size(); ++i) {
     generic_struct_name += scope[i];
+
     if (i + 1 < scope.size()) {
       generic_struct_name += "_";
     }
   }
 
   generic_struct_name = ctx.globalContext.aliased(generic_struct_name);
+
+  assertRaiseFromNode(codegen::GenericsCache::has(generic_struct_name), Error(ERROR_NO_SUCH_GENERIC_TYPE, span), this);
+
+  auto generic_struct = codegen::GenericsCache::get(generic_struct_name)->as<Struct>();
+
+  // Pad generic type with default generic param values, if missing
+  for (size_t i = genericArgs.size(); i < generic_struct->genericParams.size(); ++i) {
+    auto& param = generic_struct->genericParams[i];
+
+    assertRaiseFromNode(param.default_value.get(),
+      Error(ERROR_GENERIC_COUNT_MISMATCH, span, "Missing required generic argument '{}' for struct '{}'", param.name->defaultToString(), name()), this);
+
+    // Clone the default type and push it into the identifier's arguments
+    genericArgs.push_back(param.default_value->clone());
+  }
 
   auto concrete_struct_name = getConcreteName(ctx, generic_struct_name);
 
