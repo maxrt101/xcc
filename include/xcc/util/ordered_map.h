@@ -9,7 +9,7 @@ namespace xcc {
 template <typename K, typename V>
 class OrderedMap {
   std::unordered_map<K, V> data;
-  std::vector<K> order;
+  std::vector<K>           order;
 
 public:
   OrderedMap() = default;
@@ -104,6 +104,10 @@ public:
     return result;
   }
 
+  std::unordered_map<K, V>& map() {
+    return data;
+  }
+
   K& front() {
     if (!order.empty()) {
       return data[order[0]];
@@ -150,6 +154,22 @@ public:
 
   typename std::vector<K>::const_iterator end() const {
     return order.end();
+  }
+
+  typename std::vector<K>::reverse_iterator rbegin() {
+    return order.rbegin();
+  }
+
+  typename std::vector<K>::reverse_iterator rend() {
+    return order.rend();
+  }
+
+  typename std::vector<K>::const_reverse_iterator rbegin() const {
+    return order.rbegin();
+  }
+
+  typename std::vector<K>::const_reverse_iterator rend() const {
+    return order.rend();
   }
 };
 
