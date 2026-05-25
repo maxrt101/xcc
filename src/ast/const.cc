@@ -69,7 +69,7 @@ llvm::Constant * ConstDecl::generateConstant(codegen::ModuleContext& ctx, Payloa
 
   auto meta_type = type ? type->generateType(ctx, payload) : meta::Type::inferFromNode(ctx, value);
 
-  if (meta_type->isInteger()) {
+  if (meta_type->isInteger() || meta_type->isBool()) {
     payload = extendPayload(payload, Number::Payload::create(meta_type->getNumberBitWidth()));
   }
 
