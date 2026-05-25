@@ -2,8 +2,11 @@
 #include "xcc/ast/number.h"
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
+#include "xcc/util/log.h"
 
 using namespace xcc::ast;
+
+static auto& logger = xcc::log::Logger::get("VAR");
 
 VarDecl::VarDecl(
   SourceSpan                  span,
@@ -73,7 +76,7 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
 
   auto meta_type = generateType(ctx, payload);
 
-  if (meta_type->isInteger()) {
+  if (meta_type->isInteger() || meta_type->isBool()) {
     payload = extendPayload(payload, Number::Payload::create(meta_type->getNumberBitWidth()));
   }
 
@@ -146,9 +149,7 @@ llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_p
   auto extern_global = llvm::cast<llvm::GlobalVariable>(
     ctx.llvm.module->getOrInsertGlobal(id, llvm_type));
 
-  extern_global->print(llvm::outs());
-
-  auto di_global = ctx.globalContext.di_builder->createTempGlobalVariableFwdDecl(
+  auto di_global = ctx.globalContext.di_builder->createGlobalVariableExpression(
     ctx.currentDIScope(),
     id,
     id,
@@ -158,14 +159,19 @@ llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_p
     true
   );
 
-  // TODO: How to add global variable?
-  // ctx.globalContext.di_builder->insertDeclare(
-  //   global,
-  //   di_global,
-  //   ctx.globalContext.di_builder->createExpression(),
-  //   span.start().getDILocation(ctx),
-  //   ctx.ir_builder->GetInsertBlock()
-  // );
+  global->addDebugInfo(di_global);
+
+  if (hasAttribute("section")) {
+    auto attr = getAttribute("section");
+
+    attr.validateArgsStrict({AST_EXPR_STRING});
+
+    auto section_name = attr.args[0]->as<ast::String>()->value;
+
+    logger.debug("Placing '{}' in section '{}'", name->name(), section_name);
+
+    global->setSection(section_name);
+  }
 
   return extern_global;
 }
