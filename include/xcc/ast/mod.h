@@ -21,6 +21,7 @@ public:
   std::string toString(Node * grandparent, Node * parent, int indent, bool newline) override;
 
   std::string getName() const;
+  std::string getPath() const;
 };
 
 } /* namespace xcc::ast */

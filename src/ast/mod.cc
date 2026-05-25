@@ -18,7 +18,7 @@ std::shared_ptr<Node> Module::clone() {
 }
 
 void Module::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
-  globalContext.pushModule(getName());
+  globalContext.pushModule(getName(), getPath());
   callVisitor(globalContext, name, visitor, ignoreSubtree);
   callVisitor(globalContext, body, visitor, ignoreSubtree);
   globalContext.popModule();
@@ -37,3 +37,10 @@ std::string Module::getName() const {
   return name->as<Identifier>()->name();
 }
 
+std::string Module::getPath() const {
+  if (hasAttribute("__xcc_tag_used_from")) {
+    return getAttribute("__xcc_tag_used_from").args[0]->as<String>()->value;
+  }
+
+  return "";
+}
