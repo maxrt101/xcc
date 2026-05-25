@@ -772,7 +772,7 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
     Error(ERROR_MOD_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto name = parseIdentifier("for module name");
+  auto name = parseScopedIdentifier("for module name");
 
   if (!checkAdvance(TOKEN_LEFT_BRACE)) {
     if (!checkAdvance(TOKEN_SEMICOLON)) {
@@ -789,7 +789,12 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
     //   throw ParserException(current().line, "There can be only one file-scoped module in the file");
     // }
 
-    lexicalScope.push_back(name->value);
+    // Build full lexical scope
+    ast::LexicalScope declaredScope = name->scope;
+    declaredScope.push_back(name->value);
+
+    lexicalScope = declaredScope;
+
     return ast::Module::create(span + previous().span, lexicalScope, name, ast::Block::create({}, lexicalScope, {}));
   }
 
