@@ -21,6 +21,10 @@ std::string String::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList payload) {
+  return generateValueWithoutLoad(ctx, payload);
+}
+
+llvm::Value * String::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
   ctx.setDebugLocation(span);
 
   auto str = getOrCreateGlobalString(ctx);
@@ -32,10 +36,6 @@ llvm::Value * String::generateValue(codegen::ModuleContext& ctx, PayloadList pay
       str.global,
       llvm::ArrayRef<llvm::Constant*> {zero, zero}
   );
-}
-
-llvm::Value * String::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  return llvm::ConstantDataArray::getString(*ctx.globalContext.globalModule->llvm.ctx, value, true);
 }
 
 llvm::Constant * String::generateConstant(codegen::ModuleContext& ctx, PayloadList payload) {
