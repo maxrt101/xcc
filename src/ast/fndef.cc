@@ -228,12 +228,17 @@ void FnDef::generateNormalFunction(
 
   ctx.globalContext.setCurrentFunction(decl->name->name());
 
-  auto last_val = body->generateValue(ctx, extendPayload(payload, Block::Payload::create(meta_fn->returnType)));
+  auto last_val = body->generateValue(ctx, extendPayload(payload, Block::Payload::create(meta_fn->returnType, true)));
+
+  // Check if last node of function is `return`
+  bool hadReturnAsLastNode = isOrIsLastInBlock(body->body.back(), AST_RETURN);
 
   // Pop function scope
-  ctx.popScope();
+  // If last stmt is `return` - scope is already cleared, so pass this value as `no_clear` arg
+  ctx.popScope(hadReturnAsLastNode);
 
-  if (!body->body.back()->is(AST_RETURN)) {
+  // If there was no explicit return - create one with the last value of function block as result
+  if (!hadReturnAsLastNode) {
     if (meta_fn->returnType->isVoid()) {
       ctx.ir_builder->CreateRetVoid();
     } else {
