@@ -779,6 +779,12 @@ std::shared_ptr<ast::Node> Parser::parseUse(const ast::Node::AttributeList& attr
 
   ModuleCache::get(res.path).references.push_back(mod);
 
+  auto prelude_attr = std::find_if(attrs.begin(), attrs.end(), [](auto& a) { return a.name == "prelude"; });
+
+  if (prelude_attr != attrs.end()) {
+    mod->addAttribute({"__xcc_tag_use_alias_prelude", {}, span});
+  }
+
   return mod;
 }
 
@@ -812,7 +818,22 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
 
     lexicalScope = declaredScope;
 
-    return ast::Module::create(span + previous().span, lexicalScope, name, ast::Block::create({}, lexicalScope, {}));
+    auto mod_span = span + previous().span;
+
+    // Add current module to included list, to avoid circular includes
+    module.included.emplace(FileManager::get(fileId)->path);
+
+    ast::NodeList mods = { ast::Module::create(mod_span, lexicalScope, name, ast::Block::create({}, lexicalScope, {})) };
+
+    // Implicitly include top module
+    auto top_name = declaredScope.front();
+    auto res = includeModuleFromPath(top_name, resolveModulePath(top_name, mod_span), mod_span, false);
+
+    if (res.body) {
+      mods.push_back(ast::Module::create(mod_span, lexicalScope, ast::Identifier::create(mod_span, lexicalScope, top_name), res.body));
+    }
+
+    return ast::Block::create(mod_span, lexicalScope, mods);
   }
 
   auto body = ast::Block::create(span, lexicalScope, {});
