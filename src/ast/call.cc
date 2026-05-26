@@ -90,7 +90,8 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
   for (size_t i = 0; i < args.size(); ++i) {
     size_t llvmParamIdx = info.isMember ? i + 1 : i;
 
-    auto val = args[i]->generateValue(ctx, payload);;
+    auto type = args[i]->generateType(ctx, payload);
+    auto val  = args[i]->generateValue(ctx, payload);;
 
     if (!val) {
       Error(ERROR_INTERNAL_FAILURE, args[i]->span, "Failed to generate function call argument #{}", i).raiseFromNode(this);
@@ -104,8 +105,13 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
       llvm::Type * argType = val->getType();
 
       if (argType->isIntegerTy() && argType->getIntegerBitWidth() < 32) {
-        // ABI Rule: Promote i1, i8, i16 to i32
-        val = ctx.ir_builder->CreateSExt(val, ctx.ir_builder->getInt32Ty());
+        // ABI Rule: Promote all types, smaller than 32 bits into i32/u32
+        // Bool is a special case - as calling SExt on it makes it flip around to -1
+        if (type->isUnsigned() || type->isBool()) {
+          val = ctx.ir_builder->CreateZExt(val, ctx.ir_builder->getInt32Ty());
+        } else {
+          val = ctx.ir_builder->CreateSExt(val, ctx.ir_builder->getInt32Ty());
+        }
       } else if (argType->isFloatTy()) {
         // ABI Rule: Promote float (32-bit) to double (64-bit)
         val = ctx.ir_builder->CreateFPExt(val, ctx.ir_builder->getDoubleTy());
@@ -210,9 +216,19 @@ void Call::getCalleeInfoForFunctionCall(codegen::ModuleContext& ctx, PayloadList
 void Call::getCalleeInfoForMethodCall(codegen::ModuleContext& ctx, PayloadList payload, CalleeInfo& info, MemberAccess * memberAccess) {
   // Method call
   info.isMember = true;
-  auto caleeeType = memberAccess->lhs->generateType(ctx, payload);
+  auto caleeType = memberAccess->lhs->generateType(ctx, payload);
 
-  info.fnName = caleeeType->getName() + "_" + memberAccess->rhs->value;
+  // For by-pointer method retrieval (`self->func()`) calleeType with be `T*`, instead of `T`,
+  // which will mess up name mangling. If `T` is enum or struct - replace calleeType with it
+  if (caleeType->isPointer()) {
+    auto pointed = caleeType->getPointedType();
+
+    if (pointed->isStruct() || pointed->isEnum()) {
+      caleeType = pointed;
+    }
+  }
+
+  info.fnName = caleeType->getName() + "_" + memberAccess->rhs->value;
 
   auto * directFn = ctx.getFunction(info.fnName);
 
