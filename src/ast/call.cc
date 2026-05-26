@@ -90,11 +90,7 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
   for (size_t i = 0; i < args.size(); ++i) {
     size_t llvmParamIdx = info.isMember ? i + 1 : i;
 
-    /* If member and first arg - it's 'self', which is allways a pointer, so should
-     * generate ValueWithoutLoad, otherwise - just generate value */
-    auto val = (info.isMember && i == 0)
-      ? args[i]->generateValueWithoutLoad(ctx, payload)
-      : args[i]->generateValue(ctx, payload);
+    auto val = args[i]->generateValue(ctx, payload);;
 
     if (!val) {
       Error(ERROR_INTERNAL_FAILURE, args[i]->span, "Failed to generate function call argument #{}", i).raiseFromNode(this);
