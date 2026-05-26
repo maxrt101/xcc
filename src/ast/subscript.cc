@@ -86,9 +86,7 @@ llvm::Value * Subscript::generateValueWithoutLoad(codegen::ModuleContext& ctx, P
   auto element_type_llvm = base_type->getBaseType()->getLLVMType(ctx);
 
   if (base_type->isPointer()) {
-    // For pointers, we must load the address stored in the alloca first
-    // base_ptr_val is T**, we want T*
-    auto * actual_address = ctx.ir_builder->CreateLoad(base_type->getLLVMType(ctx), base_ptr_val, "ptr_load");
+    auto * actual_address = lhs->generateValue(ctx, payload);
 
     // GEP for pointers usually takes a single index
     return ctx.ir_builder->CreateInBoundsGEP(element_type_llvm, actual_address, index, "element_ptr");
