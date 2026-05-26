@@ -52,12 +52,12 @@ public:
   /**
    * Get id of file with provided path, or read the file and return newly assigned id
    */
-  static FileId load(const std::string& path);
+  static FileId load(std::string path);
 
   /**
    * Find file by path, returns 0 if file isn't loaded
    */
-  static FileId lookup(const std::string& path);
+  static FileId lookup(std::string path);
 
   /**
    * Get File instance by id, returns nullptr if file isn't loaded
@@ -67,7 +67,7 @@ public:
   /**
    * Get file contents, of load from path and return loaded contents
    */
-  static std::string getOrLoad(const std::string& path);
+  static std::string getOrLoad(std::string path);
 
   /**
    * Remove file instance by id
@@ -79,7 +79,7 @@ public:
   /**
    * Create a virtual file with provided contents
    */
-  static FileId createVirtual(const std::string& path, const std::string& contents);
+  static FileId createVirtual(std::string path, const std::string& contents);
 
 private:
   static std::unordered_map<FileId, std::shared_ptr<File>> files;

@@ -1,6 +1,7 @@
 #include "xcc/util/filemng.h"
 #include "xcc/util/fs.h"
 #include "xcc/util/log.h"
+#include <filesystem>
 
 using namespace xcc;
 
@@ -42,7 +43,9 @@ void File::process() {
   lines[line] = LineInfo(line, start, offset - start);
 }
 
-FileId FileManager::load(const std::string& path) {
+FileId FileManager::load(std::string path) {
+  path = std::filesystem::path(path).string();
+
   if (auto id = lookup(path)) {
     return id;
   }
@@ -58,7 +61,9 @@ FileId FileManager::load(const std::string& path) {
   return id;
 }
 
-FileId FileManager::lookup(const std::string& path) {
+FileId FileManager::lookup(std::string path) {
+  path = std::filesystem::path(path).string();
+
   for (auto& [id, file] : files) {
     if (path == file->path) {
       return id;
@@ -76,7 +81,9 @@ std::shared_ptr<File> FileManager::get(FileId id) {
   return {nullptr};
 }
 
-std::string FileManager::getOrLoad(const std::string& path) {
+std::string FileManager::getOrLoad(std::string path) {
+  path = std::filesystem::path(path).string();
+
   if (auto id = lookup(path)) {
     return files[id]->contents;
   }
@@ -88,7 +95,9 @@ void FileManager::purge(FileId id) {
   files.erase(id);
 }
 
-FileId FileManager::createVirtual(const std::string& path, const std::string& contents) {
+FileId FileManager::createVirtual(std::string path, const std::string& contents) {
+  path = std::filesystem::path(path).string();
+
   FileId id = FileManager::id++;
 
   auto file = std::make_shared<File>(id, path, contents);
