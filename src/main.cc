@@ -132,7 +132,7 @@ static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, x
 
   logger.info("Compiling '{}' into '{}'", filename, out);
 
-  xcc::compile_to_object(globalContext, file, out, getModPaths(filename, args));
+  xcc::compile_to_object(*globalContext, file, out, getModPaths(filename, args));
 
   return 0;
 }
@@ -153,7 +153,7 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
 
       logger.info("Compiling '{}' into '{}'", xcc::fs::path::getFileName(filename), xcc::fs::path::getFileName(out));
 
-      xcc::compile_to_object(globalContext, file, out, getModPaths(filename, args));
+      xcc::compile_to_object(*globalContext, file, out, getModPaths(filename, args));
 
       auto target = globalContext->target;
       globalContext = xcc::codegen::GlobalContext::create(target);
@@ -189,7 +189,7 @@ static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::
   for (auto& filename : args.files) {
     logger.info("Running file '{}'", xcc::fs::path::getFileName(filename));
 
-    xcc::compile(globalContext, xcc::FileManager::load(filename), false, args.mod_paths);
+    xcc::compile(*globalContext, xcc::FileManager::load(filename), false, args.mod_paths);
   }
 
   globalContext->flushModulesToJIT();
@@ -248,7 +248,7 @@ static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
       continue;
     }
 
-    xcc::run(globalContext, xcc::FileManager::createVirtual("repl_input_" + std::to_string(input_counter++), line), true);
+    xcc::run(*globalContext, xcc::FileManager::createVirtual("repl_input_" + std::to_string(input_counter++), line), true);
   }
 
   return 0;
