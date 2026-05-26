@@ -53,6 +53,18 @@ void Monomorphizer::apply(const std::shared_ptr<Node>& node) {
           g = substitutions[s];
         }
       }
+
+      if (!id->scope.empty() && substitutions.contains(id->scope[0])) {
+        auto param = substitutions[id->scope[0]]->template as<Type>()->name->template as<Identifier>();
+        LexicalScope new_scope = param->scope;
+        new_scope.push_back(param->value);
+
+        for (size_t i = 1; i < id->scope.size(); ++i) {
+          new_scope.push_back(id->scope[i]);
+        }
+
+        id->scope = new_scope;
+      }
     }
 
     if (n->is(AST_EXPR_TYPE)) {
