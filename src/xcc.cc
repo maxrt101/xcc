@@ -340,7 +340,20 @@ static void addDecompositionPhantoms(
   }
 }
 
-void xcc::gatherPhantomsForMacro(
+/**
+ * Helper for gathering any and all declared variables into phantom scope,
+ * for native macros to have access to them, before actual AST lowering is done.
+ * Adds found variable declarations to @ref codegen::ModuleContext::PhantomScope.
+ * Old variables will get overwritten. There is a side effect - variable
+ * declarations will be accessible by macros outside variable's lexical scope.
+ *
+ * @warning Strictly internal
+ *
+ * @param globalContext Global Context
+ * @param phantoms      Phantom Scope
+ * @param node          AST Node to check
+ */
+static void gatherPhantomsForMacro(
   codegen::GlobalContext&               globalContext,
   codegen::ModuleContext::PhantomScope& phantoms,
   std::shared_ptr<ast::Node>            node
@@ -589,10 +602,10 @@ CompilationResult xcc::compile(
 
   auto ast = parser.parse(isRepl);
 
-// #if USE_PRINT_AST
+#if USE_PRINT_AST
   logger.info("AST (After Parsing):");
   logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
-// #endif
+#endif
 
   processAttributes(ast);
   processAliases(globalContext, ast);
@@ -602,10 +615,10 @@ CompilationResult xcc::compile(
   registerMacros(globalContext, ast);
   processMacros(globalContext, ast);
 
-#if USE_PRINT_EXPANDED_AST
+// #if USE_PRINT_EXPANDED_AST
   logger.info("AST (After Attribute & Macro processing):");
   logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
-#endif
+// #endif
 
   CompilationResult result;
 

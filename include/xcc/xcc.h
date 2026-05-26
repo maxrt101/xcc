@@ -99,25 +99,6 @@ void run(
 );
 
 /**
- * Helper for gathering any and all declared variables into phantom scope,
- * for native macros to have access to them, before actual AST lowering is done.
- * Adds found variable declarations to @ref codegen::ModuleContext::PhantomScope.
- * Old variables will get overwritten. There is a side effect - variable
- * declarations will be accessible by macros outside variable's lexical scope.
- *
- * @warning Strictly internal
- *
- * @param globalContext Global Context
- * @param phantoms      Phantom Scope
- * @param node          AST Node to check
- */
-void gatherPhantomsForMacro(
-  codegen::GlobalContext&               globalContext,
-  codegen::ModuleContext::PhantomScope& phantoms,
-  std::shared_ptr<ast::Node>            node
-);
-
-/**
  * Find and expand all ast::MacroCall nodes
  *
  * FIXME: Currently all arguments are evaluated before macro call is processed, it means that, for example
