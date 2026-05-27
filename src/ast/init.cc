@@ -206,6 +206,11 @@ void Initializer::fillStruct(codegen::ModuleContext& ctx, std::shared_ptr<meta::
 
     ctx.ir_builder->CreateStore(val, fieldPtr);
   }
+
+  // Record resulting struct into RAII context
+  if (t->isDrop()) {
+    ctx.currentScope().raii.addTemporary(alloca, t);
+  }
 }
 
 void Initializer::fillArray(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type>& t, llvm::AllocaInst * alloca, PayloadList payload) {
