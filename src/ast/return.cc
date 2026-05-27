@@ -40,6 +40,12 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList pay
       val = castIfNotSame(ctx, val, type->getLLVMType(ctx), value->span);
     }
 
+    // If last value is an identifier - forget it, so it doesn't get destroyed,
+    // as it needs to live long enough to be returned from the function
+    if (auto id = getOrGetLastInBlock(value, AST_EXPR_IDENTIFIER)) {
+      ctx.currentScope().raii.forget(id->as<Identifier>()->value);
+    }
+
     ctx.clearScopes(true);
     ctx.ir_builder->CreateRet(val);
   } else {
