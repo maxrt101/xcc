@@ -118,6 +118,15 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
       }
     }
 
+    // TODO: Move semantics
+    // if (type->isStruct() && type->isDrop()) {
+    //   if (isOrIsLastInBlock(args[i], AST_EXPR_CALL) || isOrIsLastInBlock(args[i], AST_INIT)) {
+    //     ctx.currentScope().raii.forgetLastTemporary();
+    //   } else if (isOrIsLastInBlock(args[i], AST_EXPR_CALL)) {
+    //     ctx.currentScope().raii.forget(getOrGetLastInBlock(args[i], AST_EXPR_IDENTIFIER)->as<Identifier>()->value);
+    //   }
+    // }
+
     arg_vals.push_back(val);
   }
 
@@ -130,7 +139,9 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
       return ctx.ir_builder->CreateCall(signature, info.calleePtr, arg_vals);
     }
 
-    return ctx.ir_builder->CreateCall(signature, info.calleePtr, arg_vals, "calltmp");
+    auto ret_type = info.metaType->getReturnType();
+
+    return checkRAII(ctx, ctx.ir_builder->CreateCall(signature, info.calleePtr, arg_vals, "calltmp"), ret_type);
   }
 
   /* Call by function pointer, which could either be a lambda or a global function pointer
@@ -152,17 +163,20 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
     param_types.push_back(param_type->getLLVMType(ctx));
   }
 
-  llvm::Type* ret_type = info.metaType->getReturnType()->getLLVMType(ctx);
+  auto ret_type = info.metaType->getReturnType();
+
+  llvm::Type * ret_llvm_type = info.metaType->getReturnType()->getLLVMType(ctx);
   llvm::FunctionType * worker_signature = llvm::FunctionType::get(
-    ret_type,
+    ret_llvm_type,
     param_types,
     info.metaType->isVariadic()
   );
 
-  if (ret_type->isVoidTy()) {
+  if (ret_llvm_type->isVoidTy()) {
     return ctx.ir_builder->CreateCall(worker_signature, code_ptr, fat_arg_vals);
   }
-  return ctx.ir_builder->CreateCall(worker_signature, code_ptr, fat_arg_vals, "calltmp");
+
+  return checkRAII(ctx, ctx.ir_builder->CreateCall(worker_signature, code_ptr, fat_arg_vals, "calltmp"), ret_type);
 }
 
 std::shared_ptr<xcc::meta::Type> Call::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
@@ -240,4 +254,21 @@ void Call::getCalleeInfoForMethodCall(codegen::ModuleContext& ctx, PayloadList p
   info.metaType  = ctx.globalContext.getMetaFunctionType(info.fnName);
 
   assertRaiseFromNode(info.metaType.get(), Error(ERROR_UNKNOWN_FUNCTION, {}, "'{}'", info.fnName), this);
+}
+
+llvm::Value * Call::checkRAII(codegen::ModuleContext& ctx, llvm::Value * ret_val, std::shared_ptr<meta::Type> ret_type) {
+  // If return value is a struct and has a drop method
+  // create a temporary alloca, store result value there
+  // and record the alloca into RAII context
+  if (ret_type->isStruct() && ret_type->isDrop()) {
+    auto * alloca = ctx.ir_builder->CreateAlloca(ret_val->getType(), nullptr, "temp_ret");
+
+    ctx.ir_builder->CreateStore(ret_val, alloca);
+
+    ctx.currentScope().raii.addTemporary(alloca, ret_type);
+
+    return ctx.ir_builder->CreateLoad(ret_val->getType(), alloca);
+  }
+
+  return ret_val;
 }

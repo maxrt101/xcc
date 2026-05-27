@@ -41,6 +41,8 @@ private:
 
   void getCalleeInfoForFunctionCall(codegen::ModuleContext& ctx, PayloadList payload, CalleeInfo& info, Identifier* ident, bool generateCallee);
   void getCalleeInfoForMethodCall(codegen::ModuleContext& ctx, PayloadList payload, CalleeInfo& info, MemberAccess * memberAccess);
+
+  llvm::Value * checkRAII(codegen::ModuleContext& ctx, llvm::Value * ret_val, std::shared_ptr<meta::Type> ret_type);
 };
 
 } /* namespace xcc::ast */
