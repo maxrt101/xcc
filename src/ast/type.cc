@@ -8,7 +8,10 @@
 
 using namespace xcc::ast;
 
-static auto& logger = xcc::log::Logger::get("GENERICS");
+static auto& logger        = xcc::log::Logger::get("GENERICS");
+static auto& ast_logger    = xcc::log::Logger::get("AST");
+static auto& ex_ast_logger = xcc::log::Logger::get("AST_EXT");
+static auto& ir_logger     = xcc::log::Logger::get("IR");
 
 Type::Type(SourceSpan span, LexicalScope scope, Kind kind, std::shared_ptr<Node> name)
   : Node(AST_EXPR_TYPE, span, scope), kind(kind), name(std::move(name)) {}
@@ -298,6 +301,11 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
     concrete->as<Struct>()->name->value = ident->getConcreteName(ctx, ident->value);
     concrete->as<Struct>()->genericParams.clear();
 
+    if (ast_logger.isEnabled()) {
+      ast_logger.info("AST for '{}' (After Parsing):", concrete_name);
+      ast_logger.print("{}\n", concrete->toString(nullptr, nullptr, 0, true));
+    }
+
     std::shared_ptr<meta::Type> type;
 
     logger.debug("Instantiating Generic Type '{}' from '{}'", concrete_name, id);
@@ -306,6 +314,11 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
       type = concrete->generateType(ctx, {});
 
       processMacros(ctx.globalContext, concrete);
+
+      if (ex_ast_logger.isEnabled()) {
+        ex_ast_logger.info("AST for '{}' (After Macro processing):", concrete_name);
+        ex_ast_logger.print("{}\n", concrete->toString(nullptr, nullptr, 0, true));
+      }
 
       for (auto& method : concrete->as<Struct>()->methods) {
         logger.debug("Instantiating Generic Method '{}' for '{}' ('{}')", method->as<FnDef>()->decl->name->name(), concrete_name, id);
@@ -318,6 +331,13 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
 
         if (target.supportsCOMDAT()) {
           fn->setComdat(ctx.llvm.module->getOrInsertComdat(fn->getName())); // Needed for linux & windows linker to know which
+        }
+
+        if (ir_logger.isEnabled()) {
+          ir_logger.info("LLVM IR for method {}:", fn->getName().str());
+          util::RawStreamCollector fn_ir_collector;
+          fn->print(*fn_ir_collector.stream());
+          ir_logger.print("{}", fn_ir_collector.string());
         }
       }
     } catch (CompilationException& ex) {
