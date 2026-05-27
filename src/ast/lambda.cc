@@ -158,11 +158,11 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   auto * current_block = ctx.ir_builder->GetInsertBlock();
   auto current_fn = ctx.globalContext.current_function;
 
-  auto di_fn = ctx.globalContext.di_builder->createFunction(
-    ctx.globalContext.di_compile_unit,
+  auto di_fn = ctx.di_builder->createFunction(
+    ctx.di_compile_unit,
     lambda_name,
     lambda_name,
-    ctx.globalContext.getCurrentDIFile(),
+    ctx.getCurrentDIFile(),
     span.start().line,
     generateType(ctx, payload)->getDISubroutineType(ctx),
     body->span.start().line,

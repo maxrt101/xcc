@@ -5,6 +5,7 @@
 #include "xcc/meta/type.h"
 #include "xcc/util/log.h"
 #include "xcc/xcc.h"
+#include "xcc/util/fs.h"
 
 using namespace xcc::ast;
 
@@ -12,6 +13,7 @@ static auto& logger        = xcc::log::Logger::get("GENERICS");
 static auto& ast_logger    = xcc::log::Logger::get("AST");
 static auto& ex_ast_logger = xcc::log::Logger::get("AST_EXT");
 static auto& ir_logger     = xcc::log::Logger::get("IR");
+static auto& mod_ir_logger = xcc::log::Logger::get("IR_MOD");
 
 Type::Type(SourceSpan span, LexicalScope scope, Kind kind, std::shared_ptr<Node> name)
   : Node(AST_EXPR_TYPE, span, scope), kind(kind), name(std::move(name)) {}
@@ -320,17 +322,20 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
         ex_ast_logger.print("{}\n", concrete->toString(nullptr, nullptr, 0, true));
       }
 
+      auto fctx = ctx.globalContext.createModule(concrete_name, concrete->span.fileId);
+
       for (auto& method : concrete->as<Struct>()->methods) {
         logger.debug("Instantiating Generic Method '{}' for '{}' ('{}')", method->as<FnDef>()->decl->name->name(), concrete_name, id);
 
-        auto fn = method->generateFunction(ctx, payload);
+        auto fn = method->generateFunction(*fctx, payload);
 
-        fn->setLinkage(llvm::Function::LinkOnceODRLinkage);
+        fn->setLinkage(llvm::Function::WeakODRLinkage);
 
-        llvm::Triple target(ctx.llvm.module->getTargetTriple());
+        llvm::Triple target(fctx->llvm.module->getTargetTriple());
 
         if (target.supportsCOMDAT()) {
-          fn->setComdat(ctx.llvm.module->getOrInsertComdat(fn->getName())); // Needed for linux & windows linker to know which
+          // Needed for linux & windows linker prevent duplicate symbols
+          fn->setComdat(fctx->llvm.module->getOrInsertComdat(fn->getName()));
         }
 
         if (ir_logger.isEnabled()) {
@@ -340,6 +345,15 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
           ir_logger.print("{}", fn_ir_collector.string());
         }
       }
+
+      if (mod_ir_logger.isEnabled()) {
+        mod_ir_logger.info("Compiled LLVM Module for {}:", concrete_name);
+        util::RawStreamCollector mod_ir_collector;
+        fctx->llvm.module->print(*mod_ir_collector.stream(), nullptr);
+        mod_ir_logger.print("{}\n", mod_ir_collector.string());
+      }
+
+      fctx->globalContext.addModule(fctx);
     } catch (CompilationException& ex) {
       ex.error.note(generic->span, "During instantiation of '{}'", id).raiseFromNode(this);
     }

@@ -27,14 +27,6 @@ bool ModuleCache::contains(const std::string& path) {
   return modules.contains(path);
 }
 
-void ModuleCache::updateDebugInfo(codegen::GlobalContext& ctx) {
-  for (auto& [name, mod] : modules) {
-    if (!mod.di_file) {
-      mod.di_file = ctx.di_builder->createFile(fs::path::getFileName(name), fs::path::getParent(name));
-    }
-  }
-}
-
 bool Parser::isAtEnd() const {
   return current_idx >= tokens.size();
 }

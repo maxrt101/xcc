@@ -104,19 +104,19 @@ llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_pt
 
   init = codegen::castIfNotSame(ctx, init, meta_type->getLLVMType(ctx), value ? value->span : span);
 
-  auto di_local = ctx.globalContext.di_builder->createAutoVariable(
+  auto di_local = ctx.di_builder->createAutoVariable(
       ctx.currentDIScope(),
       name->name(),
-      ctx.globalContext.getCurrentDIFile(),
+      ctx.getCurrentDIFile(),
       span.start().line,
       (meta_type->isEnum() ? meta_type->getEnumElementType() : meta_type)->getDIType(ctx),
       true
     );
 
-  ctx.globalContext.di_builder->insertDeclare(
+  ctx.di_builder->insertDeclare(
     tv->value,
     di_local,
-    ctx.globalContext.di_builder->createExpression(),
+    ctx.di_builder->createExpression(),
     span.start().getDILocation(ctx),
     ctx.ir_builder->GetInsertBlock()
   );
@@ -159,11 +159,11 @@ llvm::Value * VarDecl::generateGlobal(codegen::ModuleContext& ctx, std::shared_p
   auto extern_global = llvm::cast<llvm::GlobalVariable>(
     ctx.llvm.module->getOrInsertGlobal(id, llvm_type));
 
-  auto di_global = ctx.globalContext.di_builder->createGlobalVariableExpression(
+  auto di_global = ctx.di_builder->createGlobalVariableExpression(
     ctx.currentDIScope(),
     id,
     id,
-    ctx.globalContext.getCurrentDIFile(),
+    ctx.getCurrentDIFile(),
     span.start().line,
     (meta_type->isEnum() ? meta_type->getEnumElementType() : meta_type)->getDIType(ctx),
     true

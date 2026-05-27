@@ -120,15 +120,16 @@ static int list_machines(xcc::args::Arguments& args) {
   return 0;
 }
 
-static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
+static int compile(xcc::util::Target target, xcc::args::Arguments& args) {
   if (args.files.size() > 1) {
     logger.warn("Ignoring input files after '{}'", args.files[0]);
     logger.info("xcc in 'object-compile' mode accepts only one file");
   }
 
-  auto filename = args.files[0];
-  auto file = xcc::FileManager::load(filename);
-  auto out = args.output.empty() ? xcc::fs::path::getFileName(filename) + ".o" : args.output;
+  auto filename      = args.files[0];
+  auto file          = xcc::FileManager::load(filename);
+  auto out           = args.output.empty() ? xcc::fs::path::getFileName(filename) + ".o" : args.output;
+  auto globalContext = xcc::codegen::GlobalContext::create(target, file);
 
   logger.info("Compiling '{}' into '{}'", filename, out);
 
@@ -137,11 +138,13 @@ static int compile(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, x
   return 0;
 }
 
-static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
+static int link(xcc::util::Target target, xcc::args::Arguments& args) {
   std::vector<std::string> files_to_link;
 
   for (auto & filename : args.files) {
     auto file = xcc::FileManager::load(filename);
+
+    auto globalContext = xcc::codegen::GlobalContext::create(target, file);
 
     auto magic = llvm::identify_magic(xcc::FileManager::get(file)->contents);
 
@@ -155,8 +158,6 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
 
       xcc::compile_to_object(*globalContext, file, out, getModPaths(filename, args));
 
-      auto target = globalContext->target;
-      globalContext = xcc::codegen::GlobalContext::create(target);
       files_to_link.push_back(out);
     }
   }
@@ -185,7 +186,9 @@ static int link(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc:
   return std::system(cmd.c_str());
 }
 
-static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
+static int run(xcc::util::Target target, xcc::args::Arguments& args) {
+  auto globalContext = xcc::codegen::GlobalContext::create(target, xcc::FileManager::load(args.files[0]));
+
   for (auto& filename : args.files) {
     logger.info("Running file '{}'", xcc::fs::path::getFileName(filename));
 
@@ -198,10 +201,12 @@ static int run(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::
   return 0;
 }
 
-static int repl(std::unique_ptr<xcc::codegen::GlobalContext> globalContext, xcc::args::Arguments& args) {
+static int repl(xcc::util::Target target, xcc::args::Arguments& args) {
   logger.setEnable(true);
 
   logger.print("xcc (experimental) repl {}\n", xcc::getVersion());
+
+  auto globalContext = xcc::codegen::GlobalContext::create(target, xcc::FileManager::createVirtual("<0>", ""));
 
   size_t input_counter = 0;
 
@@ -308,21 +313,19 @@ static int xcc_main(int argc, char ** argv) {
 
   auto target = xcc::init(args.target, args.machine);
 
-  auto globalContext = xcc::codegen::GlobalContext::create(target);
-
   if (!args.files.empty()) {
     if (args.run) {
-      return run(std::move(globalContext), args);
+      return run(target, args);
     }
 
     if (args.compile) {
-      return compile(std::move(globalContext), args);
+      return compile(target, args);
     }
 
-    return link(std::move(globalContext), args);
+    return link(target, args);
   }
 
-  return repl(std::move(globalContext), args);
+  return repl(target, args);
 }
 
 #undef USE_CATCH_EXCEPTIONS

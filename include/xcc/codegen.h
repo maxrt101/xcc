@@ -34,8 +34,6 @@
 
 namespace xcc::codegen {
 
-constexpr char DEFAULT_MODULE_NAME[] = "<module>";
-
 class ModuleContext;
 
 /**
@@ -65,47 +63,6 @@ private:
   static std::unordered_map<std::string, std::shared_ptr<ast::Node>> cache;
 };
 
-/**
- * RAII (Resource Acquisition Is Initialization) Context
- *
- * Tracks temporary values and forgotten locals
- */
-class RAIIContext {
-  struct Temporary {
-    llvm::AllocaInst *          alloca;
-    std::shared_ptr<meta::Type> type;
-  };
-
-  std::vector<std::string> forgotten;
-  std::vector<Temporary>   temporaries;
-
-public:
-  /**
-   * Add temporary value to the tracker
-   */
-  void addTemporary(llvm::AllocaInst * alloca, std::shared_ptr<meta::Type> type);
-
-  /**
-   * Forget about last added temporary. Kind of a rollback, that is
-   * needed when a temporary is immediately assigned to a variable
-   */
-  void forgetLastTemporary();
-
-  /**
-   * Clear temporaries. Will call drop() on every one
-   */
-  void clearTemporaries(ModuleContext& ctx);
-
-  /**
-   * Forget about a local variable (won't call `drop()` at the end of the block)
-   */
-  void forget(const std::string& name);
-
-  /**
-   * Check if named value is in the 'forgotten' list
-   */
-  bool isForgotten(const std::string& name);
-};
 
 /**
  * Global compiler context, holds functions/globals, global ModuleContext and JIT
@@ -129,15 +86,6 @@ public:
 
   /* Global Module */
   std::shared_ptr<ModuleContext> globalModule;
-
-  /* LLVM DebugInfo Builder */
-  std::unique_ptr<llvm::DIBuilder> di_builder;
-
-  /* LLVM DebugInfo Compile Unit */
-  llvm::DICompileUnit * di_compile_unit = nullptr;
-
-  /* Top-level DebugInfo File */
-  llvm::DIFile * di_file = nullptr;
 
   /* Already processed modules, which are waiting to be flushed to JIT, or merged to an object file */
   std::vector<std::unique_ptr<ModuleContext>> pendingModules;
@@ -164,20 +112,20 @@ public:
   std::unordered_map<std::string, std::shared_ptr<ast::ConstDecl>> consts;
 
 public:
-  GlobalContext(util::Target target);
+  GlobalContext(util::Target target, FileId file);
   ~GlobalContext() = default;
 
   /**
    * Creates GlobalContext. Should be used instead of raw constructor
    */
-  static std::unique_ptr<GlobalContext> create(util::Target target);
+  static std::unique_ptr<GlobalContext> create(util::Target target, FileId file);
 
   /**
    * Creates new module (e.g. for a new function) tied to global context
    *
    * @param name Module name
    */
-  std::unique_ptr<ModuleContext> createModule(const std::string& name = DEFAULT_MODULE_NAME);
+  std::unique_ptr<ModuleContext> createModule(const std::string& name, FileId fileId);
 
   /**
    * Adds module to global context. Should be called, when module is ready
@@ -193,17 +141,6 @@ public:
    * Merges all added modules into global module from global context
    */
   void mergeModules() const;
-
-  /**
-   * Creates llvm::DICompileUnit for currently processed file
-   */
-  void createCompileUnit(FileId fileId);
-
-  /**
-   * Return current llvm::DIFIle, returns a file for currently processed module,
-   * if in module context, and file of CU if in top-level scope
-   */
-  llvm::DIFile * getCurrentDIFile();
 
   /**
    * Add a (meta) function record to internal function table
@@ -292,6 +229,72 @@ public:
   void runFunction(const std::string& name);
 };
 
+
+/**
+ * RAII (Resource Acquisition Is Initialization) Context
+ *
+ * Tracks temporary values and forgotten locals
+ */
+class RAIIContext {
+  struct Temporary {
+    llvm::AllocaInst *          alloca;
+    std::shared_ptr<meta::Type> type;
+  };
+
+  std::vector<std::string> forgotten;
+  std::vector<Temporary>   temporaries;
+
+public:
+  /**
+   * Add temporary value to the tracker
+   */
+  void addTemporary(llvm::AllocaInst * alloca, std::shared_ptr<meta::Type> type);
+
+  /**
+   * Forget about last added temporary. Kind of a rollback, that is
+   * needed when a temporary is immediately assigned to a variable
+   */
+  void forgetLastTemporary();
+
+  /**
+   * Clear temporaries. Will call drop() on every one
+   */
+  void clearTemporaries(ModuleContext& ctx);
+
+  /**
+   * Forget about a local variable (won't call `drop()` at the end of the block)
+   */
+  void forget(const std::string& name);
+
+  /**
+   * Check if named value is in the 'forgotten' list
+   */
+  bool isForgotten(const std::string& name);
+};
+
+
+/**
+ * Represents a lexical scope in the codegen
+ *
+ * Holds span for block ('{}'), DebugInfo scope, locals map & 'cleared' flag
+ * Cleared flag is used to signal that this scope was already finished, and it
+ * just waits to be popped from scope stack.
+ * Clearing means that local variables are marked as `freed` to the LLVM, this
+ * enables some stack-space optimization later on
+ */
+struct Scope {
+  SourceSpan                                                 span;
+  llvm::DIScope *                                            di_scope;
+  OrderedMap<std::string, std::shared_ptr<meta::TypedValue>> locals;
+  bool                                                       cleared = false;
+
+  /* RAII (Resource Acquisition Is Initialization) Context */
+  RAIIContext raii;
+
+  void clear(ModuleContext& ctx, bool force = false);
+};
+
+
 /**
  * Context for an LLVM module (basically a new one is created for every function)
  */
@@ -332,27 +335,6 @@ public:
     void add(const std::string& name, std::shared_ptr<meta::Type> type);
   };
 
-  /**
-   * Represents a lexical scope in the codegen
-   *
-   * Holds span for block ('{}'), DebugInfo scope, locals map & 'cleared' flag
-   * Cleared flag is used to signal that this scope was already finished, and it
-   * just waits to be popped from scope stack.
-   * Clearing means that local variables are marked as `freed` to the LLVM, this
-   * enables some stack-space optimization later on
-   */
-  struct Scope {
-    SourceSpan                                                 span;
-    llvm::DIScope *                                            di_scope;
-    OrderedMap<std::string, std::shared_ptr<meta::TypedValue>> locals;
-    bool                                                       cleared = false;
-
-    /* RAII (Resource Acquisition Is Initialization) Context */
-    RAIIContext raii;
-
-    void clear(ModuleContext& ctx, bool force = false);
-  };
-
 public:
   /* Module name */
   std::string name;
@@ -368,6 +350,15 @@ public:
 
   /* LLVM IR Builder */
   std::unique_ptr<llvm::IRBuilder<>> ir_builder;
+
+  /* LLVM DebugInfo Builder */
+  std::unique_ptr<llvm::DIBuilder> di_builder;
+
+  /* LLVM DebugInfo Compile Unit */
+  llvm::DICompileUnit * di_compile_unit = nullptr;
+
+  /* Top-level DebugInfo File */
+  llvm::DIFile * di_file = nullptr;
 
   /* Named values (variables/args) organized in scopes */
   std::vector<Scope> scopes;
@@ -389,12 +380,23 @@ public:
 #endif
 
 public:
-  explicit ModuleContext(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME, util::Target * target = nullptr);
+  ModuleContext(GlobalContext& global, const std::string& name, FileId file, util::Target * target = nullptr);
 
-  static std::unique_ptr<ModuleContext> create(GlobalContext& global, const std::string& name = DEFAULT_MODULE_NAME, util::Target * target = nullptr);
+  static std::unique_ptr<ModuleContext> create(GlobalContext& global, const std::string& name, FileId file,  util::Target * target = nullptr);
 
   /** Try to get function from current module, if fails - try to get from global module */
   llvm::Function * getFunction(const std::string& name);
+
+  /**
+   * Creates llvm::DICompileUnit for currently processed file
+   */
+  void createCompileUnit(FileId fileId);
+
+  /**
+   * Return current llvm::DIFIle, returns a file for currently processed module,
+   * if in module context, and file of CU if in top-level scope
+   */
+  llvm::DIFile * getCurrentDIFile();
 
   /** Creates a RAII Ph[antomScope, provided with a list of variables and their types */
   PhantomScope phantomScope(const PhantomsList& vars);

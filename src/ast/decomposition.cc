@@ -151,19 +151,19 @@ void Decomposition::decomposeNamedPiece(
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
   auto tv = meta::TypedValue::create(ctx, fn, span, val_type, name);
 
-  auto di_local = ctx.globalContext.di_builder->createAutoVariable(
+  auto di_local = ctx.di_builder->createAutoVariable(
       ctx.currentDIScope(),
       name,
-      ctx.globalContext.getCurrentDIFile(),
+      ctx.getCurrentDIFile(),
       span.start().line,
       val_type->getDIType(ctx),
       true
     );
 
-  ctx.globalContext.di_builder->insertDeclare(
+  ctx.di_builder->insertDeclare(
     tv->value,
     di_local,
-    ctx.globalContext.di_builder->createExpression(),
+    ctx.di_builder->createExpression(),
     span.start().getDILocation(ctx),
     ctx.ir_builder->GetInsertBlock()
   );

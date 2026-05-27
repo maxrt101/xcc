@@ -460,7 +460,7 @@ static llvm::Function * compileFunction(codegen::GlobalContext& globalContext, s
     auto decl = node->is(ast::AST_FUNCTION_DEF) ? node->as<ast::FnDef>()->decl.get() : node->as<ast::FnDecl>();
     auto name = decl->name->as<ast::Identifier>()->name();
 
-    auto ctx = globalContext.createModule(name);
+    auto ctx = globalContext.createModule(name, node->span.fileId);
 
     auto fn = node->generateFunction(*ctx, {});
 
@@ -577,8 +577,6 @@ CompilationResult xcc::compile(
   bool                            isRepl,
   const std::vector<std::string>& includePaths
 ) {
-  globalContext.createCompileUnit(file);
-
   auto lexer  = Lexer(file);
   auto tokens = lexer.tokenize();
 
@@ -602,8 +600,6 @@ CompilationResult xcc::compile(
   for (auto& path : includePaths) {
     parser.addModuleSearchPath(path);
   }
-
-  ModuleCache::updateDebugInfo(globalContext);
 
   auto ast = parser.parse(isRepl);
 

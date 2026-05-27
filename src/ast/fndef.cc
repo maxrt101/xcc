@@ -54,11 +54,11 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
     return gen_fn;
   }
 
-  auto di_fn = ctx.globalContext.di_builder->createFunction(
+  auto di_fn = ctx.di_builder->createFunction(
     ctx.currentDIScope(), // or ctx.currentScope().di_scope
     meta_fn->name,
     meta_fn->name,
-    ctx.globalContext.getCurrentDIFile(),
+    ctx.getCurrentDIFile(),
     span.start().line,
     generateType(ctx, payload)->getDISubroutineType(ctx),
     body->span.start().line,

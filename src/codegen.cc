@@ -37,70 +37,32 @@ void GenericsCache::add(const std::string& name, std::shared_ptr<ast::Node> gene
   cache[name] = generic;
 }
 
-void RAIIContext::addTemporary(llvm::AllocaInst * alloca, std::shared_ptr<meta::Type> type) {
-  temporaries.emplace_back(alloca, type);
-}
-
-void RAIIContext::forgetLastTemporary() {
-  temporaries.pop_back();
-}
-
-void RAIIContext::clearTemporaries(ModuleContext& ctx) {
-  for (auto& [alloca, type] : temporaries) {
-    llvm::Function * drop_fn = ctx.getFunction(type->getDropMethodName());
-
-    if (drop_fn) {
-      ctx.ir_builder->CreateCall(drop_fn, {alloca});
-    } else {
-      Warning(WARNING_STRUCT_DROP_NO_FN, {}, "'{}'", type->getName()).emit();
-    }
-  }
-
-  temporaries.clear();
-}
-
-void RAIIContext::forget(const std::string& name) {
-  forgotten.push_back(name);
-}
-
-bool RAIIContext::isForgotten(const std::string& name) {
-  for (auto& f : forgotten) {
-    if (f == name) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-GlobalContext::GlobalContext(util::Target target) : target(target) {
+GlobalContext::GlobalContext(util::Target target, FileId file) : target(target) {
   jit = JIT::create();
 
   tsc = std::make_unique<llvm::LLVMContext>();
 
-  globalModule = ModuleContext::create(*this, "<global>", &target);
-
-  di_builder = std::make_unique<llvm::DIBuilder>(*globalModule->llvm.module);
+  globalModule = ModuleContext::create(*this, "<global>", file, &target);
 
   registerBuiltinMacros(*this);
 }
 
-std::unique_ptr<GlobalContext> GlobalContext::create(util::Target target) {
-  return std::make_unique<GlobalContext>(std::move(target));
+std::unique_ptr<GlobalContext> GlobalContext::create(util::Target target, FileId file) {
+  return std::make_unique<GlobalContext>(std::move(target), file);
 }
 
-std::unique_ptr<ModuleContext> GlobalContext::createModule(const std::string& name) {
-  return ModuleContext::create(*this, name);
+std::unique_ptr<ModuleContext> GlobalContext::createModule(const std::string& name, FileId file) {
+  return ModuleContext::create(*this, name, file);
 }
 
 void GlobalContext::addModule(std::unique_ptr<ModuleContext>& module) {
+  module->di_builder->finalize();
   pendingModules.push_back(std::move(module));
 }
 
 void GlobalContext::flushModulesToJIT() {
-  di_builder->finalize();
-
   for (auto& mod : pendingModules) {
+    mod->di_builder.reset();
     auto tsm = llvm::orc::ThreadSafeModule(std::move(mod->llvm.module), tsc);
     checkLLVMError(jit->addModule(std::move(tsm)));
   }
@@ -109,9 +71,8 @@ void GlobalContext::flushModulesToJIT() {
 }
 
 void GlobalContext::mergeModules() const {
-  di_builder->finalize();
-
   for (auto& mod : pendingModules) {
+    mod->di_builder.reset();
     if (llvm::Linker::linkModules(*globalModule->llvm.module, std::move(mod->llvm.module))) {
       logger.error("Failed to link modules <global> and {}", mod->name);
       throw std::runtime_error("Failed to link modules");
@@ -120,29 +81,6 @@ void GlobalContext::mergeModules() const {
 
   // TODO: ?
   // pendingModules.clear();
-}
-
-void GlobalContext::createCompileUnit(FileId fileId) {
-  if (di_compile_unit) return;
-
-  auto file = FileManager::get(fileId);
-
-  di_file = di_builder->createFile(fs::path::getFileName(file->path), fs::path::getParent(file->path));
-
-  di_compile_unit = di_builder->createCompileUnit(
-    llvm::dwarf::DW_LANG_C,
-    di_file,
-    "XCC",
-    false, "", 0 // what
-  );
-}
-
-llvm::DIFile * GlobalContext::getCurrentDIFile() {
-  if (!moduleStack.empty() && !moduleStack.back().second.empty()) {
-    return ModuleCache::get(moduleStack.back().second).di_file;
-  }
-
-  return di_file;
 }
 
 void GlobalContext::addFunction(const std::string& name, std::shared_ptr<meta::Function> fn, std::shared_ptr<meta::Type> type) {
@@ -274,7 +212,7 @@ std::shared_ptr<ast::ConstDecl> GlobalContext::getConst(const std::string& name)
 
 void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
   if (!globalModule->llvm.ctx || !globalModule->llvm.module) {
-    globalModule = ModuleContext::create(*this, "<global>");
+    globalModule = ModuleContext::create(*this, "<global>", 0);
   }
 
   std::shared_ptr<ast::Block> body;
@@ -365,6 +303,42 @@ void GlobalContext::runFunction(const std::string& name) {
   checkLLVMError(rt->remove());
 }
 
+void RAIIContext::addTemporary(llvm::AllocaInst * alloca, std::shared_ptr<meta::Type> type) {
+  temporaries.emplace_back(alloca, type);
+}
+
+void RAIIContext::forgetLastTemporary() {
+  temporaries.pop_back();
+}
+
+void RAIIContext::clearTemporaries(ModuleContext& ctx) {
+  for (auto& [alloca, type] : temporaries) {
+    llvm::Function * drop_fn = ctx.getFunction(type->getDropMethodName());
+
+    if (drop_fn) {
+      ctx.ir_builder->CreateCall(drop_fn, {alloca});
+    } else {
+      Warning(WARNING_STRUCT_DROP_NO_FN, {}, "'{}'", type->getName()).emit();
+    }
+  }
+
+  temporaries.clear();
+}
+
+void RAIIContext::forget(const std::string& name) {
+  forgotten.push_back(name);
+}
+
+bool RAIIContext::isForgotten(const std::string& name) {
+  for (auto& f : forgotten) {
+    if (f == name) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 ModuleContext::PhantomScope::PhantomScope(ModuleContext& module, const PhantomsList& vars) : module(module) {
   module.phantomScopes.emplace_back();
 
@@ -373,15 +347,7 @@ ModuleContext::PhantomScope::PhantomScope(ModuleContext& module, const PhantomsL
   }
 }
 
-ModuleContext::PhantomScope::~PhantomScope() {
-  module.phantomScopes.pop_back();
-}
-
-void ModuleContext::PhantomScope::add(const std::string& name, std::shared_ptr<meta::Type> type) {
-  module.phantomScopes.back()[name] = std::move(type);
-}
-
-void ModuleContext::Scope::clear(ModuleContext& ctx, bool force) {
+void Scope::clear(ModuleContext& ctx, bool force) {
   if (!force && cleared) return;
 
   auto lifetime_end = llvm::Intrinsic::getOrInsertDeclaration(ctx.llvm.module.get(), llvm::Intrinsic::lifetime_end, {ctx.ir_builder->getPtrTy()});
@@ -410,7 +376,15 @@ void ModuleContext::Scope::clear(ModuleContext& ctx, bool force) {
   }
 }
 
-ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, util::Target * target) : name(name), globalContext(global) {
+ModuleContext::PhantomScope::~PhantomScope() {
+  module.phantomScopes.pop_back();
+}
+
+void ModuleContext::PhantomScope::add(const std::string& name, std::shared_ptr<meta::Type> type) {
+  module.phantomScopes.back()[name] = std::move(type);
+}
+
+ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, FileId file, util::Target * target) : name(name), globalContext(global) {
   llvm.ctx = globalContext.tsc.getContext();
   llvm.module = std::make_unique<llvm::Module>(name, *llvm.ctx);
 
@@ -418,6 +392,10 @@ ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, uti
   llvm.module->setTargetTriple(target ? target->target_triple               : globalContext.globalModule->llvm.module->getTargetTriple());
 
   ir_builder = std::make_unique<llvm::IRBuilder<>>(*llvm.ctx);
+
+  di_builder = std::make_unique<llvm::DIBuilder>(*llvm.module);
+
+  createCompileUnit(file);
 
 #if USE_OPTIMIZATION
   opt.fpm = std::make_unique<llvm::FunctionPassManager>();
@@ -443,8 +421,38 @@ ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, uti
 #endif
 }
 
-std::unique_ptr<ModuleContext> ModuleContext::create(GlobalContext& global, const std::string& name, util::Target * target) {
-  return std::make_unique<ModuleContext>(global, name, target);
+std::unique_ptr<ModuleContext> ModuleContext::create(GlobalContext& global, const std::string& name, FileId file,  util::Target * target) {
+  return std::make_unique<ModuleContext>(global, name, file, target);
+}
+
+void ModuleContext::createCompileUnit(FileId fileId) {
+  if (di_compile_unit) return;
+
+  auto file = FileManager::get(fileId);
+
+  di_file = di_builder->createFile(fs::path::getFileName(file->path), fs::path::getParent(file->path));
+
+  di_compile_unit = di_builder->createCompileUnit(
+    llvm::dwarf::DW_LANG_C,
+    di_file,
+    "XCC",
+    false, "", 0 // what
+  );
+}
+
+llvm::DIFile * ModuleContext::getCurrentDIFile() {
+  if (!globalContext.moduleStack.empty() && !globalContext.moduleStack.back().second.empty()) {
+    auto& record = globalContext.moduleStack.back();
+    auto& mod = ModuleCache::get(record.second);
+
+    if (!mod.di_file) {
+      mod.di_file = di_builder->createFile(fs::path::getFileName(record.first), fs::path::getParent(record.first));
+    }
+
+    return mod.di_file;
+  }
+
+  return di_file;
 }
 
 llvm::Function * ModuleContext::getFunction(const std::string& name) {
@@ -535,10 +543,10 @@ void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
   llvm::DIScope * parent = nullptr;
 
   if (!scope) {
-    parent = scopes.empty() ? globalContext.di_compile_unit : scopes.back().di_scope;
-    scope = globalContext.di_builder->createLexicalBlock(
+    parent = scopes.empty() ? di_compile_unit : scopes.back().di_scope;
+    scope = di_builder->createLexicalBlock(
       parent,
-      globalContext.di_compile_unit->getFile(),
+      di_compile_unit->getFile(),
       start.line,
       start.column
     );
@@ -571,7 +579,7 @@ void ModuleContext::clearScopes(bool force) {
   }
 }
 
-ModuleContext::Scope& ModuleContext::currentScope() {
+Scope& ModuleContext::currentScope() {
   assertThrow(!scopes.empty(), std::runtime_error("No scopes declared"));
 
   return scopes.back();
@@ -580,7 +588,7 @@ ModuleContext::Scope& ModuleContext::currentScope() {
 
 llvm::DIScope * ModuleContext::currentDIScope() {
   if (scopes.empty()) {
-    return globalContext.di_compile_unit;
+    return di_compile_unit;
   }
 
   return scopes.back().di_scope;
@@ -670,20 +678,20 @@ void ModuleContext::addDIParameter(
   size_t                       index,
   llvm::Value *                storage
 ) {
-  llvm::DILocalVariable * di_param = globalContext.di_builder->createParameterVariable(
+  llvm::DILocalVariable * di_param = di_builder->createParameterVariable(
     di_fn,
     name,
     index,
-    globalContext.getCurrentDIFile(),
+    getCurrentDIFile(),
     span.start().line,
     type->getDIType(*this),
     true
   );
 
-  globalContext.di_builder->insertDeclare(
+  di_builder->insertDeclare(
     storage ? storage : getLocalValue(name),
     di_param,
-    globalContext.di_builder->createExpression(),
+    di_builder->createExpression(),
     span.start().getDILocation(*this, di_fn),
     ir_builder->GetInsertBlock()
   );

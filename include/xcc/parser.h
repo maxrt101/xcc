@@ -32,8 +32,6 @@ public:
   static IncludedModule& get(const std::string& path);
   static bool contains(const std::string& path);
 
-  static void updateDebugInfo(codegen::GlobalContext& ctx);
-
 private:
   static std::unordered_map<std::string, IncludedModule> modules;
 };
