@@ -88,6 +88,7 @@ private:
     std::shared_ptr<Type>              returnType;
     std::vector<std::shared_ptr<Type>> args;
     bool                               isVariadic;
+    std::shared_ptr<Type>              lambda;
   } fn;
 
   /** For TypeTag::LAMBDA */
@@ -271,6 +272,11 @@ public:
    * If type is a lambda - get underlying function type
    */
   [[nodiscard]] std::shared_ptr<Type> getLambdaFunctionType() const;
+
+  /**
+   * If type is lambda (or function, with linked lambda type) - return closure type as tuple
+   */
+  [[nodiscard]] std::shared_ptr<Type> getClosureType() const;
 
   /**
    * Generate LLVM type from a valid meta type, needs ModuleContext

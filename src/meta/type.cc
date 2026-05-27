@@ -827,6 +827,16 @@ std::shared_ptr<Type> Type::getLambdaFunctionType() const {
   return lambda.fn;
 }
 
+std::shared_ptr<Type> Type::getClosureType() const {
+  if (isFunction() && fn.lambda) {
+    return fn.lambda->getClosureType();
+  }
+
+  assertThrow(isLambda(), std::runtime_error("Type is not a lambda"));
+
+  return createTuple(lambda.captures);
+}
+
 llvm::Constant * Type::getDefault(codegen::ModuleContext& ctx) const {
   switch (tag) {
     case TypeTag::BOOL:
@@ -1127,6 +1137,7 @@ std::shared_ptr<Type> Type::createFunction(
 
 std::shared_ptr<Type> Type::createLambda(std::shared_ptr<Type> fn, std::vector<std::shared_ptr<Type>> captures) {
   auto type = create(TypeTag::LAMBDA);
+  fn->fn.lambda         = type;
   type->lambda.fn       = std::move(fn);
   type->lambda.captures = std::move(captures);
   return type;
