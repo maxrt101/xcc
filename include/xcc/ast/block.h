@@ -21,12 +21,13 @@ public:
 
 public:
   NodeList body;
+  bool     has_result;
 
 public:
-  explicit Block(SourceSpan span, LexicalScope scope, NodeList body);
+  explicit Block(SourceSpan span, LexicalScope scope, NodeList body, bool has_result = false);
   ~Block() override = default;
 
-  static std::shared_ptr<Block> create(SourceSpan span, LexicalScope scope, NodeList body);
+  static std::shared_ptr<Block> create(SourceSpan span, LexicalScope scope, NodeList body, bool has_result = false);
 
   std::shared_ptr<Node> clone() override;
   void visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) override;

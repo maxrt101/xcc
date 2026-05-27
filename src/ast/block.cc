@@ -26,6 +26,8 @@ static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload,
   for (size_t i = 0; i < block.body.size() - 1; ++i) {
     if constexpr (std::is_same_v<T, llvm::Value>) {
       block.body[i]->generateValue(ctx, payload);
+
+      ctx.currentScope().raii.clearTemporaries(ctx);
     } else {
       block.body[i]->generateConstant(ctx, payload);
     }
@@ -39,6 +41,12 @@ static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload,
 
   if constexpr (std::is_same_v<T, llvm::Value>) {
     val = block.body.back()->generateValue(ctx, payload);
+
+    if (block.has_result) {
+      if (auto id = getOrGetLastInBlock(block.body.back(), AST_EXPR_IDENTIFIER)) {
+        ctx.currentScope().raii.forget(id->as<Identifier>()->value);
+      }
+    }
   } else {
     val = block.body.back()->generateConstant(ctx, payload);
   }
@@ -59,15 +67,15 @@ std::shared_ptr<Node::Payload> Block::Payload::create(std::shared_ptr<meta::Type
   );
 }
 
-Block::Block(SourceSpan span, LexicalScope scope, NodeList body)
-  : Node(AST_BLOCK, span, scope), body(std::move(body)) {}
+Block::Block(SourceSpan span, LexicalScope scope, NodeList body, bool has_result)
+  : Node(AST_BLOCK, span, scope), body(std::move(body)), has_result(has_result) {}
 
-std::shared_ptr<Block> Block::create(SourceSpan span, LexicalScope scope, NodeList body) {
-  return std::make_shared<Block>(span, scope, std::move(body));
+std::shared_ptr<Block> Block::create(SourceSpan span, LexicalScope scope, NodeList body, bool has_result) {
+  return std::make_shared<Block>(span, scope, std::move(body), has_result);
 }
 
 std::shared_ptr<Node> Block::clone() {
-  return withAttrs(create(span, scope, cloneVector(body)));
+  return withAttrs(create(span, scope, cloneVector(body), has_result));
 }
 
 void Block::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
