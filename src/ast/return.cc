@@ -11,7 +11,7 @@ std::shared_ptr<Return> Return::create(SourceSpan span, LexicalScope scope, std:
 }
 
 std::shared_ptr<Node> Return::clone() {
-  return withAttrs(create(span, scope, value->clone()));
+  return withAttrs(create(span, scope, value ? value->clone() : nullptr));
 }
 
 void Return::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
