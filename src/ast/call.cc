@@ -208,7 +208,7 @@ Call::CalleeInfo Call::getCalleeInfo(codegen::ModuleContext& ctx, PayloadList pa
 }
 
 void Call::getCalleeInfoForFunctionCall(codegen::ModuleContext& ctx, PayloadList payload, CalleeInfo& info, Identifier * ident, bool generateCallee) {
-  info.fnName = ctx.globalContext.aliased(ident->name());
+  info.fnName = ident->getResolvedName(ctx);
 
   if (auto * directFn = ctx.getFunction(info.fnName)) {
     // Direct function call
