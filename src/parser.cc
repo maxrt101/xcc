@@ -378,11 +378,13 @@ std::shared_ptr<ast::Block> Parser::parseBlock(bool parseTopLevel) {
     }
   }
 
+  bool has_result = !previous().is(TOKEN_SEMICOLON);
+
   if (!checkAdvance(TOKEN_RIGHT_BRACE)) {
     Error(ERROR_BLOCK_MISSING_CLOSING_BRACE, current().span).raise();
   }
 
-  return ast::Block::create(span + previous().span, lexicalScope, nodes);
+  return ast::Block::create(span + previous().span, lexicalScope, nodes, has_result);
 }
 
 std::shared_ptr<ast::Decomposition> Parser::parseDecompositionList() {
@@ -821,6 +823,7 @@ std::shared_ptr<ast::Node> Parser::parseMod(const ast::Node::AttributeList& attr
     auto mod_span = span + previous().span;
 
     // Add current module to included list, to avoid circular includes
+    // TODO: Doesn't look like it does much
     module.included.emplace(FileManager::get(fileId)->path);
 
     ast::NodeList mods = { ast::Module::create(mod_span, lexicalScope, name, ast::Block::create({}, lexicalScope, {})) };
