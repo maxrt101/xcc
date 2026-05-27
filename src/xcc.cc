@@ -8,7 +8,12 @@
 
 using namespace xcc;
 
-static auto& logger = xcc::log::Logger::get("XCC");
+static auto& logger        = xcc::log::Logger::get("XCC");
+static auto& lex_logger    = xcc::log::Logger::get("LEX");
+static auto& ast_logger    = xcc::log::Logger::get("AST");
+static auto& ex_ast_logger = xcc::log::Logger::get("AST_EXT");
+static auto& ir_logger     = xcc::log::Logger::get("IR");
+static auto& mod_ir_logger = xcc::log::Logger::get("IR_MOD");
 
 /**
  * Process attributes for top-level block
@@ -459,19 +464,19 @@ static llvm::Function * compileFunction(codegen::GlobalContext& globalContext, s
 
     auto fn = node->generateFunction(*ctx, {});
 
-#if USE_PRINT_FUNCTION_LLVM_IR
-    logger.info("LLVM IR for function {}:", fn->getName().str());
-    util::RawStreamCollector fn_ir_collector;
-    fn->print(*fn_ir_collector.stream());
-    logger.print("{}", fn_ir_collector.string());
-#endif
+    if (ir_logger.isEnabled()) {
+      ir_logger.info("LLVM IR for function {}:", fn->getName().str());
+      util::RawStreamCollector fn_ir_collector;
+      fn->print(*fn_ir_collector.stream());
+      ir_logger.print("{}", fn_ir_collector.string());
+    }
 
-#if USE_PRINT_MODULE_LLVM_IR
-    util::RawStreamCollector mod_ir_collector;
-    ctx->llvm.module->print(*mod_ir_collector.stream(), nullptr);
-    logger.info("Compiled LLVM Module for {}:", fn->getName().str());
-    logger.print("{}\n", mod_ir_collector.string());
-#endif
+    if (mod_ir_logger.isEnabled()) {
+      mod_ir_logger.info("Compiled LLVM Module for {}:", fn->getName().str());
+      util::RawStreamCollector mod_ir_collector;
+      ctx->llvm.module->print(*mod_ir_collector.stream(), nullptr);
+      mod_ir_logger.print("{}\n", mod_ir_collector.string());
+    }
 
     globalContext.addModule(ctx);
     return fn;
@@ -577,20 +582,20 @@ CompilationResult xcc::compile(
   auto lexer  = Lexer(file);
   auto tokens = lexer.tokenize();
 
-#if USE_PRINT_TOKENS
-  auto f = FileManager::get(file);
-  logger.info("TOKENS:");
-  for (auto& token : tokens) {
-    std::string value = token.value;
-    if (token.is(TokenType::TOKEN_STRING)) {
-      value = util::strescseq(value, false);
+  if (lex_logger.isEnabled()) {
+    auto f = FileManager::get(file);
+    lex_logger.info("TOKENS:");
+    for (auto& token : tokens) {
+      std::string value = token.value;
+      if (token.is(TokenType::TOKEN_STRING)) {
+        value = util::strescseq(value, false);
+      }
+      lex_logger.print("{:<20} '{}' {}:{}:{} '{}'\n",
+        Token::typeToString(token.type), value,
+        token.span.fileId, token.span.offset, token.span.length,
+        f->contents.substr(token.span.offset, token.span.length));
     }
-    logger.print("{:<20} '{}' {}:{}:{} '{}'\n",
-      Token::typeToString(token.type), value,
-      token.span.fileId, token.span.offset, token.span.length,
-      f->contents.substr(token.span.offset, token.span.length));
   }
-#endif
 
   auto parser = Parser(file, tokens);
 
@@ -602,10 +607,10 @@ CompilationResult xcc::compile(
 
   auto ast = parser.parse(isRepl);
 
-#if USE_PRINT_AST
-  logger.info("AST (After Parsing):");
-  logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
-#endif
+  if (ast_logger.isEnabled()) {
+    ast_logger.info("AST (After Parsing):");
+    ast_logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
+  }
 
   processAttributes(ast);
   processAliases(globalContext, ast);
@@ -615,10 +620,10 @@ CompilationResult xcc::compile(
   registerMacros(globalContext, ast);
   processMacros(globalContext, ast);
 
-// #if USE_PRINT_EXPANDED_AST
-  logger.info("AST (After Attribute & Macro processing):");
-  logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
-// #endif
+  if (ex_ast_logger.isEnabled()) {
+    ex_ast_logger.info("AST (After Attribute & Macro processing):");
+    ex_ast_logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
+  }
 
   CompilationResult result;
 
