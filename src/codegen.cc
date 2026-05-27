@@ -2,6 +2,7 @@
 #include "xcc/exceptions.h"
 #include "xcc/util/log.h"
 #include "xcc/util/llvm.h"
+#include "xcc/util/util.h"
 #include "xcc/ast.h"
 
 #include "llvm/Linker/Linker.h"
@@ -367,8 +368,10 @@ void Scope::clear(ModuleContext& ctx, bool force) {
       }
     }
 
-    auto size = dl.getTypeAllocSize(tv->type->getLLVMType(ctx));
-    ctx.ir_builder->CreateCall(lifetime_end, {ctx.ir_builder->getInt64(size), tv->value});
+    if (!XCC_VECTOR_CONTAINS(forgotten, *it)) {
+      auto size = dl.getTypeAllocSize(tv->type->getLLVMType(ctx));
+      ctx.ir_builder->CreateCall(lifetime_end, {ctx.ir_builder->getInt64(size), tv->value});
+    }
   }
 
   if (!force) {
@@ -537,6 +540,10 @@ void ModuleContext::addLocal(const std::string& name, std::shared_ptr<meta::Type
   scopes.back().locals[name] = std::move(tv);
 }
 
+void ModuleContext::forgetLocal(const std::string& name) {
+  scopes.back().forgotten.insert(name);
+}
+
 void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
   auto start = span.start();
 
@@ -556,7 +563,7 @@ void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
     llvm::DILocation::get(*llvm.ctx, start.line, start.column, scope)
   );
 
-  scopes.emplace_back(span, scope);
+  scopes.emplace_back(span, scope, globalContext.current_function);
 }
 
 void ModuleContext::popScope(bool no_clear) {
@@ -575,6 +582,9 @@ void ModuleContext::popScope(bool no_clear) {
 
 void ModuleContext::clearScopes(bool force) {
   for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
+    if (scope->owner != globalContext.current_function) {
+      break;
+    }
     scope->clear(*this, force);
   }
 }
