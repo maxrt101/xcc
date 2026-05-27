@@ -66,6 +66,48 @@ private:
 };
 
 /**
+ * RAII (Resource Acquisition Is Initialization) Context
+ *
+ * Tracks temporary values and forgotten locals
+ */
+class RAIIContext {
+  struct Temporary {
+    llvm::AllocaInst *          alloca;
+    std::shared_ptr<meta::Type> type;
+  };
+
+  std::vector<std::string> forgotten;
+  std::vector<Temporary>   temporaries;
+
+public:
+  /**
+   * Add temporary value to the tracker
+   */
+  void addTemporary(llvm::AllocaInst * alloca, std::shared_ptr<meta::Type> type);
+
+  /**
+   * Forget about last added temporary. Kind of a rollback, that is
+   * needed when a temporary is immediately assigned to a variable
+   */
+  void forgetLastTemporary();
+
+  /**
+   * Clear temporaries. Will call drop() on every one
+   */
+  void clearTemporaries(ModuleContext& ctx);
+
+  /**
+   * Forget about a local variable (won't call `drop()` at the end of the block)
+   */
+  void forget(const std::string& name);
+
+  /**
+   * Check if named value is in the 'forgotten' list
+   */
+  bool isForgotten(const std::string& name);
+};
+
+/**
  * Global compiler context, holds functions/globals, global ModuleContext and JIT
  */
 class GlobalContext {
@@ -304,6 +346,9 @@ public:
     llvm::DIScope *                                            di_scope;
     OrderedMap<std::string, std::shared_ptr<meta::TypedValue>> locals;
     bool                                                       cleared = false;
+
+    /* RAII (Resource Acquisition Is Initialization) Context */
+    RAIIContext raii;
 
     void clear(ModuleContext& ctx, bool force = false);
   };

@@ -15,8 +15,9 @@ using namespace xcc::codegen;
 
 constexpr char ANONYMOUS_EXPR_FN_NAME[] = "__anonymous__";
 
-static auto& logger = xcc::log::Logger::get("CODEGEN");
+static auto& logger       = xcc::log::Logger::get("CODEGEN");
 static auto& alias_logger = xcc::log::Logger::get("ALIAS");
+static auto& ir_logger    = xcc::log::Logger::get("IR");
 
 std::unordered_map<std::string, std::shared_ptr<ast::Node>> GenericsCache::cache;
 
@@ -34,6 +35,42 @@ std::shared_ptr<ast::Node> GenericsCache::get(const std::string& name) {
 
 void GenericsCache::add(const std::string& name, std::shared_ptr<ast::Node> generic) {
   cache[name] = generic;
+}
+
+void RAIIContext::addTemporary(llvm::AllocaInst * alloca, std::shared_ptr<meta::Type> type) {
+  temporaries.emplace_back(alloca, type);
+}
+
+void RAIIContext::forgetLastTemporary() {
+  temporaries.pop_back();
+}
+
+void RAIIContext::clearTemporaries(ModuleContext& ctx) {
+  for (auto& [alloca, type] : temporaries) {
+    llvm::Function * drop_fn = ctx.getFunction(type->getDropMethodName());
+
+    if (drop_fn) {
+      ctx.ir_builder->CreateCall(drop_fn, {alloca});
+    } else {
+      Warning(WARNING_STRUCT_DROP_NO_FN, {}, "'{}'", type->getName()).emit();
+    }
+  }
+
+  temporaries.clear();
+}
+
+void RAIIContext::forget(const std::string& name) {
+  forgotten.push_back(name);
+}
+
+bool RAIIContext::isForgotten(const std::string& name) {
+  for (auto& f : forgotten) {
+    if (f == name) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 GlobalContext::GlobalContext(util::Target target) : target(target) {
@@ -268,18 +305,18 @@ void GlobalContext::runExpr(std::shared_ptr<ast::Node> expr) {
 
   auto fndef = ast::FnDef::create(SourceSpan::builtin(), {}, fndecl, body);
 
-#if USE_PRINT_LLVM_IR
   auto fn = fndef->generateFunction(*globalModule, {});
-  util::RawStreamCollector collector;
-  fn->print(*collector.stream());
-  for (auto &global : globalModule->llvm.module->globals()) {
-    global.print(*collector.stream());
-    *collector.stream() << "\n";
+
+  if (ir_logger.isEnabled()) {
+    util::RawStreamCollector collector;
+    fn->print(*collector.stream());
+    for (auto &global : globalModule->llvm.module->globals()) {
+      global.print(*collector.stream());
+      *collector.stream() << "\n";
+    }
+    ir_logger.debug("IR:\n{}", collector.string());
   }
-  logger.debug("IR:\n{}", collector.string());
-#else
-  fndef->generateFunction(*globalModule, {});
-#endif
+
 
   return runFunction(ANONYMOUS_EXPR_FN_NAME);
 }
@@ -354,7 +391,7 @@ void ModuleContext::Scope::clear(ModuleContext& ctx, bool force) {
   for (auto it = locals.rbegin(); it != locals.rend(); ++it) {
     auto& tv = locals[*it];
 
-    if (tv->type->isStruct() && tv->type->isDrop()) {
+    if (tv->type->isStruct() && tv->type->isDrop() && !raii.isForgotten(*it)) {
       llvm::Function * drop_fn = ctx.getFunction(tv->type->getDropMethodName());
 
       if (drop_fn) {
@@ -539,6 +576,7 @@ ModuleContext::Scope& ModuleContext::currentScope() {
 
   return scopes.back();
 }
+
 
 llvm::DIScope * ModuleContext::currentDIScope() {
   if (scopes.empty()) {
