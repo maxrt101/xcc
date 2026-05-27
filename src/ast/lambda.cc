@@ -174,9 +174,9 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
   ctx.setDebugLocation(span, di_fn);
 
-  ctx.pushScope(span, di_fn);
-
   ctx.globalContext.setCurrentFunction(lambda_name);
+
+  ctx.pushScope(span, di_fn);
 
   auto * entry = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", lambda_fn);
   ctx.ir_builder->SetInsertPoint(entry);
@@ -193,6 +193,8 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     auto * field_ptr = ctx.ir_builder->CreateStructGEP(closure_type, closure_arg, i, capture.name + "_gep");
 
     ctx.addLocal(capture.name, meta::TypedValue::create(ctx, lambda_fn, capture.node->span, capture.type, capture.name));
+
+    ctx.forgetLocal(capture.name);
 
     llvm::Value * val;
 
@@ -221,7 +223,7 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   }
 
   // Generate actual lambda body
-  auto val = body->generateValue(ctx, extendPayload(payload, Block::Payload::create(t->getReturnType(), true)));
+  auto val = body->generateValue(ctx, extendPayload(excludePayload(payload, AST_BLOCK), Block::Payload::create(t->getReturnType(), true)));
 
   ctx.popScope(isOrIsLastInBlock(body->body.back(), AST_RETURN));
 
