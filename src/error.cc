@@ -174,6 +174,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_GENERIC_EXPECTED_SCOPE,                     "Expected '::' after generic type in expression for static method call"),
   DESC(ERROR_NO_SUCH_GENERIC_TYPE,                       "No such generic type"),
   DESC(ERROR_NON_UNIQUE_CAPTURE_NAME,                    "Non-unique lambda capture name"),
+  DESC(ERROR_CAPTURE_NAME_EXPECTED_IDENTIFIER,           "Capture name must be an identifier"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {

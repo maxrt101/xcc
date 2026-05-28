@@ -19,7 +19,7 @@ uint64_t Lambda::counter = 0;
 Lambda::Lambda(
     SourceSpan                                    span,
     LexicalScope                                  scope,
-    NodeList                                      captures,
+    std::vector<Capture>                          captures,
     std::vector<std::shared_ptr<TypedIdentifier>> args,
     std::shared_ptr<Node>                         return_type,
     std::shared_ptr<Block>                        body,
@@ -34,7 +34,7 @@ Lambda::Lambda(
 std::shared_ptr<Lambda> Lambda::create(
     SourceSpan                                    span,
     LexicalScope                                  scope,
-    NodeList                                      captures,
+    std::vector<Capture>                          captures,
     std::vector<std::shared_ptr<TypedIdentifier>> args,
     std::shared_ptr<Node>                         return_type,
     std::shared_ptr<Block>                        body,
@@ -44,10 +44,16 @@ std::shared_ptr<Lambda> Lambda::create(
 }
 
 std::shared_ptr<Node> Lambda::clone() {
+  std::vector<Capture> cloned_captures;
+
+  for (auto& capture : captures) {
+    cloned_captures.emplace_back(capture.name->clone(), capture.expr->clone());
+  }
+
   return withAttrs(create(
     span,
     scope,
-    cloneVector(captures),
+    cloned_captures,
     cloneVector(args),
     return_type->clone(),
     cast<Block>(body->clone()),
@@ -57,7 +63,8 @@ std::shared_ptr<Node> Lambda::clone() {
 
 void Lambda::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
   for (auto& node : captures) {
-    callVisitor(globalContext, node, visitor, ignoreSubtree);
+    callVisitor(globalContext, node.name, visitor, ignoreSubtree);
+    callVisitor(globalContext, node.expr, visitor, ignoreSubtree);
   }
 
   for (auto& node : args) {
@@ -72,7 +79,7 @@ std::string Lambda::toString(Node * grandparent, Node * parent, int indent, bool
   std::string res = attributesToString(indent, newline) + "fn [";
 
   for (size_t i = 0; i < captures.size(); ++i) {
-    res += captures[i]->toString(parent, this, indent, false);
+    res += captures[i].expr->toString(parent, this, indent, false);
 
     if (i + 1 < captures.size()) {
       res += ", ";
@@ -117,18 +124,20 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   for (size_t i = 0; i < captures.size(); ++i) {
     auto& capture = captures[i];
 
-    bool isPointer = capture->is(AST_EXPR_UNARY);
+    bool isPointer = capture.expr->is(AST_EXPR_UNARY);
 
     // Rely on generateLambdaType to raise an error on bad/invalid AST node
-    auto id = isPointer ? capture->as<Unary>()->rhs->as<Identifier>() : capture->as<Identifier>();
+    auto id = isPointer ? capture.expr->as<Unary>()->rhs->as<Identifier>() : capture.expr->as<Identifier>();
 
-    assertRaiseFromNode(!captured_names.contains(id->value),
-      Error(ERROR_NON_UNIQUE_CAPTURE_NAME, capture->span, "Captures must have unique names")
-        .note(captured_names[id->value], "Previous capture with the same at"), this);
+    auto name = capture.name ? capture.name->as<Identifier>() : id;
 
-    captured_names[id->value] = capture->span;
+    assertRaiseFromNode(!captured_names.contains(name->value),
+      Error(ERROR_NON_UNIQUE_CAPTURE_NAME, capture.expr->span, "Captures must have unique names")
+        .note(captured_names[name->value], "Previous capture with the same at"), this);
 
-    capture_info.emplace_back(id->value, capture->generateType(ctx, payload), isPointer, capture);
+    captured_names[name->value] = capture.expr->span;
+
+    capture_info.emplace_back(name->value, capture.expr->generateType(ctx, payload), isPointer, capture.expr);
 
     // Closures should only capture local variables + parent function's arguments
     auto val = ctx.getLocalValue(id->value);
@@ -204,11 +213,11 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
     llvm::Value * val;
 
-    if (capture.isPointer) {
+    // if (capture.isPointer) {
+    //   val = field_ptr;
+    // } else {
       val = ctx.ir_builder->CreateLoad(ctx.ir_builder->getPtrTy(), field_ptr, capture.name + "_ptr");
-    } else {
-      val = field_ptr;
-    }
+    // }
 
     ctx.ir_builder->CreateStore(val, ctx.getLocalValue(capture.name));
   }
@@ -281,21 +290,26 @@ std::shared_ptr<meta::Type> Lambda::generateLambdaType(codegen::ModuleContext &c
   std::vector<std::shared_ptr<meta::Type>> captures, args;
 
   for (auto& capture : this->captures) {
-    assertRaiseFromNode(capture->isAnyOf(AST_EXPR_IDENTIFIER, AST_EXPR_UNARY),
-      Error(ERROR_LAMBDA_BAD_CAPTURE_EXPR, capture->span)
+    if (capture.name) {
+      assertRaiseFromNode(capture.name->is(AST_EXPR_IDENTIFIER),
+        Error(ERROR_CAPTURE_NAME_EXPECTED_IDENTIFIER, capture.name->span), this);
+    }
+
+    assertRaiseFromNode(capture.expr->isAnyOf(AST_EXPR_IDENTIFIER, AST_EXPR_UNARY),
+      Error(ERROR_LAMBDA_BAD_CAPTURE_EXPR, capture.expr->span)
       .note("Only identifier or unary '&' operation are allowed in lambda capture"), this);
 
-    if (capture->is(AST_EXPR_UNARY)) {
-      assertRaiseFromNode(capture->as<Unary>()->operation.is(TOKEN_AMP),
-        Error(ERROR_LAMBDA_BAD_CAPTURE_EXPR, capture->span)
+    if (capture.expr->is(AST_EXPR_UNARY)) {
+      assertRaiseFromNode(capture.expr->as<Unary>()->operation.is(TOKEN_AMP),
+        Error(ERROR_LAMBDA_BAD_CAPTURE_EXPR, capture.expr->span)
         .note("Only '&' is allowed in unary expression in lambda capture"), this);
 
-      assertRaiseFromNode(capture->as<Unary>()->rhs->is(AST_EXPR_IDENTIFIER),
-        Error(ERROR_LAMBDA_BAD_CAPTURE_EXPR, capture->span)
+      assertRaiseFromNode(capture.expr->as<Unary>()->rhs->is(AST_EXPR_IDENTIFIER),
+        Error(ERROR_LAMBDA_BAD_CAPTURE_EXPR, capture.expr->span)
         .note("RHS in unary expression must be an identifier for lambda capture"), this);
     }
 
-    captures.push_back(capture->generateType(ctx, payload));
+    captures.push_back(capture.expr->generateType(ctx, payload));
   }
 
   for (auto& arg : this->args) {

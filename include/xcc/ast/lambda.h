@@ -11,7 +11,12 @@ namespace xcc::ast {
 
 class Lambda : public Node {
 public:
-  NodeList                                      captures;
+  struct Capture {
+    std::shared_ptr<Node> name;
+    std::shared_ptr<Node> expr;
+  };
+
+  std::vector<Capture>                          captures;
   std::vector<std::shared_ptr<TypedIdentifier>> args;
   std::shared_ptr<Node>                         return_type;
   std::shared_ptr<Block>                        body;
@@ -21,7 +26,7 @@ public:
   Lambda(
       SourceSpan                                    span,
       LexicalScope                                  scope,
-      NodeList                                      captures,
+      std::vector<Capture>                          captures,
       std::vector<std::shared_ptr<TypedIdentifier>> args,
       std::shared_ptr<Node>                         return_type,
       std::shared_ptr<Block>                        body,
@@ -33,7 +38,7 @@ public:
   static std::shared_ptr<Lambda> create(
       SourceSpan                                    span,
       LexicalScope                                  scope,
-      NodeList                                      captures,
+      std::vector<Capture>                          captures,
       std::vector<std::shared_ptr<TypedIdentifier>> args,
       std::shared_ptr<Node>                         return_type,
       std::shared_ptr<Block>                        body,

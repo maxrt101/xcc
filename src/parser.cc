@@ -1212,7 +1212,7 @@ std::shared_ptr<ast::Node> Parser::parseRvalue() {
 
 std::shared_ptr<ast::Node> Parser::parseLambda() {
   std::vector<std::shared_ptr<ast::TypedIdentifier>> args;
-  ast::NodeList                                      captures;
+  std::vector<ast::Lambda::Capture>                  captures;
   std::shared_ptr<ast::Node>                         return_type;
   bool                                               is_variadic = false;
 
@@ -1228,7 +1228,15 @@ std::shared_ptr<ast::Node> Parser::parseLambda() {
 
   if (!check(TOKEN_RIGHT_SQUARE_BRACE)) {
     do {
-      captures.push_back(parseExpr());
+      std::shared_ptr<ast::Node> id;
+      std::shared_ptr<ast::Node> expr = parseUnary();
+
+      if (checkAdvance(TOKEN_EQUALS)) {
+        id = expr;
+        expr = parseUnary();
+      }
+
+      captures.emplace_back(id, expr);
     } while (checkAdvance(TOKEN_COMMA));
   }
 
