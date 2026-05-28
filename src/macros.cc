@@ -313,6 +313,12 @@ static std::shared_ptr<Node> xcc_macro_is_same(codegen::GlobalContext& global, s
   return Number::createInteger(call->span, call->scope, *type1 == *type2 ? 1 : 0);
 }
 
+static std::shared_ptr<Node> xcc_macro_closure_type(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  std::shared_ptr<meta::Type> type = evalType(global, *global.globalModule, call->args[0]);
+
+  return type->getClosureType()->toAst();
+}
+
 static std::shared_ptr<Node> xcc_macro_str(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   return String::create(call->span, call->scope, call->args[0]->toString(nullptr, call.get(), 0, false));
 }
@@ -497,25 +503,26 @@ static std::shared_ptr<Node> xcc_macro_include(codegen::GlobalContext& global, s
 }
 
 static std::vector builtin_macros = {
-  createNativeMacro("cat",     {"a", "b"},               xcc_macro_cat),
-  createNativeMacro("sizeof",  {"expr"},                 xcc_macro_sizeof),
-  createNativeMacro("typeof",  {"expr"},                 xcc_macro_typeof),
-  createNativeMacro("is_same", {"a", "b"},               xcc_macro_is_same),
-  createNativeMacro("str",     {"expr"},                 xcc_macro_str),
-  createNativeMacro("strf",    {"expr"},                 xcc_macro_strf),
-  createNativeMacro("int",     {"expr"},                 xcc_macro_int),
-  createNativeMacro("cond",    {"cond", "then"},         xcc_macro_cond, true),
-  createNativeMacro("repeat",  {"n", "var", "expr"},     xcc_macro_repeat),
-  createNativeMacro("asm",     {"code", "constraints"},  xcc_macro_asm, true),
+  createNativeMacro("cat",          {"a", "b"},               xcc_macro_cat),
+  createNativeMacro("sizeof",       {"expr"},                 xcc_macro_sizeof),
+  createNativeMacro("typeof",       {"expr"},                 xcc_macro_typeof),
+  createNativeMacro("is_same",      {"a", "b"},               xcc_macro_is_same),
+  createNativeMacro("closure_type", {"expr"},                 xcc_macro_closure_type),
+  createNativeMacro("str",          {"expr"},                 xcc_macro_str),
+  createNativeMacro("strf",         {"expr"},                 xcc_macro_strf),
+  createNativeMacro("int",          {"expr"},                 xcc_macro_int),
+  createNativeMacro("cond",         {"cond", "then"},         xcc_macro_cond, true),
+  createNativeMacro("repeat",       {"n", "var", "expr"},     xcc_macro_repeat),
+  createNativeMacro("asm",          {"code", "constraints"},  xcc_macro_asm, true),
 
-  createNativeMacro("assert",  {"expr"},                 xcc_macro_assert, true),
-  createNativeMacro("warn",    {"msg"},                  xcc_macro_warn),
-  createNativeMacro("error",   {"msg"},                  xcc_macro_error),
+  createNativeMacro("assert",       {"expr"},                 xcc_macro_assert, true),
+  createNativeMacro("warn",         {"msg"},                  xcc_macro_warn),
+  createNativeMacro("error",        {"msg"},                  xcc_macro_error),
 
-  createNativeMacro("print",   {"fmt"},                  xcc_macro_print, true),
-  createNativeMacro("println", {"fmt"},                  xcc_macro_println, true),
+  createNativeMacro("print",        {"fmt"},                  xcc_macro_print, true),
+  createNativeMacro("println",      {"fmt"},                  xcc_macro_println, true),
 
-  createNativeMacro("include", {"path"},                 xcc_macro_include),
+  createNativeMacro("include",      {"path"},                 xcc_macro_include),
 
   // TODO: Is this needed, if constant unary/binary expressions are implemented
   createNativeMacro("inc", {"x"},      [](auto& ctx, auto& call) { __ARITHMETIC_UNARY_OP( "inc!", ctx, call, ++); }),
