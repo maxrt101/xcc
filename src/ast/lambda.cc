@@ -111,6 +111,8 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
   std::vector<CaptureInfo> capture_info;
 
+  std::unordered_map<std::string, SourceSpan> captured_names;
+
   // Fill up the closure
   for (size_t i = 0; i < captures.size(); ++i) {
     auto& capture = captures[i];
@@ -119,6 +121,12 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
     // Rely on generateLambdaType to raise an error on bad/invalid AST node
     auto id = isPointer ? capture->as<Unary>()->rhs->as<Identifier>() : capture->as<Identifier>();
+
+    assertRaiseFromNode(!captured_names.contains(id->value),
+      Error(ERROR_NON_UNIQUE_CAPTURE_NAME, capture->span, "Captures must have unique names")
+        .note(captured_names[id->value], "Previous capture with the same at"), this);
+
+    captured_names[id->value] = capture->span;
 
     capture_info.emplace_back(id->value, capture->generateType(ctx, payload), isPointer, capture);
 

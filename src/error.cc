@@ -173,6 +173,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_GENERIC_COUNT_MISMATCH,                     "Count of generic arguments required by a type is different from the count of provided type arguments"),
   DESC(ERROR_GENERIC_EXPECTED_SCOPE,                     "Expected '::' after generic type in expression for static method call"),
   DESC(ERROR_NO_SUCH_GENERIC_TYPE,                       "No such generic type"),
+  DESC(ERROR_NON_UNIQUE_CAPTURE_NAME,                    "Non-unique lambda capture name"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {
