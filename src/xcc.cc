@@ -385,6 +385,33 @@ static void gatherPhantomsForMacro(
       }
     }
 
+    // FIXME: since node->visit() is called before visit(node), this adds captures too late, if a macro in
+    //        lambda body needs it. One solution would be to separate Lambda and lets say LmbdaDecl
+#if 0
+    if (node->is(ast::AST_LAMBDA)) {
+      auto lambda = node->template as<ast::Lambda>();
+
+      for (auto& capture : lambda->captures) {
+        bool isPointer = capture.expr->is(ast::AST_EXPR_UNARY);
+
+        // Rely on generateLambdaType to raise an error on bad/invalid AST node
+        auto id = isPointer
+          ? capture.expr->template as<ast::Unary>()->rhs->template as<ast::Identifier>()
+          : capture.expr->template as<ast::Identifier>();
+
+        auto name = capture.name ? capture.name->template as<ast::Identifier>() : id;
+
+        printf("CAPTURE '%s' '%s'\n", name->defaultToString().c_str(), capture.expr->defaultToString().c_str());
+
+        phantoms.add(name->value, capture.expr->generateType(*globalContext.globalModule, {}));
+      }
+
+      for (auto& arg : lambda->args) {
+        phantoms.add(arg->name->name(), arg->generateType(*globalContext.globalModule, {}));
+      }
+    }
+#endif
+
     return nullptr;
   }, {ast::AST_MACRO});
 }
