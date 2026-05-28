@@ -194,8 +194,6 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
     ctx.addLocal(capture.name, meta::TypedValue::create(ctx, lambda_fn, capture.node->span, capture.type, capture.name));
 
-    ctx.forgetLocal(capture.name);
-
     llvm::Value * val;
 
     if (capture.isPointer) {

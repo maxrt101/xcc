@@ -285,9 +285,8 @@ public:
 struct Scope {
   SourceSpan                                                 span;
   llvm::DIScope *                                            di_scope;
-  std::string                                                owner;
+  std::string                                                owner; // Function name
   OrderedMap<std::string, std::shared_ptr<meta::TypedValue>> locals;
-  std::set<std::string>                                      forgotten;
   bool                                                       cleared = false;
 
   /* RAII (Resource Acquisition Is Initialization) Context */
@@ -420,9 +419,6 @@ public:
 
   /** Save local variable record in current scope */
   void addLocal(const std::string& name, std::shared_ptr<meta::TypedValue> tv);
-
-  /** Forget about a local in LLVM scope management*/
-  void forgetLocal(const std::string& name);
 
   /** Create new lexical scope and push it to scope stack. `scope` can be used to override default DIScope creation */
   void pushScope(SourceSpan span, llvm::DIScope * scope = nullptr);

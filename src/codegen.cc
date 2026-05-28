@@ -358,6 +358,7 @@ void Scope::clear(ModuleContext& ctx, bool force) {
   for (auto it = locals.rbegin(); it != locals.rend(); ++it) {
     auto& tv = locals[*it];
 
+    // Don't drop if value is marked as forgotten in RAII scope
     if (tv->type->isStruct() && tv->type->isDrop() && !raii.isForgotten(*it)) {
       llvm::Function * drop_fn = ctx.getFunction(tv->type->getDropMethodName());
 
@@ -368,10 +369,8 @@ void Scope::clear(ModuleContext& ctx, bool force) {
       }
     }
 
-    if (!XCC_VECTOR_CONTAINS(forgotten, *it)) {
-      auto size = dl.getTypeAllocSize(tv->type->getLLVMType(ctx));
-      ctx.ir_builder->CreateCall(lifetime_end, {ctx.ir_builder->getInt64(size), tv->value});
-    }
+    auto size = dl.getTypeAllocSize(tv->type->getLLVMType(ctx));
+    ctx.ir_builder->CreateCall(lifetime_end, {ctx.ir_builder->getInt64(size), tv->value});
   }
 
   if (!force) {
@@ -540,10 +539,6 @@ void ModuleContext::addLocal(const std::string& name, std::shared_ptr<meta::Type
   scopes.back().locals[name] = std::move(tv);
 }
 
-void ModuleContext::forgetLocal(const std::string& name) {
-  scopes.back().forgotten.insert(name);
-}
-
 void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
   auto start = span.start();
 
@@ -567,7 +562,7 @@ void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
 }
 
 void ModuleContext::popScope(bool no_clear) {
-  if (!scopes.empty()) {
+  if (scopes.size() > 1) {
     auto end = scopes.back().span.end();
 
     ir_builder->SetCurrentDebugLocation(end.getDILocation(*this));
@@ -582,6 +577,7 @@ void ModuleContext::popScope(bool no_clear) {
 
 void ModuleContext::clearScopes(bool force) {
   for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
+    // Stop clearing when scope is owned by another function
     if (scope->owner != globalContext.current_function) {
       break;
     }
