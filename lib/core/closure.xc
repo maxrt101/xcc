@@ -17,7 +17,7 @@ mod core::closure;
 # become invalid, once the defining function has returned
 #
 macro pin(__closure) {
-  var size = sizeof!(closure_type!(lambda));
+  var size = sizeof!(closure_type!(__closure));
   var ptr = core::alloc::Allocator::alloc(size);
 
   core::mem::copy(ptr, __closure[1], size);
@@ -33,7 +33,10 @@ macro pin(__closure) {
 # Deallocates closure buffer created by pin!
 # It is undefined behaviour to call this on a
 # lambda, which was not pinned
+# After calling this, the closure (and by
+# extension the whole lambda) becomes invalid
 #
 macro unpin(__closure) {
   core::alloc::Allocator::free(__closure[1]);
+  __closure[1] = 0x0;
 }
