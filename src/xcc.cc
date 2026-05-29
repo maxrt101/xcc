@@ -535,8 +535,13 @@ static void compileBlock(
       auto constant = ast::Node::cast<ast::ConstDecl>(node);
       globalContext.addConst(constant->name->getMangledName(constant->name->value), constant);
     } else if (node->is(ast::AST_STRUCT)) {
-      node->generateType(*globalContext.globalModule, {});
-      for (auto& method : node->as<ast::Struct>()->methods) {
+      auto _struct = node->as<ast::Struct>();
+
+      _struct->generateType(*globalContext.globalModule, {});
+
+      _struct->generateForwardDeclarations(*globalContext.globalModule, {});
+
+      for (auto& method : _struct->methods) {
         compileFunction(globalContext, method);
       }
     } else if (node->is(ast::AST_ENUM)) {

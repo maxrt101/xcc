@@ -324,6 +324,10 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
 
       auto fctx = ctx.globalContext.createModule(concrete_name, concrete->span.fileId);
 
+      // Forward declare all methods, for a method to be able to call another method, which is declared later
+      concrete->as<Struct>()->generateForwardDeclarations(*fctx, payload);
+
+      // Generate methods
       for (auto& method : concrete->as<Struct>()->methods) {
         logger.debug("Instantiating Generic Method '{}' for '{}' ('{}')", method->as<FnDef>()->decl->name->name(), concrete_name, id);
 
