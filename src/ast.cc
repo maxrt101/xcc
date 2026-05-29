@@ -65,6 +65,11 @@ void Monomorphizer::apply(const std::shared_ptr<Node>& node) {
 
         id->scope = new_scope;
       }
+
+      // Specifically for macro expansions, as a type in macro call context is treated as an identifier
+      if (substitutions.contains(id->value)) {
+        return substitutions[id->value];
+      }
     }
 
     if (n->is(AST_EXPR_TYPE)) {
