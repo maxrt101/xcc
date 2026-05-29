@@ -2,6 +2,7 @@
 #include "xcc/codegen.h"
 #include "xcc/exceptions.h"
 #include "xcc/util/string.h"
+#include "xcc/util/util.h"
 
 using namespace xcc;
 using namespace xcc::ast;
@@ -85,6 +86,9 @@ std::string Identifier::getResolvedName(codegen::ModuleContext& ctx) const {
   if (!scope.empty()) {
     std::string base_scope = scope[0];
 
+    // Base scope (first link in scope chain) could be an alias
+    // if so - resolve the alias and then proceed normally with
+    // mangling the rest of the identifier
     if (ctx.globalContext.isAliased(base_scope)) {
       std::string resolved_base = ctx.globalContext.aliased(base_scope);
 
@@ -99,12 +103,29 @@ std::string Identifier::getResolvedName(codegen::ModuleContext& ctx) const {
       return result;
     }
 
-    std::string explicit_name;
-    for (const auto& s : scope) {
-      explicit_name += s + "_";
+    std::string mangled_scope = str::join(scope, "_", false);
+
+    std::string unqualified = mangled_scope + value;
+
+    std::string current_prefix = str::join(util::pairVectorExtractFirst(ctx.globalContext.moduleStack), "_", false);
+
+    // Try prepending current moduleStack
+    std::string qualified = current_prefix + unqualified;
+
+    // Check if anything with qualified name (current moduleStack + scope + name) exists
+    if (ctx.globalContext.functions.contains(qualified)) {
+      return qualified;
     }
 
-    return ctx.globalContext.aliased(explicit_name + value);
+    if (ctx.globalContext.consts.contains(qualified)) {
+      return qualified;
+    }
+
+    // TODO: Globals, macros and aliases are not checked. Should they be?
+
+    // If prepending moduleStack didn't yield any
+    // existing symbols - return scope + name as-is
+    return ctx.globalContext.aliased(unqualified);
   }
 
   return resolveSymbolName(ctx, value);
@@ -117,7 +138,7 @@ std::string Identifier::getConcreteName(codegen::ModuleContext& ctx, const std::
     concrete_name += "_" + arg->generateType(ctx, {})->getName();
   }
 
-  util::strreplace(concrete_name, "*", "_ptr");
+  str::replace(concrete_name, "*", "_ptr");
 
   return concrete_name;
 }
