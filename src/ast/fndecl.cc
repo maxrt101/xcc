@@ -12,7 +12,7 @@ static auto& alias_logger = xcc::log::Logger::get("ALIAS");
 FnDecl::FnDecl(
   SourceSpan                                    span,
   LexicalScope                                  scope,
-  std::shared_ptr<Identifier>                   name,
+  std::shared_ptr<Node>                         name,
   std::shared_ptr<Node>                         return_type,
   std::vector<std::shared_ptr<TypedIdentifier>> args,
   bool                                          isExtern,
@@ -27,7 +27,7 @@ FnDecl::FnDecl(
 std::shared_ptr<FnDecl> FnDecl::create(
   SourceSpan                                    span,
   LexicalScope                                  scope,
-  std::shared_ptr<Identifier>                   name,
+  std::shared_ptr<Node>                         name,
   std::shared_ptr<Node>                         return_type,
   std::vector<std::shared_ptr<TypedIdentifier>> args,
   bool                                          isExtern,
@@ -79,7 +79,11 @@ std::string FnDecl::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
-  std::string fn_name = isExtern ? name->value : getMangledName(name->value);
+  assertRaiseFromNode(name->is(AST_EXPR_IDENTIFIER), Error(ERROR_FN_NAME_NOT_AN_IDENTIFIER, name->span), this);
+
+  auto id = name->as<Identifier>();
+
+  std::string fn_name = isExtern ? id->value : getMangledName(id->value);
   std::string symbol_name = fn_name;
 
   if (hasAttribute("alias")) {

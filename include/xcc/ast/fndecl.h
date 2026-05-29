@@ -10,7 +10,7 @@ namespace xcc::ast {
 
 class FnDecl : public Node, public std::enable_shared_from_this<FnDecl> {
 public:
-  std::shared_ptr<Identifier>                   name;
+  std::shared_ptr<Node>                         name;
   std::shared_ptr<Node>                         return_type;
   std::vector<std::shared_ptr<TypedIdentifier>> args;
   bool                                          isExtern;
@@ -21,7 +21,7 @@ public:
   FnDecl(
       SourceSpan                                    span,
       LexicalScope                                  scope,
-      std::shared_ptr<Identifier>                   name,
+      std::shared_ptr<Node>                         name,
       std::shared_ptr<Node>                         return_type,
       std::vector<std::shared_ptr<TypedIdentifier>> args       = {},
       bool                                          isExtern   = false,
@@ -33,7 +33,7 @@ public:
   static std::shared_ptr<FnDecl> create(
       SourceSpan                                    span,
       LexicalScope                                  scope,
-      std::shared_ptr<Identifier>                   name,
+      std::shared_ptr<Node>                         name,
       std::shared_ptr<Node>                         return_type,
       std::vector<std::shared_ptr<TypedIdentifier>> args       = {},
       bool                                          isExtern   = false,

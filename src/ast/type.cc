@@ -347,7 +347,7 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
 
       // Generate methods
       for (auto& method : concrete->as<Struct>()->methods) {
-        logger.debug("Instantiating Generic Method '{}' for '{}' ('{}')", method->as<FnDef>()->decl->name->name(), concrete_name, id);
+        logger.debug("Instantiating Generic Method '{}' for '{}' ('{}')", method->as<FnDef>()->decl->name->as<Identifier>()->name(), concrete_name, id);
 
         auto fn = method->generateFunction(*fctx, payload);
 

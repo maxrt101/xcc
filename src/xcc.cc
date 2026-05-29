@@ -45,8 +45,8 @@ static void processModAliases(
   using namespace xcc::ast;
 
   auto getExportableId = [](const std::shared_ptr<Node>& node) -> std::shared_ptr<Identifier> {
-    if (node->is(AST_FUNCTION_DECL)) return node->as<FnDecl>()->name;
-    if (node->is(AST_FUNCTION_DEF))  return node->as<FnDef>()->decl->name;
+    if (node->is(AST_FUNCTION_DECL)) return Node::cast<Identifier>(node->as<FnDecl>()->name);
+    if (node->is(AST_FUNCTION_DEF))  return Node::cast<Identifier>(node->as<FnDef>()->decl->name);
     if (node->is(AST_STRUCT))        return node->as<Struct>()->name;
     if (node->is(AST_TYPE_DECL))     return Node::cast<Identifier>(node->as<TypeDecl>()->name);
     if (node->is(AST_CONST_DECL))    return node->as<ConstDecl>()->name;
@@ -378,7 +378,7 @@ static void gatherPhantomsForMacro(
     if (node->is(ast::AST_FUNCTION_DECL)) {
       auto fndecl = node->template as<ast::FnDecl>();
 
-      phantoms.add(fndecl->name->name(), node->generateType(*globalContext.globalModule, {}));
+      phantoms.add(fndecl->name->template as<ast::Identifier>()->name(), node->generateType(*globalContext.globalModule, {}));
 
       for (auto& arg : fndecl->args) {
         phantoms.add(arg->name->name(), arg->generateType(*globalContext.globalModule, {}));

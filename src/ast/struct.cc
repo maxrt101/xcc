@@ -135,7 +135,7 @@ std::shared_ptr<meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::Mod
   for (auto& method : methods) {
     if (method->hasAttribute("drop")) {
       auto decl = method->is(AST_FUNCTION_DEF) ? method->as<FnDef>()->decl.get() : method->as<FnDecl>();
-      dropMethodName = id + "_" + decl->name->value;
+      dropMethodName = id + "_" + decl->name->as<Identifier>()->value;
     }
   }
 

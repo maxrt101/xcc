@@ -112,7 +112,7 @@ void FnDef::processAttributes(codegen::ModuleContext& ctx, PayloadList payload, 
 
     auto section_name = attr.args[0]->as<ast::String>()->value;
 
-    logger.debug("Placing '{}' in section '{}'", decl->name->name(), section_name);
+    logger.debug("Placing '{}' in section '{}'", decl->name->as<Identifier>()->name(), section_name);
 
     fn->setSection(section_name);
   }
@@ -193,7 +193,7 @@ void FnDef::generateNakedFunction(
 ) {
   ctx.pushScope(span, di_fn);
 
-  ctx.globalContext.setCurrentFunction(decl->name->name());
+  ctx.globalContext.setCurrentFunction(decl->name->as<Identifier>()->name());
 
   for (auto& node : body->body) {
     assertRaiseFromNode(node->is(AST_ASM), Error(ERROR_NOT_ASM_IN_NAKED_FN, node->span), this);
@@ -226,7 +226,7 @@ void FnDef::generateNormalFunction(
     ctx.ir_builder->CreateStore(&arg, ctx.getLocalValue(arg_name));
   }
 
-  ctx.globalContext.setCurrentFunction(decl->name->name());
+  ctx.globalContext.setCurrentFunction(decl->name->as<Identifier>()->name());
 
   auto last_val = body->generateValue(ctx, extendPayload(payload, Block::Payload::create(meta_fn->returnType, true)));
 
