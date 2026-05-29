@@ -313,8 +313,25 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
     logger.debug("Instantiating Generic Type '{}' from '{}'", concrete_name, id);
 
     try {
+      auto originalModuleStack = ctx.globalContext.moduleStack;
+
+      std::vector<std::pair<std::string, std::string>> moduleStack;
+
+      // Construct moduleStack with generic struct scope
+      for (auto & s : concrete->scope) {
+        // FIXME: Path is empty, investigate if this could become an issue
+        moduleStack.emplace_back(s, "");
+      }
+
+      // Replace current moduleStack with the one
+      // constructed from generic struct scope
+      ctx.globalContext.moduleStack = moduleStack;
+
+      // Generate struct type for concrete generic struct
       type = concrete->generateType(ctx, {});
 
+      // Process macros, as they haven't been processed
+      // because generic structs are detached from root AST
       processMacros(ctx.globalContext, concrete);
 
       if (ex_ast_logger.isEnabled()) {
@@ -358,6 +375,9 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
       }
 
       fctx->globalContext.addModule(fctx);
+
+      // Restore original moduleStack
+      ctx.globalContext.moduleStack = originalModuleStack;
     } catch (CompilationException& ex) {
       ex.error.note(generic->span, "During instantiation of '{}'", id).raiseFromNode(this);
     }
