@@ -79,7 +79,7 @@
   if (__it != __vec.end())
 
 
-namespace xcc {
+namespace xcc::util {
 
 /**
  * Checks if `value` is one of the `args`
@@ -137,6 +137,25 @@ std::vector<T> sliceVector(const std::vector<T>& vec, ssize_t start, ssize_t end
 
   for (ssize_t i = start; i < end; ++i) {
     res.push_back(vec[i]);
+  }
+
+  return res;
+}
+
+/**
+ * Extract pair<K, V>::first from a vector<pair<K, V>>
+ *
+ * @tparam K Type of first pair element
+ * @tparam V Type of second pair element
+ * @param vec Vector of pairs
+ * @return Vector of K
+ */
+template <typename K, typename V>
+std::vector<K> pairVectorExtractFirst(const std::vector<std::pair<K, V>>& vec) {
+  std::vector<K> res;
+
+  for (auto& [first, _] : vec) {
+    res.push_back(first);
   }
 
   return res;
