@@ -144,3 +144,11 @@ std::shared_ptr<meta::Type> Struct::generateTypeForValueWithoutLoad(codegen::Mod
 
   return type;
 }
+
+void Struct::generateForwardDeclarations(codegen::ModuleContext& ctx, PayloadList payload) {
+  for (auto& method : methods) {
+    auto decl = method->is(AST_FUNCTION_DEF) ? method->as<FnDef>()->decl : cast<FnDecl>(method);
+
+    decl->generateFunction(ctx, payload);
+  }
+}

@@ -51,6 +51,8 @@ public:
 
   std::shared_ptr<meta::Type> generateTypeForValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) override;
   std::shared_ptr<meta::Type> generateType(codegen::ModuleContext &ctx, PayloadList payload) override;
+
+  void generateForwardDeclarations(codegen::ModuleContext& ctx, PayloadList payload);
 };
 
 } /* namespace xcc::ast */
