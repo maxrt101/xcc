@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace xcc::util {
+namespace xcc::str {
 
 struct BaseDetermineResult {
   int         base;
@@ -40,16 +40,17 @@ bool contains(const std::string& str, Args&&... substrings) {
  * @param delimiter Delimiter to split by (' ' by default)
  * @return Vector of string parts, split by delimiter
  */
-std::vector<std::string> strsplit(const std::string& str, const std::string& delimiter = " ");
+std::vector<std::string> split(const std::string& str, const std::string& delimiter = " ");
 
 /**
  * Joins multiple string into one using delimiter
  *
- * @param parts Strings to join
+ * @param parts     Strings to join
  * @param delimiter Delimiter to put inbetween parts
+ * @param omit_last If true - will not append extra delimiter at the end
  * @return Joined string
  */
-std::string strjoin(const std::vector<std::string>& parts, const std::string& delimiter = ", ");
+std::string join(const std::vector<std::string>& parts, const std::string& delimiter = ", ", bool omit_last = true);
 
 /**
  * Replaces occurrences of `from` with `to` in-place in `str`
@@ -58,7 +59,7 @@ std::string strjoin(const std::vector<std::string>& parts, const std::string& de
  * @param from String to replace
  * @param to String to replace with
  */
-void strreplace(std::string& str, const std::string& from, const std::string& to);
+void replace(std::string& str, const std::string& from, const std::string& to);
 
 /**
  * Adds/Removes escape sequences
@@ -67,7 +68,7 @@ void strreplace(std::string& str, const std::string& from, const std::string& to
  * @param add If true - will escape escape sequences
  *            if false - will replace with actual ascii special characters
  */
-std::string strescseq(const std::string& str, bool add = true);
+std::string escseq(const std::string& str, bool add = true);
 
 /**
  * Compile-time djb2 string hash function
@@ -75,7 +76,7 @@ std::string strescseq(const std::string& str, bool add = true);
  * @param s String
  * @return Hash
  */
-constexpr uint64_t strhash(const char * s) {
+constexpr uint64_t hash(const char * s) {
   uint64_t hash = 5381;
   int c;
 

@@ -1,11 +1,11 @@
 #include "xcc/util/string.h"
 #include <format>
 
-bool xcc::util::contains(const std::string& str, const std::string& sub) {
+bool xcc::str::contains(const std::string& str, const std::string& sub) {
   return str.find(sub) != std::string::npos;
 }
 
-std::vector<std::string> xcc::util::strsplit(const std::string& str, const std::string& delimiter) {
+std::vector<std::string> xcc::str::split(const std::string& str, const std::string& delimiter) {
   std::vector<std::string> result;
 
   size_t last = 0, next = 0;
@@ -29,12 +29,12 @@ std::vector<std::string> xcc::util::strsplit(const std::string& str, const std::
   return result;
 }
 
-std::string xcc::util::strjoin(const std::vector<std::string>& parts, const std::string& delimiter) {
+std::string xcc::str::join(const std::vector<std::string>& parts, const std::string& delimiter, bool omit_last) {
   std::string result;
 
   for (size_t i = 0; i < parts.size(); ++i) {
     result += parts[i];
-    if (i + 1 != parts.size()) {
+    if (!omit_last || i + 1 < parts.size()) {
       result += delimiter;
     }
   }
@@ -42,7 +42,7 @@ std::string xcc::util::strjoin(const std::vector<std::string>& parts, const std:
   return result;
 }
 
-void xcc::util::strreplace(std::string& str, const std::string& from, const std::string& to) {
+void xcc::str::replace(std::string& str, const std::string& from, const std::string& to) {
   if (from.empty()) {
     return;
   }
@@ -53,26 +53,26 @@ void xcc::util::strreplace(std::string& str, const std::string& from, const std:
   }
 }
 
-std::string xcc::util::strescseq(const std::string& str, bool add) {
+std::string xcc::str::escseq(const std::string& str, bool add) {
   std::string result = str;
 
   // TODO: Make two-way map for this
   if (add) {
-    util::strreplace(result, "\\n", "\n");
-    util::strreplace(result, "\\r", "\r");
-    util::strreplace(result, "\\t", "\t");
-    util::strreplace(result, "\\b", "\b");
+    str::replace(result, "\\n", "\n");
+    str::replace(result, "\\r", "\r");
+    str::replace(result, "\\t", "\t");
+    str::replace(result, "\\b", "\b");
   } else {
-    util::strreplace(result, "\n", "\\n");
-    util::strreplace(result, "\r", "\\r");
-    util::strreplace(result, "\t", "\\t");
-    util::strreplace(result, "\b", "\\b");
+    str::replace(result, "\n", "\\n");
+    str::replace(result, "\r", "\\r");
+    str::replace(result, "\t", "\\t");
+    str::replace(result, "\b", "\\b");
   }
 
   return result;
 }
 
-std::string xcc::util::toStringWithOrdinalSuffix(int num) {
+std::string xcc::str::toStringWithOrdinalSuffix(int num) {
   switch (num) {
     case 1: return "1st";
     case 2: return "2nd";
@@ -82,7 +82,7 @@ std::string xcc::util::toStringWithOrdinalSuffix(int num) {
   }
 }
 
-xcc::util::BaseDetermineResult xcc::util::determineBase(const std::string& value) {
+xcc::str::BaseDetermineResult xcc::str::determineBase(const std::string& value) {
   BaseDetermineResult res = {.base = 10, .value = value};
 
   int prefix_len = 2;
