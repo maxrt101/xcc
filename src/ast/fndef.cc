@@ -242,7 +242,14 @@ void FnDef::generateNormalFunction(
     if (meta_fn->returnType->isVoid()) {
       ctx.ir_builder->CreateRetVoid();
     } else {
-      last_val = castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx), body->body.back()->span);
+      try {
+        last_val = castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx), body->body.back()->span);
+      } catch (CompilationException& ex) {
+        ex.error
+          .note(decl->span, "Function expected a '{}'; got here by treating the last value of block as return value", meta_fn->returnType->toString())
+          .raise();
+      }
+
       ctx.ir_builder->CreateRet(last_val);
     }
   }
