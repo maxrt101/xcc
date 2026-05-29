@@ -211,13 +211,7 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
     ctx.addLocal(capture.name, meta::TypedValue::create(ctx, lambda_fn, capture.node->span, capture.type, capture.name));
 
-    llvm::Value * val;
-
-    // if (capture.isPointer) {
-    //   val = field_ptr;
-    // } else {
-      val = ctx.ir_builder->CreateLoad(ctx.ir_builder->getPtrTy(), field_ptr, capture.name + "_ptr");
-    // }
+    llvm::Value * val = ctx.ir_builder->CreateLoad(ctx.ir_builder->getPtrTy(), field_ptr, capture.name + "_ptr");
 
     ctx.ir_builder->CreateStore(val, ctx.getLocalValue(capture.name));
   }
