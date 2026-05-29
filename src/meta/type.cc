@@ -995,21 +995,21 @@ std::shared_ptr<Type> Type::create(TypeTag tag) {
 }
 
 std::shared_ptr<Type> Type::fromTypeName(codegen::GlobalContext& ctx, const std::string& name, SourceSpan span) {
-  switch (util::strhash(name.c_str())) {
-    case util::strhash("void"):  return createVoid();
-    case util::strhash("bool"):  return createBool();
-    case util::strhash("i8"):    return createI8();
-    case util::strhash("i16"):   return createI16();
-    case util::strhash("i32"):   return createI32();
-    case util::strhash("i64"):   return createI64();
-    case util::strhash("u8"):    return createU8();
-    case util::strhash("u16"):   return createU16();
-    case util::strhash("u32"):   return createU32();
-    case util::strhash("u64"):   return createU64();
-    case util::strhash("f32"):   return createF32();
-    case util::strhash("f64"):   return createF64();
-    case util::strhash("isize"): return createIsize();
-    case util::strhash("usize"): return createUsize();
+  switch (str::hash(name.c_str())) {
+    case str::hash("void"):  return createVoid();
+    case str::hash("bool"):  return createBool();
+    case str::hash("i8"):    return createI8();
+    case str::hash("i16"):   return createI16();
+    case str::hash("i32"):   return createI32();
+    case str::hash("i64"):   return createI64();
+    case str::hash("u8"):    return createU8();
+    case str::hash("u16"):   return createU16();
+    case str::hash("u32"):   return createU32();
+    case str::hash("u64"):   return createU64();
+    case str::hash("f32"):   return createF32();
+    case str::hash("f64"):   return createF64();
+    case str::hash("isize"): return createIsize();
+    case str::hash("usize"): return createUsize();
     default: {
       if (customTypes.find(name) != customTypes.end()) {
         return customTypes[name];
@@ -1191,7 +1191,7 @@ std::shared_ptr<Type> Type::getCustomType(const std::string& name) {
 }
 
 bool Type::isBuiltIn(const std::string& name) {
-  return oneOf(name, "void", "bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64", "isize", "usize");
+  return util::oneOf(name, "void", "bool", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "f32", "f64", "isize", "usize");
 }
 
 std::shared_ptr<Type> Type::alignTypes(std::shared_ptr<Type> lhs, std::shared_ptr<Type> rhs) {

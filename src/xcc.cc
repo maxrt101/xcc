@@ -618,7 +618,7 @@ CompilationResult xcc::compile(
     for (auto& token : tokens) {
       std::string value = token.value;
       if (token.is(TokenType::TOKEN_STRING)) {
-        value = util::strescseq(value, false);
+        value = str::escseq(value, false);
       }
       lex_logger.print("{:<20} '{}' {}:{}:{} '{}'\n",
         Token::typeToString(token.type), value,

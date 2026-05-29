@@ -74,7 +74,7 @@ void Node::Attribute::validateArgsStrict(const std::vector<NodeType>& arg_types)
   for (size_t i = 0; i < arg_types.size(); ++i) {
     assertRaise(args[i]->is(arg_types[i]),
       Error(ERROR_ATTR_ARG_TYPE_MISMATCH, span, "Attribute '{}' expected {} as {} argument, got {}",
-        name, typeToHumanReadableString(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToHumanReadableString(args[i]->type)));
+        name, typeToHumanReadableString(arg_types[i]), str::toStringWithOrdinalSuffix(i), typeToHumanReadableString(args[i]->type)));
   }
 }
 
@@ -93,7 +93,7 @@ void Node::Attribute::validateArgs(const std::vector<std::vector<NodeType>>& arg
 
     assertRaise(has,
       Error(ERROR_ATTR_ARG_TYPE_MISMATCH, span, "Attribute '{}' expected any of {} as {} argument, got {}",
-        name, formArgTypeList(arg_types[i]), util::toStringWithOrdinalSuffix(i), typeToHumanReadableString(args[i]->type)));
+        name, formArgTypeList(arg_types[i]), str::toStringWithOrdinalSuffix(i), typeToHumanReadableString(args[i]->type)));
   }
 }
 

@@ -51,7 +51,7 @@ std::string xcc::binop::Meta::toString() const {
     }
   }
 
-  return Token::typeToString(op) + "(" + util::strjoin(result) + ")";
+  return Token::typeToString(op) + "(" + str::join(result) + ")";
 }
 
 xcc::binop::Meta xcc::binop::Meta::fromType(TokenType op, std::shared_ptr<meta::Type> type) {

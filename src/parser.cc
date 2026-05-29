@@ -1135,7 +1135,7 @@ std::shared_ptr<ast::Node> Parser::parseNumber() {
     return ast::Number::createFloating(span, lexicalScope, std::stod(value));
   }
 
-  auto res = util::determineBase(value);
+  auto res = str::determineBase(value);
 
   return ast::Number::createInteger(span, lexicalScope, std::stol(res.value, nullptr, res.base));
 }
@@ -1622,7 +1622,7 @@ std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_p
 
 std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::Node::AttributeList& attrs) {
   if (check(TOKEN_LEFT_SQUARE_BRACE)) {
-    auto new_attrs = mergeVectors(parseAttributeList(), attrs);
+    auto new_attrs = util::mergeVectors(parseAttributeList(), attrs);
     auto node      = parseOneTopLevelNode(isRepl, new_attrs);
     node->attributes.insert(node->attributes.end(), new_attrs.begin(), new_attrs.end());
     return node;

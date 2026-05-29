@@ -337,7 +337,7 @@ static std::shared_ptr<Node> xcc_macro_int(codegen::GlobalContext& global, std::
     return Number::createFloating(call->span, call->scope, std::stod(s->value));
   }
 
-  auto res = util::determineBase(s->value);
+  auto res = str::determineBase(s->value);
 
   return Number::createInteger(call->span, call->scope, std::stol(res.value, nullptr, res.base));
 }

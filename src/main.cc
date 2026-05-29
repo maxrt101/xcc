@@ -226,7 +226,7 @@ static int repl(xcc::util::Target target, xcc::args::Arguments& args) {
       continue;
     }
 
-    auto tokens = xcc::util::strsplit(line);
+    auto tokens = xcc::str::split(line);
 
     if (!tokens.empty() && tokens[0].starts_with("/")) {
       auto command = tokens[0].substr(1);

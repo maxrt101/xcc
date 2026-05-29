@@ -54,7 +54,7 @@ xcc::args::Arguments xcc::args::parse(int argc, char ** argv) {
       CHECK_ARG(i, argc, "output");
       std::string arg = argv[++i];
 
-      for (auto & name : util::strsplit(arg, ",")) {
+      for (auto & name : str::split(arg, ",")) {
         args.loggers.emplace_back(name);
       }
 

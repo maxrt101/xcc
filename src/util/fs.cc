@@ -30,7 +30,7 @@ bool xcc::fs::exists(const std::string& path) {
 }
 
 std::vector<std::string> xcc::fs::path::split(const std::string& path) {
-  auto res = util::strsplit(path, "/");
+  auto res = str::split(path, "/");
 
   std::erase_if(res, [](auto& x) { return x.empty(); });
 
@@ -38,13 +38,13 @@ std::vector<std::string> xcc::fs::path::split(const std::string& path) {
 }
 
 std::string xcc::fs::path::getParent(const std::string& path) {
-  auto pos = path.rfind("/");
+  auto pos = path.rfind('/');
 
   return pos == std::string::npos ? path : path.substr(0, pos);
 }
 
 std::string xcc::fs::path::getFileName(const std::string& path) {
-  auto pos = path.rfind("/");
+  auto pos = path.rfind('/');
 
   return pos == std::string::npos ? path : path.substr(pos+1);
 }

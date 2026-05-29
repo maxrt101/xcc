@@ -299,11 +299,11 @@ void Lexer::tokenizeString() {
 
   if (!result.empty() && result.back().is(TOKEN_STRING)) {
     result.back().span  += SourceSpan {fileId, current_index, size};
-    result.back().value += util::strescseq(text.substr(start, size), true);
+    result.back().value += str::escseq(text.substr(start, size), true);
   } else {
     result.push_back({
       TOKEN_STRING,
-      util::strescseq(text.substr(start, size), true),
+      str::escseq(text.substr(start, size), true),
       {fileId, current_index, size}
     });
   }
@@ -327,7 +327,7 @@ void Lexer::tokenizeChar() {
 
   result.push_back({
     TOKEN_CHAR,
-    util::strescseq(val, true),
+    str::escseq(val, true),
     {fileId, start, current_index - start}
   });
 
