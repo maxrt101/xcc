@@ -185,6 +185,7 @@ enum ErrorId {
   ERROR_NO_SUCH_GENERIC_TYPE                       = 159,
   ERROR_NON_UNIQUE_CAPTURE_NAME                    = 160,
   ERROR_CAPTURE_NAME_EXPECTED_IDENTIFIER           = 161,
+  ERROR_FN_NAME_NOT_AN_IDENTIFIER                  = 162,
 
   ERROR_MAX,
 };

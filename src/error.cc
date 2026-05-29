@@ -175,6 +175,7 @@ const std::unordered_map<ErrorId, ErrorDescription> ErrorDescription::descs = {
   DESC(ERROR_NO_SUCH_GENERIC_TYPE,                       "No such generic type"),
   DESC(ERROR_NON_UNIQUE_CAPTURE_NAME,                    "Non-unique lambda capture name"),
   DESC(ERROR_CAPTURE_NAME_EXPECTED_IDENTIFIER,           "Capture name must be an identifier"),
+  DESC(ERROR_FN_NAME_NOT_AN_IDENTIFIER,                  "Function name must be an identifier"),
 };
 
 const std::unordered_map<WarningId, WarningDescription> WarningDescription::descs {
