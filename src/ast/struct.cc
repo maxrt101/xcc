@@ -26,7 +26,13 @@ std::shared_ptr<Struct> Struct::create(
     std::vector<std::shared_ptr<TypedIdentifier>> fields,
     NodeList                                      methods
 ) {
-  return std::make_shared<Struct>(span, scope, std::move(name), std::move(genericParams), std::move(fields), std::move(methods));
+  return std::make_shared<Struct>(
+    span, scope,
+    std::move(name),
+    std::move(genericParams),
+    std::move(fields),
+    std::move(methods)
+  );
 }
 
 bool Struct::isGeneric() const {

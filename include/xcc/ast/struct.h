@@ -27,8 +27,8 @@ public:
       LexicalScope                                  scope,
       std::shared_ptr<Identifier>                   name,
       std::vector<GenericParam>                     genericParams = {},
-      std::vector<std::shared_ptr<TypedIdentifier>> fields       = {},
-      NodeList                                      methods      = {}
+      std::vector<std::shared_ptr<TypedIdentifier>> fields        = {},
+      NodeList                                      methods       = {}
   );
 
   ~Struct() override = default;
@@ -38,8 +38,8 @@ public:
       LexicalScope                                  scope,
       std::shared_ptr<Identifier>                   name,
       std::vector<GenericParam>                     genericParams = {},
-      std::vector<std::shared_ptr<TypedIdentifier>> fields       = {},
-      NodeList                                      methods      = {}
+      std::vector<std::shared_ptr<TypedIdentifier>> fields        = {},
+      NodeList                                      methods       = {}
   );
 
   bool isGeneric() const;
