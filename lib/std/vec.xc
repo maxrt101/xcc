@@ -42,7 +42,7 @@ struct Vector<T, A = core::alloc::Allocator> {
   # @returns Newly created vector
   #
   fn from(arr: T*, size: usize) -> Vector {
-    var data = A::alloc(size) as T*;
+    var data = A::alloc(size * sizeof!(T)) as T*;
 
     core::mem::copy(data, arr, size * sizeof!(T));
 
@@ -56,7 +56,7 @@ struct Vector<T, A = core::alloc::Allocator> {
   # @returns Newly created vector
   #
   fn with_cap(cap: usize) -> Vector {
-    var data = A::alloc(cap) as T*;
+    var data = A::alloc(cap * sizeof!(T)) as T*;
 
     Vector { data, size: 0, cap }
   }
@@ -69,7 +69,7 @@ struct Vector<T, A = core::alloc::Allocator> {
   # @returns Newly created vector
   #
   fn fill(size: usize, val: T) -> Vector {
-    var data = A::alloc(size) as T*;
+    var data = A::alloc(size * sizeof!(T)) as T*;
 
     for (var i = 0; i < size; i += 1) {
       data[i] = val;
@@ -96,8 +96,8 @@ struct Vector<T, A = core::alloc::Allocator> {
   # Create a new vector from current, copying all of the data
   #
   fn clone(self) -> String {
-    var new_data = A::alloc(self->size + 1);
-    core::mem::copy(new_data, self->data, self->size + 1);
+    var new_data = A::alloc(self->size * sizeof!(T));
+    core::mem::copy(new_data, self->data, self->size);
 
     Vector { data: new_data, size: self->size, cap: self->size }
   }
@@ -156,7 +156,7 @@ struct Vector<T, A = core::alloc::Allocator> {
     var new_size = self->size + 1;
 
     if (self->cap < new_size) {
-      self->data = A::realloc(self->data, new_size + 1);
+      self->data = A::realloc(self->data, new_size * sizeof!(T));
     }
 
     self->data[self->size] = val;
@@ -190,11 +190,13 @@ struct Vector<T, A = core::alloc::Allocator> {
       return;
     }
 
-    if (self->cap < self->size + 1) {
-      self->data = A::realloc(self->data, self->size + 2);
+    var new_size = self->size + 1;
+
+    if (self->cap < new_size) {
+      self->data = A::realloc(self->data, new_size * sizeof!(T));
     }
 
-    for (var i = self->size + 1; i > idx; i -= 1) {
+    for (var i = new_size; i > idx; i -= 1) {
       self->data[i] = self->data[i - 1];
     }
 
