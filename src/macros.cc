@@ -155,25 +155,6 @@ static std::shared_ptr<meta::Type> evalType(codegen::GlobalContext& global, code
    Error(ERROR_MACRO_CALL_ARG_TYPE_MISMATCH, node->span, "Cannot evaluate expression's type").raise();
 }
 
-static std::string getStr(std::shared_ptr<Node> node) {
-  if (node->is(AST_EXPR_IDENTIFIER)) {
-    return node->as<Identifier>()->name();
-  }
-
-  if (node->is(AST_EXPR_STRING)) {
-    return node->as<String>()->value;
-  }
-
-  if (node->is(AST_EXPR_NUMBER)) {
-    auto num = node->as<Number>();
-    return num->tag == Number::INTEGER
-      ? std::format("{}", num->value.integer)
-      : std::format("{}", num->value.floating);
-  }
-
-  return "";
-}
-
 /**
  * Modifiers:
  * {}      - auto determine
@@ -288,7 +269,7 @@ static std::shared_ptr<Macro> createNativeMacro(std::string name, std::vector<st
 }
 
 static std::shared_ptr<Node> xcc_macro_cat(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
-  return Identifier::create(call->span, call->scope, getStr(call->args[0]) + getStr(call->args[1]));
+  return Identifier::create(call->span, call->scope, call->args[0]->defaultToString() + call->args[1]->defaultToString());
 }
 
 static std::shared_ptr<Node> xcc_macro_sizeof(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -325,6 +306,14 @@ static std::shared_ptr<Node> xcc_macro_str(codegen::GlobalContext& global, std::
 
 static std::shared_ptr<Node> xcc_macro_strf(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
   return String::create(call->span, call->scope, call->args[0]->toString(nullptr, call.get(), 0, true));
+}
+
+static std::shared_ptr<Node> xcc_macro_mangle(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
+  auto str = call->args[0]->defaultToString();
+
+  str::replace(str, "*", "_ptr");
+
+  return Identifier::create(call->span, call->scope, str);
 }
 
 static std::shared_ptr<Node> xcc_macro_int(codegen::GlobalContext& global, std::shared_ptr<MacroCall>& call) {
@@ -510,6 +499,7 @@ static std::vector builtin_macros = {
   createNativeMacro("closure_type", {"expr"},                 xcc_macro_closure_type),
   createNativeMacro("str",          {"expr"},                 xcc_macro_str),
   createNativeMacro("strf",         {"expr"},                 xcc_macro_strf),
+  createNativeMacro("mangle",       {"type"},                 xcc_macro_mangle),
   createNativeMacro("int",          {"expr"},                 xcc_macro_int),
   createNativeMacro("cond",         {"cond", "then"},         xcc_macro_cond, true),
   createNativeMacro("repeat",       {"n", "var", "expr"},     xcc_macro_repeat),
