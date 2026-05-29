@@ -53,8 +53,18 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
     auto selfNode = callee->as<MemberAccess>()->lhs;
     auto selfType = selfNode->generateType(ctx, payload);
 
-    llvm::Value * self_ptr = selfNode->generateValueWithoutLoad(ctx, payload);
+    llvm::Value * self_ptr;
 
+    if (selfType->isPointer()) {
+      // Already a pointer
+      self_ptr = selfNode->generateValue(ctx, payload);
+    } else {
+      // Generate a pointer
+      self_ptr = selfNode->generateValueWithoutLoad(ctx, payload);
+    }
+
+    // If value is still not a pointer - it must be a temporary rvalue (initializer, enum value, etc.)
+    // Create a temporary alloca, put the value there, and set self_ptr to the alloca
     if (!self_ptr->getType()->isPointerTy()) {
       auto * alloca = ctx.ir_builder->CreateAlloca(
           selfType->getLLVMType(ctx),
