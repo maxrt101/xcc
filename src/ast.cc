@@ -70,7 +70,7 @@ void Monomorphizer::apply(const std::shared_ptr<Node>& node) {
     if (n->is(AST_EXPR_TYPE)) {
       auto type = n->template as<Type>();
 
-      if (type->name->is(AST_EXPR_IDENTIFIER)) {
+      if (type->name && type->name->is(AST_EXPR_IDENTIFIER)) {
         auto id = type->name->template as<Identifier>()->value;
         if (substitutions.contains(id)) {
           type->name = substitutions[id];
