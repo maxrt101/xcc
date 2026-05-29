@@ -18,14 +18,15 @@ static auto& mod_ir_logger = xcc::log::Logger::get("IR_MOD");
 /**
  * Process attributes for top-level block
  *
- * @param block AST Block
+ * @param globalContext Global Context
+ * @param block         AST Block
  */
-static void processAttributes(const std::shared_ptr<ast::Block>& block) {
+static void processAttributes(codegen::GlobalContext& globalContext, const std::shared_ptr<ast::Block>& block) {
   // TODO: Use visitor
   for (auto& node : block->body) {
     if (!node->attributes.empty()) {
       for (auto& attr : node->attributes) {
-        attr::callHandler(attr, node.get());
+        attr::callHandler(globalContext, attr, node.get());
       }
     }
   }
@@ -36,7 +37,6 @@ static void processAttributes(const std::shared_ptr<ast::Block>& block) {
  *
  * @param globalContext Global Context
  * @param mod           Module that has to be processed
- * @param topLevel      Is current context a top-level
  */
 static void processModAliases(
   codegen::GlobalContext&      globalContext,
@@ -583,14 +583,16 @@ util::Target xcc::init(const std::string& target, const std::string& machine, bo
   }
 
   auto target_info = util::Target(target, machine);
+  auto triple = llvm::Triple(target_info.target_triple);
 
   logger.info("XCC v{} initialized for {}", getVersion().c_str(), target_info.target_triple);
 
   setenv("XCC_VERSION", getVersion().c_str(), 1);
-  // XCC_TARGET
-  // XCC_ARCH
-  // XCC_MACH
-  // XCC_OS
+  setenv("XCC_TARGET",  target_info.target_triple.c_str(), 1);
+  setenv("XCC_ARCH",    triple.getArchName().str().c_str(), 1);
+  setenv("XCC_OS",      triple.getOSName().str().c_str(), 1);
+  setenv("XCC_ENV",     triple.getEnvironmentName().str().c_str(), 1);
+  setenv("XCC_CPU",     target_info.machine->getTargetCPU().str().c_str(), 1);
 
   // XCC_BUILT_ON ?
   // XCC_BUILT_BY ?
@@ -640,7 +642,7 @@ CompilationResult xcc::compile(
     ast_logger.print("{}\n", ast->toString(nullptr, nullptr, 0, true));
   }
 
-  processAttributes(ast);
+  processAttributes(globalContext, ast);
   processAliases(globalContext, ast);
   registerCustomTypes(globalContext, ast);
   registerConstants(globalContext, ast);
