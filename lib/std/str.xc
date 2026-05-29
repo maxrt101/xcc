@@ -16,7 +16,6 @@
 mod std::str;
 
 use core;
-use stdc;
 
 #
 # Module for raw string manipulation
@@ -30,7 +29,13 @@ mod raw {
   # @returns size of `str`, without the null-terminator
   #
   fn size(str: i8*) -> usize {
-    stdc::strlen(str)
+    var size: usize = 0;
+
+    while (str[size] != 0x0) {
+      size += 1;
+    }
+
+    return size;
   }
 
   #
@@ -41,8 +46,8 @@ mod raw {
   # @returns `true` if `lhs` & `rhs` are equal, `false` otherwise
   #
   fn equals(lhs: i8*, rhs: i8*) -> bool {
-    var lhs_size = stdc::strlen(lhs);
-    var rhs_size = stdc::strlen(rhs);
+    var lhs_size = size(lhs);
+    var rhs_size = size(rhs);
 
     if (lhs_size != rhs_size) {
       return false;
@@ -59,8 +64,8 @@ mod raw {
   # @returns `true` if lhs starts with rhs
   #
   fn starts_with(lhs: i8*, rhs: i8*) -> bool {
-    var lhs_size = stdc::strlen(rhs);
-    var rhs_size = stdc::strlen(rhs);
+    var lhs_size = size(rhs);
+    var rhs_size = size(rhs);
 
     if (lhs_size < rhs_size) {
       return false;
@@ -77,8 +82,8 @@ mod raw {
   # @returns `true` if lhs ends with rhs
   #
   fn ends_with(lhs: i8*, rhs: i8*) -> bool {
-    var lhs_size = stdc::strlen(rhs);
-    var rhs_size = stdc::strlen(rhs);
+    var lhs_size = size(rhs);
+    var rhs_size = size(rhs);
 
     if (lhs_size < rhs_size) {
       return false;
@@ -95,8 +100,8 @@ mod raw {
   # @returns index into `lhs`, at which `rhs` starts, if found, -1 otherwise
   #
   fn find(lhs: i8*, rhs: i8*) -> isize {
-    var lhs_size = stdc::strlen(lhs);
-    var rhs_size = stdc::strlen(rhs);
+    var lhs_size = size(lhs);
+    var rhs_size = size(rhs);
 
     if (lhs_size < rhs_size) {
       return -1;
@@ -162,7 +167,7 @@ struct String<T = i8, A = core::alloc::Allocator> {
   # @returns Newly created String instance
   #
   fn from(str: T*) -> String {
-    var size = stdc::strlen(str);
+    var size = raw::size(str);
     var data = A::alloc(size + 1) as T*;
 
     stdc::memcpy(data, str, size + 1);
@@ -367,7 +372,7 @@ struct String<T = i8, A = core::alloc::Allocator> {
       return;
     }
 
-    var str_size = stdc::strlen(str);
+    var str_size = raw::size(str);
     var combined_size = self->size + str_size;
 
     if (self->cap < combined_size + 1) {
@@ -437,7 +442,7 @@ struct String<T = i8, A = core::alloc::Allocator> {
   # @param rhs C-String to append
   #
   fn append_raw(self, rhs: T*) {
-    var rhs_size = stdc::strlen(rhs);
+    var rhs_size = raw::size(rhs);
     var combined_size = self->size + rhs_size;
 
     if (self->cap < combined_size + 1) {
@@ -472,7 +477,7 @@ struct String<T = i8, A = core::alloc::Allocator> {
   # @returns `true` if strings are equal
   #
   fn equals_raw(self, rhs: T*) -> bool {
-    var rhs_size = stdc::strlen(rhs);
+    var rhs_size = raw::size(rhs);
 
     if (self->size != rhs_size) {
       return false;
@@ -502,7 +507,7 @@ struct String<T = i8, A = core::alloc::Allocator> {
   # @returns `true` if starts with rhs
   #
   fn starts_with_raw(self, rhs: T*) -> bool {
-    var rhs_size = stdc::strlen(rhs);
+    var rhs_size = raw::size(rhs);
 
     if (self->size < rhs_size) {
       return false;
@@ -532,7 +537,7 @@ struct String<T = i8, A = core::alloc::Allocator> {
   # @returns `true` if ends with rhs
   #
   fn ends_with_raw(self, rhs: T*) -> bool {
-    var rhs_size = stdc::strlen(rhs);
+    var rhs_size = raw::size(rhs);
 
     if (self->size < rhs_size) {
       return false;
@@ -572,7 +577,7 @@ struct String<T = i8, A = core::alloc::Allocator> {
   # @returns index of first occurrence, if found and -1 otherwise
   #
   fn find_raw(self, rhs: T*) -> isize {
-    var rhs_size = stdc::strlen(rhs);
+    var rhs_size = raw::size(rhs);
 
     if (self->size < rhs_size) {
       return -1;
