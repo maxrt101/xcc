@@ -61,15 +61,17 @@ String::GlobalString String::getOrCreateGlobalString(codegen::ModuleContext& ctx
 
   llvm::Constant * str_const = llvm::ConstantDataArray::getString(*ctx.llvm.ctx, value, true);
 
-  return {
-    name,
-    new llvm::GlobalVariable(
+  auto global = new llvm::GlobalVariable(
       *ctx.llvm.module,
       str_const->getType(),
       true,
-      llvm::GlobalValue::ExternalLinkage,
+      llvm::GlobalValue::LinkOnceODRLinkage,
       str_const,
       name
-    )
-  };
+    );
+
+  global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  global->setAlignment(llvm::Align(1));
+
+  return {name, global};
 }
