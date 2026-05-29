@@ -77,6 +77,10 @@ std::shared_ptr<ast::Identifier> Parser::parseIdentifier(const std::string& ex_m
     return ast::Identifier::create(previous().span, lexicalScope, "self");
   }
 
+  if (checkAdvance(TOKEN_TYPE)) {
+    return ast::Identifier::create(previous().span, lexicalScope, "type");
+  }
+
   if (!checkAdvance(TOKEN_IDENTIFIER)) {
     Error(ERROR_MISSING_IDENTIFIER, current().span, "Expected identifier " + ex_msg).raise();
   }
@@ -277,7 +281,11 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
     Error(ERROR_FN_MISSING_KEYWORD, current().span).raise();
   }
 
-  auto name = parseIdentifier("for function name");
+  std::shared_ptr<ast::Node> name = parseIdentifier("for function name");
+
+  if (checkAdvance(TOKEN_NOT)) {
+    name = parseCall(name);
+  }
 
   std::vector<std::shared_ptr<ast::TypedIdentifier>> args;
   std::shared_ptr<ast::Node> return_type;
@@ -1081,10 +1089,22 @@ std::shared_ptr<ast::Node> Parser::parseTerm() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseFactor() {
-  auto expr = parseCast();
+  auto expr = parseShifts();
 
   // TODO: Parse modulo ('%')
   while (checkAdvanceAnyOf(TOKEN_SLASH, TOKEN_STAR)) {
+    Token op = previous();
+    auto rhs = parseShifts();
+    expr = ast::Binary::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
+  }
+
+  return expr;
+}
+
+std::shared_ptr<ast::Node> Parser::parseShifts() {
+  auto expr = parseCast();
+
+  while (checkAdvanceAnyOf(TOKEN_SHIFT_LEFT, TOKEN_SHIFT_RIGHT)) {
     Token op = previous();
     auto rhs = parseCast();
     expr = ast::Binary::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
@@ -1279,7 +1299,9 @@ std::shared_ptr<ast::Node> Parser::parseLambda() {
 }
 
 std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {
-  if (!check(TOKEN_IDENTIFIER) && !check(TOKEN_SELF)) {
+  // self & type are exception, because they are tokenized as
+  // distinct token types but can be used as plain identifiers
+  if (!check(TOKEN_IDENTIFIER) && !check(TOKEN_SELF) && !check(TOKEN_TYPE)) {
     Error(ERROR_LVALUE_UNEXPECTED_TOKEN, current().span, "'{}' ({})", current().value, Token::typeToString(current().type)).raise();
   }
 
@@ -1331,12 +1353,18 @@ std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue(std::shared_ptr<ast
 std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) {
   ast::NodeList args;
 
-  bool isMacro = false;
+  bool isMacro     = false;
+  bool isTypeMacro = false;
 
   if (checkAdvance(TOKEN_NOT)) {
     assertRaise(callee->is(ast::AST_EXPR_IDENTIFIER),
       Error(ERROR_MACRO_CALLEE_IS_NOT_ID, callee->span));
     isMacro = true;
+    // Special case: normally, macros can parse statements or expressions
+    // but not types, since a type can't just appear by itself in the
+    // middle of an expression, so macro ty! is used to parse types in
+    // macros
+    isTypeMacro = callee->as<ast::Identifier>()->value == "ty";
   }
 
   if (!checkAdvance(TOKEN_LEFT_PAREN)) {
@@ -1351,7 +1379,7 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
 
       /* Parse *any* node for macros arg. Use isRepl=true for this, which allows for
        * parsing exprs from top-level context */
-      args.push_back(isMacro ? parseOneTopLevelNode(true, {}) : parseExpr());
+      args.push_back(isMacro ? (isTypeMacro ? parseType() : parseOneTopLevelNode(true, {})) : parseExpr());
     } while (checkAdvance(TOKEN_COMMA));
   }
 
@@ -1360,6 +1388,11 @@ std::shared_ptr<ast::Node> Parser::parseCall(std::shared_ptr<ast::Node> callee) 
   }
 
   if (isMacro) {
+    if (isTypeMacro) {
+      assertRaise(args.size() == 1, Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, callee->span + previous().span, "ty! expects single argument"));
+      return args[0];
+    }
+
     return ast::MacroCall::create(callee->span + previous().span, lexicalScope, ast::Node::cast<ast::Identifier>(callee), args);
   }
 

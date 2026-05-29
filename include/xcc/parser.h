@@ -179,6 +179,7 @@ private:
   std::shared_ptr<ast::Node> parseComparison();
   std::shared_ptr<ast::Node> parseTerm();
   std::shared_ptr<ast::Node> parseFactor();
+  std::shared_ptr<ast::Node> parseShifts();
   std::shared_ptr<ast::Node> parseCast();
   std::shared_ptr<ast::Node> parseUnary();
   std::shared_ptr<ast::Node> parseSubscript();
