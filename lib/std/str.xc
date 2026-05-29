@@ -136,9 +136,6 @@ mod raw {
   }
 }
 
-# TODO: String Flags (STRING_FLAG_INITIALIZED, STRING_FLAG_STATIC)
-# TODO: Static strings (disallowed realloc, no free in drop())
-
 #
 # Basic implementation of a string
 #
@@ -147,6 +144,10 @@ mod raw {
 #
 # Base Char Type is intentionally generic, to maybe
 # facilitate non-ascii strings in the future
+# TODO: If strings with anything else from i8 are considered/implemented sizeof!(T) must be considered in all allocations
+#
+# TODO: String Flags (STRING_FLAG_INITIALIZED, STRING_FLAG_STATIC)
+# TODO: Static strings (disallowed realloc, no free in drop())
 #
 struct String<T = i8, A = core::alloc::Allocator> {
   data: T*;    # Raw string data (null-terminated)
