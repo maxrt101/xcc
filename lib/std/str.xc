@@ -385,6 +385,15 @@ struct String<T = i8, A = core::alloc::Allocator> {
   }
 
   #
+  # Erase a character at specified index
+  #
+  # @param idx Index of character to be erased
+  #
+  fn erase(self, idx: usize) {
+    self->remove(idx, 1);
+  }
+
+  #
   # Remove a substring from string
   #
   # @param idx  Index that corresponds to the start of a substring that has to be removed
