@@ -245,7 +245,7 @@ public:
     std::vector<std::string> msg_parts;
 
     if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
-      msg_parts = util::strsplit(string, "\n");
+      msg_parts = str::split(string, "\n");
     } else {
       msg_parts.push_back(string);
     }
@@ -361,7 +361,7 @@ private:
     std::vector<std::string> msg_parts;
 
     if (hasFlag(Flag::SPLIT_ON_NEWLINE)) {
-      msg_parts = util::strsplit({log_string}, "\n");
+      msg_parts = str::split({log_string}, "\n");
     } else {
       msg_parts.push_back(log_string);
     }
