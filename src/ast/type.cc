@@ -313,7 +313,8 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
     logger.debug("Instantiating Generic Type '{}' from '{}'", concrete_name, id);
 
     try {
-      auto originalModuleStack = ctx.globalContext.moduleStack;
+      auto originalCurrentFunction = ctx.globalContext.current_function;
+      auto originalModuleStack     = ctx.globalContext.moduleStack;
 
       std::vector<std::pair<std::string, std::string>> moduleStack;
 
@@ -376,8 +377,9 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
 
       fctx->globalContext.addModule(fctx);
 
-      // Restore original moduleStack
-      ctx.globalContext.moduleStack = originalModuleStack;
+      // Restore original moduleStack & current_function
+      ctx.globalContext.moduleStack      = originalModuleStack;
+      ctx.globalContext.current_function = originalCurrentFunction;
     } catch (CompilationException& ex) {
       ex.error.note(generic->span, "During instantiation of '{}'", id).raiseFromNode(this);
     }
