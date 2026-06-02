@@ -70,6 +70,8 @@ llvm::Function * FnDef::generateFunction(codegen::ModuleContext& ctx, PayloadLis
 
   ctx.setDebugLocation(span, di_fn);
 
+  ctx.globalContext.setCurrentFunction(gen_fn->getName().str());
+
   auto basic_block = llvm::BasicBlock::Create(*ctx.llvm.ctx, "entry", fn);
 
   ctx.ir_builder->SetInsertPoint(basic_block);
@@ -193,8 +195,6 @@ void FnDef::generateNakedFunction(
 ) {
   ctx.pushScope(span, di_fn);
 
-  ctx.globalContext.setCurrentFunction(decl->name->as<Identifier>()->name());
-
   for (auto& node : body->body) {
     assertRaiseFromNode(node->is(AST_ASM), Error(ERROR_NOT_ASM_IN_NAKED_FN, node->span), this);
 
@@ -226,27 +226,30 @@ void FnDef::generateNormalFunction(
     ctx.ir_builder->CreateStore(&arg, ctx.getLocalValue(arg_name));
   }
 
-  ctx.globalContext.setCurrentFunction(decl->name->as<Identifier>()->name());
-
   auto last_val = body->generateValue(ctx, extendPayload(payload, Block::Payload::create(meta_fn->returnType, true)));
 
   // Check if last node of function is `return`
   bool hadReturnAsLastNode = body->body.empty() ? false : isOrIsLastInBlock(body->body.back(), AST_RETURN);
 
+  if (ctx.ir_builder->GetInsertBlock()->getTerminator()) {
+    hadReturnAsLastNode = true;
+  }
+
   // Pop function scope
   // If last stmt is `return` - scope is already cleared, so pass this value as `no_clear` arg
+  // TODO: This proved to be unreliable, maybe only getTerminator should be considered here?
   ctx.popScope(hadReturnAsLastNode);
 
-  // If there was no explicit return - create one with the last value of function block as result
-  if (!hadReturnAsLastNode) {
+  // Create implicit return, if one was not
+  if (!ctx.ir_builder->GetInsertBlock()->getTerminator()) {
     if (meta_fn->returnType->isVoid()) {
       ctx.ir_builder->CreateRetVoid();
     } else {
       try {
-        last_val = castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx), body->body.back()->span);
+        last_val = castIfNotSame(ctx, last_val, meta_fn->getLLVMReturnType(ctx), body->body.empty() ? decl->span : body->body.back()->span);
       } catch (CompilationException& ex) {
         ex.error
-          .note(decl->span, "Function expected a '{}'; got here by treating the last value of block as return value", meta_fn->returnType->toString())
+          .note(decl->span, "Function expected to return '{}', but control reached the end of the function without returning a value", meta_fn->returnType->toString())
           .raise();
       }
 
