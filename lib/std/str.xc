@@ -660,4 +660,7 @@ struct String<T = i8, A = core::alloc::Allocator> {
 
     res
   }
+
+  # TODO: split
+  # TODO: join
 }
