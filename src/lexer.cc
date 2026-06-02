@@ -68,6 +68,7 @@ static const PrefixTree<TokenType> s_token_patterns(TOKEN_EOF, {
     {"~",       TOKEN_TILDA},
     {"<<",      TOKEN_SHIFT_LEFT},
     {">>",      TOKEN_SHIFT_RIGHT},
+    {"%",       TOKEN_PERCENT},
 });
 
 static const std::unordered_map<TokenType, std::string> s_token_type_name_map {
@@ -135,6 +136,7 @@ static const std::unordered_map<TokenType, std::string> s_token_type_name_map {
     {TOKEN_TILDA,               "TOKEN_TILDA"},
     {TOKEN_SHIFT_LEFT,          "TOKEN_SHIFT_LEFT"},
     {TOKEN_SHIFT_RIGHT,         "TOKEN_SHIFT_RIGHT"},
+    {TOKEN_PERCENT,             "TOKEN_PERCENT"},
 };
 
 static const std::unordered_map<TokenType, std::string> s_token_type_value_map {
@@ -202,6 +204,7 @@ static const std::unordered_map<TokenType, std::string> s_token_type_value_map {
     {TOKEN_TILDA,               "~"},
     {TOKEN_SHIFT_LEFT,          "<<"},
     {TOKEN_SHIFT_RIGHT,         ">>"},
+    {TOKEN_PERCENT,             "%"},
 };
 
 static bool isBase16Char(char c) {
