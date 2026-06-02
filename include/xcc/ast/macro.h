@@ -10,14 +10,14 @@
 
 namespace xcc::codegen
 {
-class GlobalContext;
+class ModuleContext;
 }
 
 namespace xcc::ast {
 
 class Macro : public Node {
 public:
-  using NativeFn = std::function<std::shared_ptr<Node>(codegen::GlobalContext&, std::shared_ptr<MacroCall>&)>;
+  using NativeFn = std::function<std::shared_ptr<Node>(codegen::ModuleContext&, MacroCall&)>;
 
   std::shared_ptr<Identifier>              name;
   std::vector<std::shared_ptr<Identifier>> args;
