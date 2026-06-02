@@ -340,6 +340,9 @@ public:
   /* Module name */
   std::string name;
 
+  /* File ID for root module file */
+  FileId file;
+
   /* Global Context Handle */
   GlobalContext& globalContext;
 
@@ -366,6 +369,9 @@ public:
 
   /* Phantom named values (variables/args), that need to be in AST generator's scope without being generated */
   std::vector<std::unordered_map<std::string, std::shared_ptr<meta::Type>>> phantomScopes;
+
+  /* Cached DebugInfo for custom types */
+  std::unordered_map<const meta::Type *, llvm::DIType *> di_type_cache;
 
 #if USE_OPTIMIZATION
   /* Optimization Contexts */
@@ -411,6 +417,9 @@ public:
   /** Returns true if local variable with provided name exists. Searches recursively up the scope stack */
   bool hasLocal(const std::string& name);
 
+  /** Return whole TypedValue for local variable */
+  std::shared_ptr<meta::TypedValue> getLocal(const std::string& name);
+
   /** Retrieves value of specific local variable */
   llvm::AllocaInst * getLocalValue(const std::string& name);
 
@@ -419,6 +428,9 @@ public:
 
   /** Save local variable record in current scope */
   void addLocal(const std::string& name, std::shared_ptr<meta::TypedValue> tv);
+
+  /** Update Liveness state of a local variable, if it's name can be extracted from node */
+  void updateLocalLiveness(std::shared_ptr<ast::Node> node, meta::Liveness state);
 
   /** Create new lexical scope and push it to scope stack. `scope` can be used to override default DIScope creation */
   void pushScope(SourceSpan span, llvm::DIScope * scope = nullptr);

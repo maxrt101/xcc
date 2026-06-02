@@ -386,7 +386,7 @@ void ModuleContext::PhantomScope::add(const std::string& name, std::shared_ptr<m
   module.phantomScopes.back()[name] = std::move(type);
 }
 
-ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, FileId file, util::Target * target) : name(name), globalContext(global) {
+ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, FileId file, util::Target * target) : name(name), file(file), globalContext(global) {
   llvm.ctx = globalContext.tsc.getContext();
   llvm.module = std::make_unique<llvm::Module>(name, *llvm.ctx);
 
@@ -503,6 +503,16 @@ bool ModuleContext::hasLocal(const std::string& name) {
   return false;
 }
 
+std::shared_ptr<meta::TypedValue> ModuleContext::getLocal(const std::string& name) {
+  for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
+    if (scope->locals.has(name)) {
+      return scope->locals[name];
+    }
+  }
+
+  return nullptr;
+}
+
 llvm::AllocaInst * ModuleContext::getLocalValue(const std::string& name) {
   for (auto scope = scopes.rbegin(); scope != scopes.rend(); ++scope) {
     if (scope->locals.has(name)) {
@@ -539,6 +549,17 @@ void ModuleContext::addLocal(const std::string& name, std::shared_ptr<meta::Type
   scopes.back().locals[name] = std::move(tv);
 }
 
+void ModuleContext::updateLocalLiveness(std::shared_ptr<ast::Node> node, meta::Liveness state) {
+  // TODO: Very primitive, should be improved upon
+  if (auto id = getOrGetLastInBlock(node, ast::AST_EXPR_IDENTIFIER)->as<ast::Identifier>()) {
+    if (hasLocal(id->value)) {
+      auto tv      = getLocal(id->value);
+      tv->state    = state;
+      tv->moved_at = node->span;
+    }
+  }
+}
+
 void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
   auto start = span.start();
 
@@ -546,12 +567,17 @@ void ModuleContext::pushScope(SourceSpan span, llvm::DIScope * scope) {
 
   if (!scope) {
     parent = scopes.empty() ? di_compile_unit : scopes.back().di_scope;
-    scope = di_builder->createLexicalBlock(
-      parent,
-      di_compile_unit->getFile(),
-      start.line,
-      start.column
-    );
+
+    if (parent && llvm::isa<llvm::DILocalScope>(parent)) {
+      scope = di_builder->createLexicalBlock(
+        parent,
+        di_compile_unit->getFile(),
+        start.line,
+        start.column
+      );
+    } else {
+      scope = parent;
+    }
   }
 
   ir_builder->SetCurrentDebugLocation(
