@@ -3,6 +3,7 @@
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Type.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include "xcc/ast/node.h"
@@ -311,7 +312,7 @@ public:
   /**
    * Generate pretty string for a type
    */
-  [[nodiscard]] std::string toString(bool get_name = false) const;
+  [[nodiscard]] std::string toString(bool get_name = false, std::unordered_set<const Type*> visited = {}) const;
 
   [[nodiscard]] bool isVoid() const;
   [[nodiscard]] bool isBool() const;

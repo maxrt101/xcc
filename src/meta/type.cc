@@ -281,7 +281,8 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
       return getLLVMArrayType(ctx);
 
     case TypeTag::PTR:
-      return llvm::PointerType::get(ptr.pointedType->getLLVMType(ctx), 0);
+      // return llvm::PointerType::get(ptr.pointedType->getLLVMType(ctx), 0);
+      return llvm::PointerType::get(*ctx.llvm.ctx, 0);
 
     case TypeTag::FUNCTION:
       return llvm::StructType::get(*ctx.llvm.ctx, {
@@ -313,13 +314,21 @@ llvm::Type * Type::getLLVMType(codegen::ModuleContext& ctx) const {
     }
 
     case TypeTag::STRUCT: {
-      std::vector<llvm::Type *> elements;
-
-      for (auto & member : _struct.members) {
-        elements.push_back(member.second->getLLVMType(ctx));
+      if (auto t = llvm::StructType::getTypeByName(*ctx.llvm.ctx, _struct.name)) {
+        return t;
       }
 
-      return llvm::StructType::get(*ctx.llvm.ctx, elements, _struct.packed);
+      llvm::StructType * llvm_struct = llvm::StructType::create(*ctx.llvm.ctx, _struct.name);
+
+      std::vector<llvm::Type *> member_llvm_types;
+
+      for (auto& member : _struct.members) {
+        member_llvm_types.push_back(member.second->getLLVMType(ctx));
+      }
+
+      llvm_struct->setBody(member_llvm_types, _struct.packed);
+
+      return llvm_struct;
     }
 
     default:
@@ -350,6 +359,10 @@ llvm::ArrayType * Type::getLLVMArrayType(codegen::ModuleContext& ctx) const {
 }
 
 llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
+  if (ctx.di_type_cache.contains(this)) {
+    return ctx.di_type_cache[this];
+  }
+
   switch (tag) {
     case TypeTag::VOID:   return ctx.di_builder->createBasicType("void",  0,  0);
     case TypeTag::BOOL:   return ctx.di_builder->createBasicType("bool",  1,  llvm::dwarf::DW_ATE_boolean);
@@ -422,6 +435,10 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
     case TypeTag::STRUCT: {
       auto * llvmType = getLLVMType(ctx);
 
+      auto struct_di = createDICompositeType(ctx, llvmType, _struct.name, {});
+
+      ctx.di_type_cache[this] = struct_di;
+
       std::vector<llvm::Metadata *> members;
 
       for (size_t i = 0; i < _struct.members.size(); ++i) {
@@ -429,7 +446,8 @@ llvm::DIType * Type::getDIType(codegen::ModuleContext& ctx) const {
         members.push_back(createDIDerivedType(ctx, llvmType, i, member.first, member.second));
       }
 
-      return createDICompositeType(ctx, llvmType, _struct.name, members);
+      ctx.di_builder->replaceArrays(struct_di, ctx.di_builder->getOrCreateArray(members));
+      return struct_di;
     }
 
     default:
@@ -465,7 +483,17 @@ std::string Type::getName() const {
   return toString(true);
 }
 
-std::string Type::toString(bool get_name) const {
+std::string Type::toString(bool get_name, std::unordered_set<const Type *> visited) const {
+  if (visited.contains(this)) {
+    if (tag == TypeTag::STRUCT && !_struct.name.empty()) {
+      return _struct.name;
+    }
+
+    return "...";
+  }
+
+  visited.insert(this);
+
   switch (tag) {
     case TypeTag::VOID:   return "void";
     case TypeTag::BOOL:   return "bool";
@@ -481,20 +509,20 @@ std::string Type::toString(bool get_name) const {
     case TypeTag::F64:    return "f64";
     case TypeTag::ISIZE:  return "isize";
     case TypeTag::USIZE:  return "usize";
-    case TypeTag::ARRAY:  return std::format("{}[{}]", get_name ? arr.elementType->getName() : arr.elementType->toString(), arr.size);
-    case TypeTag::PTR:    return (get_name ? ptr.pointedType->getName() : ptr.pointedType->toString()) + "*";
+    case TypeTag::ARRAY:  return std::format("{}[{}]", get_name ? arr.elementType->getName() : arr.elementType->toString(get_name, visited), arr.size);
+    case TypeTag::PTR:    return (get_name ? ptr.pointedType->getName() : ptr.pointedType->toString(get_name, visited)) + "*";
 
     case TypeTag::FUNCTION: {
       std::string result = "fn (";
 
       for (size_t i = 0; i < fn.args.size(); ++i) {
-        result += fn.args[i]->toString();
+        result += fn.args[i]->toString(get_name, visited);
         if (i + 1 < fn.args.size()) {
           result += ", ";
         }
       }
 
-      return result + "): " + fn.returnType->toString();
+      return result + "): " + fn.returnType->toString(get_name, visited);
     }
 
     case TypeTag::LAMBDA: {
@@ -502,7 +530,7 @@ std::string Type::toString(bool get_name) const {
 
       for (size_t i = 0; i < lambda.captures.size(); ++i) {
         auto& capture = lambda.captures[i];
-        result += capture->toString();
+        result += capture->toString(get_name, visited);
         if (i + 1 < lambda.captures.size()) {
           result += ", ";
         }
@@ -511,17 +539,17 @@ std::string Type::toString(bool get_name) const {
       result += "] (";
 
       for (size_t i = 0; i < lambda.fn->fn.args.size(); ++i) {
-        result += lambda.fn->fn.args[i]->toString();
+        result += lambda.fn->fn.args[i]->toString(get_name, visited);
         if (i + 1 < lambda.fn->fn.args.size()) {
           result += ", ";
         }
       }
 
-      return result + "): " + lambda.fn->fn.returnType->toString();
+      return result + "): " + lambda.fn->fn.returnType->toString(get_name, visited);
     }
 
     case TypeTag::ENUM: {
-      std::string result = "enum : " + _enum.base->toString() + " {";
+      std::string result = "enum : " + _enum.base->toString(get_name, visited) + " {";
 
       for (size_t i = 0; i < _enum.members.size(); ++i) {
         result += _enum.members[i].name + " = " + std::to_string(_enum.members[i].value);
@@ -537,7 +565,7 @@ std::string Type::toString(bool get_name) const {
       std::string result = "[";
 
       for (size_t i = 0; i < tuple.members.size(); ++i) {
-        result += tuple.members[i]->toString();
+        result += tuple.members[i]->toString(get_name, visited);
         if (i + 1 < tuple.members.size()) {
           result += ", ";
         }
@@ -557,7 +585,7 @@ std::string Type::toString(bool get_name) const {
       for (size_t i = 0; i < _struct.members.size(); ++i) {
         result += _struct.members[i].first;
         result += ": ";
-        result += _struct.members[i].second->toString();
+        result += _struct.members[i].second->toString(get_name, visited);
         if (i + 1 != _struct.members.size()) {
           result += ", ";
         }
