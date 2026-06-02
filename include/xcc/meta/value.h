@@ -6,6 +6,16 @@
 namespace xcc::meta {
 
 /**
+ * State of a variable
+ * TODO: MAYBE_MOVED
+ */
+enum class Liveness {
+  UNINITIALIZED = 0,
+  INITIALIZED,
+  MOVED
+};
+
+/**
  * Value - Type pair
  */
 class TypedValue {
@@ -13,6 +23,10 @@ public:
   SourceSpan            span;
   std::shared_ptr<Type> type;
   llvm::AllocaInst *    value;
+
+  // Track current state and last location of a move
+  Liveness              state = Liveness::INITIALIZED;
+  SourceSpan            moved_at;
 
 public:
   TypedValue();
