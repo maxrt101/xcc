@@ -112,4 +112,13 @@ void processMacros(
   std::shared_ptr<ast::Node> root
 );
 
+/**
+ * Performs definition stripping
+ *
+ * For more info use @ref Parser::includeModuleFromPath
+ *
+ * @param body Module body
+ */
+std::shared_ptr<ast::Block> moduleReplaceDefinitions(ast::LexicalScope lexicalScope, const std::shared_ptr<ast::Block>& body);
+
 }
