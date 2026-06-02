@@ -95,7 +95,7 @@ struct Vector<T, A = core::alloc::Allocator> {
   #
   # Create a new vector from current, copying all of the data
   #
-  fn clone(self) -> String {
+  fn clone(self) -> Vector {
     var new_data = A::alloc(self->size * sizeof!(T));
     core::mem::copy(new_data, self->data, self->size);
 
@@ -282,6 +282,7 @@ struct Vector<T, A = core::alloc::Allocator> {
   # TODO: contains
   # TODO: contains_if
   # TODO: count
+  # TODO: count_if
   # TODO: get_all?
   # TODO: get_all_if?
 }
