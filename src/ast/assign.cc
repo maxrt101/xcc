@@ -54,17 +54,51 @@ llvm::Value * Assign::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     Error(ERROR_INVALID_ASSIGNMENT_OP, kind.span, "{}", Token::typeToString(kind.type)).raiseFromNode(this);
   }
 
+  auto lhs_meta_type = lhs->generateTypeForValueWithoutLoad(ctx, payload);
+  auto lhs_llvm_type = lhs_meta_type->getLLVMType(ctx);
+  auto lhs_ptr       = lhs->generateValueWithoutLoad(ctx, payload);
+
   value = codegen::castIfNotSame(
     ctx,
     throwIfNull(value, std::runtime_error("assignment value generated NULL")),
-    lhs->generateTypeForValueWithoutLoad(ctx, payload)->getLLVMType(ctx),
+    lhs_llvm_type,
     span
   );
+
+  // Call drop on LHS, as it's about to be overwritten
+  if (lhs_meta_type->isStruct() && lhs_meta_type->isDrop()) {
+    llvm::Function * drop_fn = ctx.getFunction(lhs_meta_type->getDropMethodName());
+
+    // If value can be traced to a named local - update it's state to MOVED
+    ctx.updateLocalLiveness(rhs, meta::Liveness::MOVED);
+
+    if (drop_fn) {
+      ctx.ir_builder->CreateCall(drop_fn, {lhs_ptr});
+    } else {
+      Warning(WARNING_STRUCT_DROP_NO_FN, {}, "'{}'", lhs_meta_type->getName()).emit();
+    }
+  }
 
   ctx.ir_builder->CreateStore(
     value,
     lhs->generateValueWithoutLoad(ctx, payload)
   );
+
+  // If we got this far, RHS should be the same type as LHS, so check if it needs to be dropped
+  if (lhs_meta_type->isStruct() && lhs_meta_type->isDrop()) {
+    if (isOrIsLastInBlock(rhs, AST_EXPR_CALL) || isOrIsLastInBlock(rhs, AST_INIT)) {
+      // Temporary value - can be just forgotten
+      ctx.currentScope().raii.forgetLastTemporary();
+    } else if (isOrIsLastInBlock(rhs, AST_EXPR_IDENTIFIER)) {
+      // Not a temporary - clear the value manually
+      auto rhs_ptr  = rhs->generateValueWithoutLoad(ctx, payload);
+      auto zero_val = llvm::ConstantAggregateZero::get(lhs_llvm_type);
+      ctx.ir_builder->CreateStore(zero_val, rhs_ptr);
+    }
+  }
+
+  // Consider LHS valid now
+  ctx.updateLocalLiveness(lhs, meta::Liveness::INITIALIZED);
 
   return lhs->generateValue(ctx, payload);
 }

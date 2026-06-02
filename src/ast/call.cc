@@ -128,14 +128,21 @@ llvm::Value * Call::generateValue(codegen::ModuleContext& ctx, PayloadList paylo
       }
     }
 
-    // TODO: Move semantics
-    // if (type->isStruct() && type->isDrop()) {
-    //   if (isOrIsLastInBlock(args[i], AST_EXPR_CALL) || isOrIsLastInBlock(args[i], AST_INIT)) {
-    //     ctx.currentScope().raii.forgetLastTemporary();
-    //   } else if (isOrIsLastInBlock(args[i], AST_EXPR_CALL)) {
-    //     ctx.currentScope().raii.forget(getOrGetLastInBlock(args[i], AST_EXPR_IDENTIFIER)->as<Identifier>()->value);
-    //   }
-    // }
+    if (type->isStruct() && type->isDrop()) {
+      // If value can be traced to a named local - update it's state to MOVED
+      ctx.updateLocalLiveness(args[i], meta::Liveness::MOVED);
+
+      // Consider value moved, if it is passed into a function
+      if (isOrIsLastInBlock(args[i], AST_EXPR_CALL) || isOrIsLastInBlock(args[i], AST_INIT)) {
+        // Temporary value - can be just forgotten
+        ctx.currentScope().raii.forgetLastTemporary();
+      } else if (isOrIsLastInBlock(args[i], AST_EXPR_IDENTIFIER)) {
+        // Not a temporary - clear the value manually
+        auto var_ptr  = args[i]->generateValueWithoutLoad(ctx, payload);
+        auto zero_val = llvm::ConstantAggregateZero::get(type->getLLVMType(ctx));
+        ctx.ir_builder->CreateStore(zero_val, var_ptr);
+      }
+    }
 
     arg_vals.push_back(val);
   }
