@@ -266,7 +266,7 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
           // Check if this id is from generic params, if so - replace the whole node with generic argument
           for (size_t i = 0; i < genericParamNames.size(); ++i) {
             if (id->value == genericParamNames[i]->as<Identifier>()->value) {
-              return genericsArgs[i];
+              return genericsArgs[i]->clone();
             }
           }
         }
@@ -330,10 +330,6 @@ std::shared_ptr<xcc::meta::Type> Type::getBaseType(codegen::ModuleContext& ctx, 
 
       // Generate struct type for concrete generic struct
       type = concrete->generateType(ctx, {});
-
-      // Process macros, as they haven't been processed
-      // because generic structs are detached from root AST
-      processMacros(ctx.globalContext, concrete);
 
       if (ex_ast_logger.isEnabled()) {
         ex_ast_logger.info("AST for '{}' (After Macro processing):", concrete_name);

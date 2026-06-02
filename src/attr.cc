@@ -20,8 +20,6 @@ static void xcc_attr_dump_ast(codegen::GlobalContext& globalContext, const ast::
 static void xcc_attr_if(codegen::GlobalContext& globalContext, const ast::Node::Attribute& attr, ast::Node * node) {
   assertRaiseFromNode(attr.args.size() == 1, Error(ERROR_ATTR_ARG_COUNT_MISMATCH, attr.span), node);
 
-  processMacros(globalContext, ast::Block::create(attr.span, node->scope, {attr.args[0]}));
-
   assertRaiseFromNode(attr.args[0]->is(ast::AST_EXPR_NUMBER),
     Error(ERROR_ATTR_ARG_TYPE_MISMATCH, attr.span, "Argument to [if] must evaluate to a number"), node);
 
