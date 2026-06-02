@@ -152,12 +152,14 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
     );
   }
 
-  std::vector<llvm::Type *> arg_types;
-  arg_types.push_back(ctx.ir_builder->getPtrTy()); // Add implicit 0th argument - Closure
+  OrderedMap<std::string, std::shared_ptr<meta::Type>> arg_meta_types = {{"closure$", meta::Type::createPointer(meta::Type::createVoid())}};
+  std::vector<llvm::Type *> arg_types = {ctx.ir_builder->getPtrTy()}; // Add implicit 0th argument - Closure
 
   // Generate types for arguments
   for (auto& arg : args) {
-    arg_types.push_back(arg->generateType(ctx, payload)->getLLVMType(ctx));
+    auto at = arg->generateType(ctx, payload);
+    arg_meta_types[arg->name->name()] = at;
+    arg_types.push_back(at->getLLVMType(ctx));
   }
 
   // Generate function signature
@@ -169,6 +171,12 @@ llvm::Value * Lambda::generateValue(codegen::ModuleContext& ctx, PayloadList pay
 
   auto * lambda_fn = llvm::Function::Create(
     lambda_signature, llvm::Function::InternalLinkage, lambda_name, ctx.llvm.module.get()
+  );
+
+  ctx.globalContext.addFunction(
+    lambda_name,
+    meta::Function::create(lambda_name, t->getReturnType(), arg_meta_types, nullptr),
+    t
   );
 
   // Backup current insert block to restore it later
