@@ -51,7 +51,21 @@ llvm::Value * If::generateValue(codegen::ModuleContext& ctx, PayloadList payload
   }
 
   ctx.setDebugLocation(span);
-  cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(cond_val->getType(), 0), "ifcond");
+
+  llvm::Type * cond_type = cond_val->getType();
+
+  if (cond_type->isPointerTy()) {
+    auto null_ptr = llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(cond_type));
+    cond_val = ctx.ir_builder->CreateICmpNE(cond_val, null_ptr, "ifcond");
+  } else if (cond_type->isIntegerTy()) {
+    auto zero = llvm::ConstantInt::get(cond_type, 0);
+    cond_val = ctx.ir_builder->CreateICmpNE(cond_val, zero, "ifcond");
+  } else if (cond_type->isFloatingPointTy()) {
+    auto zero = llvm::ConstantFP::get(cond_type, 0.0);
+    cond_val = ctx.ir_builder->CreateFCmpUNE(cond_val, zero, "ifcond");
+  } else {
+    Error(ERROR_INVALID_CAST, condition->span, "Cannot implicitly evaluate this type as a boolean condition").raise();
+  }
 
   auto fn = ctx.ir_builder->GetInsertBlock()->getParent();
 

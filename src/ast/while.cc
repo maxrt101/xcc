@@ -44,8 +44,19 @@ llvm::Value * While::generateValue(codegen::ModuleContext& ctx, PayloadList payl
 
   auto cond_val = condition->generateValue(ctx, payload);
 
-  if (!cond_val->getType()->isIntegerTy(1)) {
-    cond_val = ctx.ir_builder->CreateICmpNE(cond_val, llvm::ConstantInt::get(cond_val->getType(), 0), "while_cond_cmp");
+  llvm::Type * cond_type = cond_val->getType();
+
+  if (cond_type->isPointerTy()) {
+    auto null_ptr = llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(cond_type));
+    cond_val = ctx.ir_builder->CreateICmpNE(cond_val, null_ptr, "ifcond");
+  } else if (cond_type->isIntegerTy()) {
+    auto zero = llvm::ConstantInt::get(cond_type, 0);
+    cond_val = ctx.ir_builder->CreateICmpNE(cond_val, zero, "ifcond");
+  } else if (cond_type->isFloatingPointTy()) {
+    auto zero = llvm::ConstantFP::get(cond_type, 0.0);
+    cond_val = ctx.ir_builder->CreateFCmpUNE(cond_val, zero, "ifcond");
+  } else {
+    Error(ERROR_INVALID_CAST, condition->span, "Cannot implicitly evaluate this type as a boolean condition").raise();
   }
 
   // If true go to body otherwise go to after
@@ -64,5 +75,9 @@ llvm::Value * While::generateValue(codegen::ModuleContext& ctx, PayloadList payl
   // After Block
   ctx.ir_builder->SetInsertPoint(after_block);
 
-  return meta::Type::createI64()->getDefault(ctx);
+  return nullptr;
+}
+
+std::shared_ptr<xcc::meta::Type> While::generateType(codegen::ModuleContext& ctx, PayloadList payload) {
+  return meta::Type::createVoid();
 }
