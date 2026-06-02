@@ -12,6 +12,12 @@ mod boolean {
 
 # TODO: Add const NULL value
 
+#
+# Bring panic! into scope
+#
+[prelude]
+use mod panic;
+
 # Contains basic memory operations (copy/fill/etc.)
 use mod mem;
 

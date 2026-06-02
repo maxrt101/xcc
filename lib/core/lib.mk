@@ -2,4 +2,4 @@
 CORE_DIR = $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 XCC_FLAGS += -I $(CORE_DIR)
-XCC_SRC += $(CORE_DIR)/alloc.xc $(CORE_DIR)/mem.xc
+XCC_SRC += $(CORE_DIR)/alloc.xc $(CORE_DIR)/mem.xc $(CORE_DIR)/panic.xc $(CORE_DIR)/core.xc
