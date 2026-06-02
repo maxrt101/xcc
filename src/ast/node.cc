@@ -349,6 +349,7 @@ std::string Node::resolveSymbolName(codegen::ModuleContext& ctx, const std::stri
        ctx.globalContext.getMetaFunction(search_name) ||
        ctx.globalContext.hasGlobal(search_name) ||
        ctx.globalContext.getConst(search_name) ||
+       ctx.globalContext.getMacro(search_name) ||
        codegen::GenericsCache::has(search_name)
     ) {
       return search_name;
