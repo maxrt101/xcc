@@ -171,6 +171,7 @@ private:
   // Generic
   std::shared_ptr<ast::Node> parseStmt(bool parseTopLevel = false);
   std::shared_ptr<ast::Node> parseExpr();
+  std::shared_ptr<ast::Node> parseSingleMemberAccess(std::shared_ptr<ast::Node> expr);
 
   // Expressions
   std::shared_ptr<ast::Node> parseAssignment();
@@ -299,15 +300,6 @@ private:
     const std::vector<std::shared_ptr<ast::Identifier>>& symbols,
     SourceSpan                                           span
   );
-
-  /**
-   * Performs definition stripping
-   *
-   * For more info use @ref Parser::includeModuleFromPath
-   *
-   * @param body Module body
-   */
-  std::shared_ptr<ast::Block> moduleReplaceDefinitions(const std::shared_ptr<ast::Block>& body);
 
   /**
    * Parse single top-level statement/declaration

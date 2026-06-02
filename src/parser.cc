@@ -4,6 +4,7 @@
 #include "xcc/util/log.h"
 #include "xcc/util/filemng.h"
 #include "xcc/exceptions.h"
+#include "xcc/xcc.h"
 
 #include <filesystem>
 
@@ -283,7 +284,7 @@ std::shared_ptr<ast::Node> Parser::parseFunction(bool isMethod) {
 
   std::shared_ptr<ast::Node> name = parseIdentifier("for function name");
 
-  if (checkAdvance(TOKEN_NOT)) {
+  if (check(TOKEN_NOT)) {
     name = parseCall(name);
   }
 
@@ -1022,6 +1023,22 @@ std::shared_ptr<ast::Node> Parser::parseExpr() {
   return parseAssignment();
 }
 
+std::shared_ptr<ast::Node> Parser::parseSingleMemberAccess(std::shared_ptr<ast::Node> expr) {
+  if (checkAnyOf(TOKEN_DOT, TOKEN_RIGHT_ARROW)) {
+    bool is_pointer = check(TOKEN_RIGHT_ARROW);
+
+    advance();
+
+    auto field = parseIdentifier("for member access");
+
+    expr = is_pointer
+      ? ast::MemberAccess::createByPointer(expr->span + previous().span, lexicalScope, expr, field)
+      : ast::MemberAccess::createByValue(expr->span + previous().span, lexicalScope, expr, field);
+  }
+
+  return expr;
+}
+
 std::shared_ptr<ast::Node> Parser::parseAssignment() {
   auto expr = parseLogicAndBitOps();
 
@@ -1091,8 +1108,7 @@ std::shared_ptr<ast::Node> Parser::parseTerm() {
 std::shared_ptr<ast::Node> Parser::parseFactor() {
   auto expr = parseShifts();
 
-  // TODO: Parse modulo ('%')
-  while (checkAdvanceAnyOf(TOKEN_SLASH, TOKEN_STAR)) {
+  while (checkAdvanceAnyOf(TOKEN_SLASH, TOKEN_STAR, TOKEN_PERCENT)) {
     Token op = previous();
     auto rhs = parseShifts();
     expr = ast::Binary::create(expr->span + rhs->span, lexicalScope, op, expr, rhs);
@@ -1310,7 +1326,7 @@ std::shared_ptr<ast::Node> Parser::parseLvalueOrCallOrInitializer() {
 
   if (check(TOKEN_LEFT_PAREN) || (check(TOKEN_NOT) && checkNext(TOKEN_LEFT_PAREN))) {
     /* Function or Macro Call */
-    return parseCall(id);
+    return parseSingleMemberAccess(parseCall(id));
   }
 
   if (check(TOKEN_LEFT_BRACE) && id->is(ast::AST_EXPR_IDENTIFIER)) {
@@ -1344,7 +1360,7 @@ std::shared_ptr<ast::Node> Parser::parseMemberAccessOrLvalue(std::shared_ptr<ast
 
   /* Method Call */
   if (check(TOKEN_LEFT_PAREN)) {
-    return parseCall(expr);
+    expr = parseSingleMemberAccess(parseCall(expr));
   }
 
   return expr;
@@ -1561,7 +1577,7 @@ IncludedModule Parser::includeModuleFromPath(
 
     auto mod = parser.parse(false);
 
-    result.body = moduleReplaceDefinitions(mod);
+    result.body = moduleReplaceDefinitions(lexicalScope, mod);
 
     ModuleCache::set(path, result);
 
@@ -1625,32 +1641,6 @@ void Parser::updateModAliases(
   for (auto& symbol : symbols) {
     mod->addAttribute({"__xcc_tag_use_alias", { ast::String::create(span, mod->scope, symbol->value), ast::String::create(span, mod->scope, target_prefix) }, symbol->span});
   }
-}
-
-std::shared_ptr<ast::Block> Parser::moduleReplaceDefinitions(const std::shared_ptr<ast::Block>& body) {
-  auto result = ast::Block::create({}, lexicalScope, {});
-
-  for (auto & node : body->body) {
-    if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL, ast::AST_MACRO, ast::AST_CONST_DECL)) {
-      result->body.push_back(node);
-    } else if (node->is(ast::AST_MOD)) {
-      auto mod = node->as<ast::Module>();
-      mod->body = moduleReplaceDefinitions(mod->body);
-      result->body.push_back(node);
-    } else if (node->is(ast::AST_FUNCTION_DEF)) {
-      result->body.push_back(node->as<ast::FnDef>()->decl);
-    } else if (node->is(ast::AST_STRUCT)) {
-      auto s = node->as<ast::Struct>();
-
-      for (size_t j = 0; j < s->methods.size(); ++j) {
-        s->methods[j] = s->methods[j]->as<ast::FnDef>()->decl;
-      }
-
-      result->body.push_back(node);
-    }
-  }
-
-  return result;
 }
 
 std::shared_ptr<ast::Node> Parser::parseOneTopLevelNode(bool isRepl, const ast::Node::AttributeList& attrs) {
