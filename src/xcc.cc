@@ -238,243 +238,38 @@ static void registerMacros(
   }, {});
 }
 
-/**
- * Expand macro arguments with the ones passed via MacroCall inside of macro body
- *
- * @param macro Macro Definition
- * @param call  Macro Call
- * @param body  Macro body (cloned!)
- */
-static void processMacroCall(
-  codegen::GlobalContext&                globalContext,
-  const std::shared_ptr<ast::Macro>&     macro,
-  const std::shared_ptr<ast::MacroCall>& call,
-  const std::shared_ptr<ast::Node>&      body
-) {
-  body->visit(globalContext, [macro, call](auto node) -> std::shared_ptr<ast::Node> {
-    if (node->is(ast::AST_EXPR_IDENTIFIER)) {
-      auto arg = node->template as<ast::Identifier>()->name();
+std::shared_ptr<ast::Block> xcc::moduleReplaceDefinitions(ast::LexicalScope lexicalScope, const std::shared_ptr<ast::Block>& body) {
+  auto result = ast::Block::create({}, lexicalScope, {});
 
-      int argn = -1;
+  for (auto & node : body->body) {
+    if (node->isAnyOf(ast::AST_FUNCTION_DECL, ast::AST_TYPE_DECL, ast::AST_MACRO, ast::AST_CONST_DECL, ast::AST_EXPR_MACRO_CALL)) {
+      result->body.push_back(node);
+    } else if (node->is(ast::AST_MOD)) {
+      auto mod = ast::Node::cast<ast::Module>(node->clone());
+      mod->body = moduleReplaceDefinitions(lexicalScope, mod->body);
+      result->body.push_back(mod);
+    } else if (node->is(ast::AST_FUNCTION_DEF)) {
+      result->body.push_back(node->as<ast::FnDef>()->decl);
+    } else if (node->is(ast::AST_STRUCT)) {
+      auto _struct = ast::Node::cast<ast::Struct>(node->clone());
 
-      for (int i = 0; i < macro->args.size(); ++i) {
-        if (macro->args[i]->value == arg) {
-          argn = i;
-          break;
-        }
+      for (size_t j = 0; j < _struct->methods.size(); ++j) {
+        _struct->methods[j] = _struct->methods[j]->as<ast::FnDef>()->decl;
       }
 
-      if (argn == -1) {
-        return nullptr;
-      }
-
-      return call->args[argn]->clone();
+      result->body.push_back(_struct);
     }
-
-    return nullptr;
-  }, {});
-}
-
-/**
- * Recursively mark each generated node with provided attribute and a new span
- */
-static void markExpandedMacro(
-  std::shared_ptr<ast::Node>               body,
-  ast::Node::Attribute                     attr,
-  SourceSpan                               span
-) {
-  body->addAttribute(attr);
-  body->span = span;
-
-  std::unique_ptr<codegen::GlobalContext> ctx = {nullptr};
-
-  body->visit(*ctx, [&attr, &span](auto node) -> std::shared_ptr<ast::Node> {
-    if (!node->hasAttribute(attr.name)) {
-      node->addAttribute(attr);
-      node->span = span;
-    }
-
-    return nullptr;
-  }, {});
-}
-
-/**
- * Helper that recursively parses ast::Decomposition into a phantom scope
- * For more info see @ref gatherPhantomsForMacroContext
- *
- * @param globalContext Global Context
- * @param phantoms      Phantom Scope
- * @param node          ast::Decomposition node
- */
-static void addDecompositionPhantoms(
-  codegen::GlobalContext&               globalContext,
-  codegen::ModuleContext::PhantomScope& phantoms,
-  const std::shared_ptr<ast::Node>&     node,
-  std::shared_ptr<meta::Type>           parentType = nullptr
-) {
-  auto d = node->as<ast::Decomposition>();
-  auto t = d->value ? d->generateType(*globalContext.globalModule, {}) : std::move(parentType);
-
-  if (!t) {
-    // If type for ast::Decomposition can't be generated (no value) and to parentType was provided
-    // Absence of d->value means that this ast::Decomposition is a sub node of a parent ast::Decomposition
-    // Absence of parentType means that this is the first call to addDecompositionPhantoms
-    // If this is the first call, and node is a sub node to another ast::Decomposition, it means
-    // that the parent (along with current) ast::Decomposition was already processed
-
-    // TODO: Add some kind of Node::markVisited to exclude a subtree from being visited again.
-    //       This might be challenging as visit() and callVisitor will need some kind of context
-    //       and this context (containing visited nodes) should be able to efficiently check
-    //       if the node was processed (maybe a O(1) access map/set with pointers to nodes? or add
-    //       a global node instance id)
-
-    return;
   }
 
-  for (size_t i = 0; i < d->pieces.size(); ++i) {
-    auto& piece = d->pieces[i];
-
-    if (piece->is(ast::AST_EXPR_IDENTIFIER)) {
-      phantoms.add(
-        piece->as<ast::Identifier>()->name(),
-        d->generateTypeForPiece(t, i)
-      );
-    } else {
-      addDecompositionPhantoms(globalContext, phantoms, piece, t);
-    }
-  }
+  return result;
 }
 
-/**
- * Helper for gathering any and all declared variables into phantom scope,
- * for native macros to have access to them, before actual AST lowering is done.
- * Adds found variable declarations to @ref codegen::ModuleContext::PhantomScope.
- * Old variables will get overwritten. There is a side effect - variable
- * declarations will be accessible by macros outside variable's lexical scope.
- *
- * @warning Strictly internal
- *
- * @param globalContext Global Context
- * @param phantoms      Phantom Scope
- * @param node          AST Node to check
- */
-static void gatherPhantomsForMacro(
-  codegen::GlobalContext&               globalContext,
-  codegen::ModuleContext::PhantomScope& phantoms,
-  std::shared_ptr<ast::Node>            node
-) {
-  ast::Node::callVisitor(globalContext, node, [&globalContext, &phantoms](auto node) -> std::shared_ptr<ast::Node> {
-    if (node->is(ast::AST_STRUCT)) {
-    }
-
-    if (node->is(ast::AST_VAR_DECL)) {
-      phantoms.add(node->template as<ast::VarDecl>()->name->name(), node->generateType(*globalContext.globalModule, {}));
-    }
-
-    if (node->is(ast::AST_DECOMPOSITION_DECL)) {
-      addDecompositionPhantoms(globalContext, phantoms, node);
-    }
-
-    if (node->is(ast::AST_FUNCTION_DECL)) {
-      auto fndecl = node->template as<ast::FnDecl>();
-
-      phantoms.add(fndecl->name->template as<ast::Identifier>()->name(), node->generateType(*globalContext.globalModule, {}));
-
-      for (auto& arg : fndecl->args) {
-        phantoms.add(arg->name->name(), arg->generateType(*globalContext.globalModule, {}));
-      }
-    }
-
-    // FIXME: since node->visit() is called before visit(node), this adds captures too late, if a macro in
-    //        lambda body needs it. One solution would be to separate Lambda and lets say LmbdaDecl
-#if 0
-    if (node->is(ast::AST_LAMBDA)) {
-      auto lambda = node->template as<ast::Lambda>();
-
-      for (auto& capture : lambda->captures) {
-        bool isPointer = capture.expr->is(ast::AST_EXPR_UNARY);
-
-        // Rely on generateLambdaType to raise an error on bad/invalid AST node
-        auto id = isPointer
-          ? capture.expr->template as<ast::Unary>()->rhs->template as<ast::Identifier>()
-          : capture.expr->template as<ast::Identifier>();
-
-        auto name = capture.name ? capture.name->template as<ast::Identifier>() : id;
-
-        printf("CAPTURE '%s' '%s'\n", name->defaultToString().c_str(), capture.expr->defaultToString().c_str());
-
-        phantoms.add(name->value, capture.expr->generateType(*globalContext.globalModule, {}));
-      }
-
-      for (auto& arg : lambda->args) {
-        phantoms.add(arg->name->name(), arg->generateType(*globalContext.globalModule, {}));
-      }
-    }
-#endif
-
-    return nullptr;
-  }, {ast::AST_MACRO});
-}
-
-void xcc::processMacros(
-  codegen::GlobalContext&    globalContext,
-  std::shared_ptr<ast::Node> root
-) {
-  auto phantoms = globalContext.globalModule->phantomScope({});
-
-  root->visit(globalContext, [&globalContext, &phantoms](auto node) -> std::shared_ptr<ast::Node> {
-    gatherPhantomsForMacro(globalContext, phantoms, node);
-
-    if (!node->is(ast::AST_EXPR_MACRO_CALL)) {
-      return nullptr;
-    }
-
-    auto call  = ast::Node::cast<ast::MacroCall>(node);
-    auto name  = call->name->getResolvedName(*globalContext.globalModule);
-    auto macro = globalContext.getMacro(name);
-
-    assertRaise(macro != nullptr, Error(ERROR_UNKNOWN_MACRO, call->name->span, "'{}'", name));
-
-    if (macro->variadic) {
-      assertRaise(macro->args.size() <= call->args.size(), Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->span, "'{}'", name));
-    } else {
-      assertRaise(macro->args.size() == call->args.size(), Error(ERROR_MACRO_CALL_ARG_COUNT_MISMATCH, call->span, "'{}'", name));
-    }
-
-    if (macro->native) {
-      auto res = macro->fn(globalContext, call);
-
-      // Attach expansion markers & set span to call site
-      markExpandedMacro(res, {
-        "__xcc_macro_expanded_from",
-        {ast::Identifier::create(macro->span, macro->scope, name)},
-        call->span
-      }, call->span);
-
-      return res;
-    }
-
-    auto body = ast::Node::cast<ast::Block>(macro->body->clone());
-
-    try {
-      processMacroCall(globalContext, macro, call, body);
-      registerCustomTypes(globalContext, body);
-
-      processMacros(globalContext, body);
-    } catch (CompilationException& ex) {
-      ex.error.note(macro->span, "During expansion of macro {}", name).raise();
-    }
-
-    // Attach expansion markers & set span to call site
-    markExpandedMacro(body, {
-      "__xcc_macro_expanded_from",
-      {ast::Identifier::create(macro->span, macro->scope, name)},
-      call->span
-    }, call->span);
-
-    return body;
-  }, {ast::AST_MACRO});
-}
+static void compileBlock(
+  codegen::GlobalContext&            globalContext,
+  CompilationResult&                 result,
+  const std::shared_ptr<ast::Block>& block,
+  bool                               isRepl
+);
 
 /**
  * Compile function (both declarations & definitions)
@@ -513,6 +308,66 @@ static llvm::Function * compileFunction(codegen::GlobalContext& globalContext, s
 }
 
 /**
+ * Lower a single AST node
+ *
+ * @param globalContext Global Context
+ * @param result        Generates functions and/or top-level expressions will be put here
+ * @param node          Node to lower
+ * @param isRepl        In in REPL mode
+ */
+static void compileNode(
+  codegen::GlobalContext&           globalContext,
+  CompilationResult&                result,
+  const std::shared_ptr<ast::Node>& node,
+  bool                              isRepl
+) {
+  if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
+    compileFunction(globalContext, node);
+  } else if (node->is(ast::AST_VAR_DECL)) {
+    node->generateValue(*globalContext.globalModule, {});
+  } else if (node->is(ast::AST_CONST_DECL)) {
+    auto constant = ast::Node::cast<ast::ConstDecl>(node);
+    globalContext.addConst(constant->name->getMangledName(constant->name->value), constant);
+  } else if (node->is(ast::AST_STRUCT)) {
+    auto _struct = node->as<ast::Struct>();
+
+    _struct->generateType(*globalContext.globalModule, {});
+
+    _struct->generateForwardDeclarations(*globalContext.globalModule, {});
+
+    for (auto& method : _struct->methods) {
+      compileFunction(globalContext, method);
+    }
+  } else if (node->is(ast::AST_ENUM)) {
+    node->generateType(*globalContext.globalModule, {});
+    for (auto& method : node->as<ast::Enum>()->methods) {
+      compileFunction(globalContext, method);
+    }
+  } else if (node->is(ast::AST_MOD)) {
+    auto mod = ast::Node::cast<ast::Module>(node);
+
+    globalContext.pushModule(mod->getName(), mod->getPath());
+    compileBlock(globalContext, result, mod->body, isRepl);
+    globalContext.popModule();
+  } else if (node->is(ast::AST_TYPE_DECL)) {
+    node->generateType(*globalContext.globalModule, {});
+  } else if (node->is(ast::AST_BLOCK)) {
+    compileBlock(globalContext, result, ast::Node::cast<ast::Block>(node), isRepl);
+  } else if (node->isAnyOf(ast::AST_EMPTY, ast::AST_MACRO)) {
+    // Ignore
+  } else if (node->is(ast::AST_EXPR_MACRO_CALL)) {
+    auto expanded = expand(node, *globalContext.globalModule);
+    compileNode(globalContext, result, expanded, isRepl);
+  } else {
+    if (isRepl) {
+      result.nodes.expr.push_back(node);
+    } else {
+      throw std::runtime_error("Unexpected node at top-level scope: " + ast::Node::typeToString(node->type));
+    }
+  }
+}
+
+/**
  * Recursively lowers AST
  *
  * @param globalContext Global Context
@@ -527,47 +382,7 @@ static void compileBlock(
   bool                               isRepl
 ) {
   for (auto& node : block->body) {
-    if (node->isAnyOf(ast::AST_FUNCTION_DEF, ast::AST_FUNCTION_DECL)) {
-      compileFunction(globalContext, node);
-    } else if (node->is(ast::AST_VAR_DECL)) {
-      node->generateValue(*globalContext.globalModule, {});
-    } else if (node->is(ast::AST_CONST_DECL)) {
-      auto constant = ast::Node::cast<ast::ConstDecl>(node);
-      globalContext.addConst(constant->name->getMangledName(constant->name->value), constant);
-    } else if (node->is(ast::AST_STRUCT)) {
-      auto _struct = node->as<ast::Struct>();
-
-      _struct->generateType(*globalContext.globalModule, {});
-
-      _struct->generateForwardDeclarations(*globalContext.globalModule, {});
-
-      for (auto& method : _struct->methods) {
-        compileFunction(globalContext, method);
-      }
-    } else if (node->is(ast::AST_ENUM)) {
-      node->generateType(*globalContext.globalModule, {});
-      for (auto& method : node->as<ast::Enum>()->methods) {
-        compileFunction(globalContext, method);
-      }
-    } else if (node->is(ast::AST_MOD)) {
-      auto mod = ast::Node::cast<ast::Module>(node);
-
-      globalContext.pushModule(mod->getName(), mod->getPath());
-      compileBlock(globalContext, result, mod->body, isRepl);
-      globalContext.popModule();
-    } else if (node->is(ast::AST_TYPE_DECL)) {
-      node->generateType(*globalContext.globalModule, {});
-    } else if (node->is(ast::AST_BLOCK)) {
-      compileBlock(globalContext, result, ast::Node::cast<ast::Block>(node), isRepl);
-    } else if (node->isAnyOf(ast::AST_EMPTY, ast::AST_MACRO)) {
-      // Ignore
-    } else {
-      if (isRepl) {
-        result.nodes.expr.push_back(node);
-      } else {
-        throw std::runtime_error("Unexpected node at top-level scope: " + ast::Node::typeToString(node->type));
-      }
-    }
+    compileNode(globalContext, result, node, isRepl);
   }
 }
 
@@ -648,7 +463,6 @@ CompilationResult xcc::compile(
   registerConstants(globalContext, ast);
   registerFunctions(globalContext, ast);
   registerMacros(globalContext, ast);
-  processMacros(globalContext, ast);
 
   if (ex_ast_logger.isEnabled()) {
     ex_ast_logger.info("AST (After Attribute & Macro processing):");
