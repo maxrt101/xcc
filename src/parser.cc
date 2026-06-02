@@ -1500,7 +1500,10 @@ ast::Node::AttributeList Parser::parseAttributeList() {
 
     auto span = current().span;
 
-    auto name = parseIdentifier("for attribute name");
+    // Workaround for `if` to be allowed as an attribute name
+    auto name = checkAdvance(TOKEN_IF)
+      ? ast::Identifier::create(previous().span, lexicalScope, "if")
+      : parseIdentifier("for attribute name");
 
     ast::NodeList args;
 

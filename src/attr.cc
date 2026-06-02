@@ -20,10 +20,12 @@ static void xcc_attr_dump_ast(codegen::GlobalContext& globalContext, const ast::
 static void xcc_attr_if(codegen::GlobalContext& globalContext, const ast::Node::Attribute& attr, ast::Node * node) {
   assertRaiseFromNode(attr.args.size() == 1, Error(ERROR_ATTR_ARG_COUNT_MISMATCH, attr.span), node);
 
-  assertRaiseFromNode(attr.args[0]->is(ast::AST_EXPR_NUMBER),
+  auto expr = expand(attr.args[0], *globalContext.globalModule);
+
+  assertRaiseFromNode(expr->is(ast::AST_EXPR_NUMBER),
     Error(ERROR_ATTR_ARG_TYPE_MISMATCH, attr.span, "Argument to [if] must evaluate to a number"), node);
 
-  auto result = attr.args[0]->as<ast::Number>();
+  auto result = expr->as<ast::Number>();
 
   assertRaiseFromNode(result->tag == ast::Number::INTEGER,
     Error(ERROR_ATTR_ARG_TYPE_MISMATCH, attr.span, "Argument to [if] must evaluate to an integer"), node);
