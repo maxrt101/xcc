@@ -26,6 +26,7 @@ Monomorphizer::Monomorphizer(
   }
 }
 
+// TODO: Document this shit
 void Monomorphizer::apply(const std::shared_ptr<Node>& node) {
   node->visit(this->globalContext, [this](const auto& n) -> std::shared_ptr<Node> {
     for (auto& s : n->scope) {
@@ -47,28 +48,35 @@ void Monomorphizer::apply(const std::shared_ptr<Node>& node) {
         id->value = concreteUnqualifiedName;
       }
 
-      for (auto & g : id->genericArgs) {
-        auto s = g->defaultToString();
-        if (substitutions.contains(s)) {
-          g = substitutions[s];
-        }
-      }
-
       if (!id->scope.empty() && substitutions.contains(id->scope[0])) {
-        auto param = substitutions[id->scope[0]]->template as<Type>()->name->template as<Identifier>();
-        LexicalScope new_scope = param->scope;
-        new_scope.push_back(param->value);
+        if (!id->scope.empty() && substitutions.contains(id->scope[0])) {
+          auto sub_node = substitutions[id->scope[0]];
+          Identifier * param = nullptr;
 
-        for (size_t i = 1; i < id->scope.size(); ++i) {
-          new_scope.push_back(id->scope[i]);
+          while (sub_node->is(AST_EXPR_TYPE)) {
+            sub_node = sub_node->template as<Type>()->name;
+          }
+
+          if (sub_node->is(AST_EXPR_IDENTIFIER)) {
+            param = sub_node->template as<Identifier>();
+          }
+
+          if (param) {
+            LexicalScope new_scope = param->scope;
+            new_scope.push_back(param->value);
+
+            for (size_t i = 1; i < id->scope.size(); ++i) {
+              new_scope.push_back(id->scope[i]);
+            }
+
+            id->scope = new_scope;
+          }
         }
-
-        id->scope = new_scope;
       }
 
       // Specifically for macro expansions, as a type in macro call context is treated as an identifier
       if (substitutions.contains(id->value)) {
-        return substitutions[id->value];
+        return substitutions[id->value]->clone();
       }
     }
 
@@ -78,7 +86,7 @@ void Monomorphizer::apply(const std::shared_ptr<Node>& node) {
       if (type->name && type->name->is(AST_EXPR_IDENTIFIER)) {
         auto id = type->name->template as<Identifier>()->value;
         if (substitutions.contains(id)) {
-          type->name = substitutions[id];
+          return substitutions[id]->clone();
         }
       }
     }
