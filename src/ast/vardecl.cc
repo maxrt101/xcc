@@ -68,9 +68,6 @@ llvm::Value * VarDecl::generateValue(codegen::ModuleContext& ctx, PayloadList pa
   assertRaiseFromNode(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span), this);
 
   if (type) {
-    assertRaiseFromNode(isOrIsLastInBlock(type, AST_EXPR_TYPE),
-      Error(ERROR_NOT_A_TYPE, type->span, "got a {}", typeToHumanReadableString(getOrGetLastInBlock(type)->type)), this);
-
     payload = extendPayload(payload, Initializer::Payload::create(type->generateType(ctx, payload)));
   }
 
@@ -87,7 +84,16 @@ std::shared_ptr<xcc::meta::Type> VarDecl::generateType(codegen::ModuleContext& c
   // If both type and value are missing - fail, if one is present - the other can be (usually) inferred
   assertRaiseFromNode(type || value, Error(ERROR_VARDECL_NO_VAL_AND_TYPE, span), this);
 
-  return type ? type->generateType(ctx, payload) : meta::Type::inferFromNode(ctx, value);
+  if (type) {
+    auto t = expand(type, ctx);
+
+    assertRaiseFromNode(isOrIsLastInBlock(t, AST_EXPR_TYPE),
+      Error(ERROR_NOT_A_TYPE, type->span, "got a {}", typeToHumanReadableString(getOrGetLastInBlock(type)->type)), this);
+
+    return t->generateType(ctx, payload);
+  }
+
+  return meta::Type::inferFromNode(ctx, value);
 }
 
 llvm::Value * VarDecl::generateLocal(codegen::ModuleContext& ctx, std::shared_ptr<meta::Type> meta_type, PayloadList payload) {
