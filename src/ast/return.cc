@@ -1,5 +1,6 @@
 #include "xcc/ast/return.h"
 #include "xcc/codegen.h"
+#include "xcc/exceptions.h"
 
 using namespace xcc::ast;
 
@@ -30,14 +31,19 @@ llvm::Value * Return::generateValue(codegen::ModuleContext& ctx, PayloadList pay
   if (value) {
     std::shared_ptr<meta::Type> type;
 
+    // TODO: This should never fail to extract the type, if it does - it's a bug
     if (auto fn = ctx.globalContext.getCurrentFunction()) {
       type = fn->returnType;
     }
 
     val = value->generateValue(ctx, extendPayload(excludePayload(payload, AST_INIT), Initializer::Payload::create(type)));
 
-    if (type) {
-      val = castIfNotSame(ctx, val, type->getLLVMType(ctx), value->span);
+    try {
+      val = castIfNotSame(ctx, val, type->getLLVMType(ctx), span);
+    } catch (CompilationException& ex) {
+      ex.error
+        .note(span, "Function expected to return '{}', but control reached the end of the function without returning a value", type->toString())
+        .raise();
     }
 
     // If last value is an identifier - forget it, so it doesn't get destroyed,

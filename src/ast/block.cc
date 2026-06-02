@@ -52,7 +52,9 @@ static T * generate(xcc::codegen::ModuleContext &ctx, Node::PayloadList payload,
   }
 
   if (!is_fn_block) {
-    ctx.popScope();
+    // Treat the existence of a terminator as no_clear flag, because if a
+    // terminator was generated - the scope was already cleared out of order
+    ctx.popScope(ctx.ir_builder->GetInsertBlock()->getTerminator());
   }
 
   return val;
@@ -140,11 +142,14 @@ std::shared_ptr<xcc::meta::Type> Block::generateType(codegen::ModuleContext& ctx
 
   auto phantoms = ctx.phantomScope({});
 
+  // TODO: Check if this shit still needs to exist
   for (auto& node : body) {
     if (node->is(AST_VAR_DECL)) {
       auto vardecl = node->as<VarDecl>();
 
-      phantoms.add(vardecl->name->name(), vardecl->type->generateType(ctx, payload));
+      if (vardecl->type) {
+        phantoms.add(vardecl->name->name(), vardecl->type->generateType(ctx, payload));
+      }
     }
   }
 
