@@ -39,6 +39,8 @@ static const binop::List s_binops = {
   XCC_BINOP(TOKEN_VERTICAL_LINE,  NONE,               CreateOr,          "ortmp",       ()                ),
   XCC_BINOP(TOKEN_SHIFT_LEFT,     NONE,               CreateShl,         "shltmp",      (bool, bool)      ),
   XCC_BINOP(TOKEN_SHIFT_RIGHT,    NONE,               CreateLShr,        "shrtmp",      (bool)            ),
+  XCC_BINOP(TOKEN_PERCENT,        INTEGER | SIGNED,   CreateSRem,        "sremtmp",     ()                ),
+  XCC_BINOP(TOKEN_PERCENT,        INTEGER | UNSIGNED, CreateURem,        "uremtmp",     ()                ),
 };
 
 Binary::Binary(SourceSpan span, LexicalScope scope, Token operation, std::shared_ptr<Node> lhs, std::shared_ptr<Node> rhs)
