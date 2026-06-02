@@ -6,3 +6,6 @@ use mod str;
 
 # Contains generic Vector class
 use mod vec;
+
+# Contains generic Map class
+use mod map;
