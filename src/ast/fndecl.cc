@@ -39,7 +39,7 @@ std::shared_ptr<FnDecl> FnDecl::create(
 std::shared_ptr<Node> FnDecl::clone() {
   return withAttrs(create(
     span, scope,
-    cast<Identifier>(name->clone()),
+    name->clone(),
     return_type->clone(),
     cloneVector(args),
     isExtern, isVariadic
@@ -79,9 +79,9 @@ std::string FnDecl::toString(Node * grandparent, Node * parent, int indent, bool
 }
 
 llvm::Function * FnDecl::generateFunction(codegen::ModuleContext& ctx, PayloadList payload) {
-  assertRaiseFromNode(name->is(AST_EXPR_IDENTIFIER), Error(ERROR_FN_NAME_NOT_AN_IDENTIFIER, name->span), this);
+  auto id = convertExpanded<Identifier>(name, AST_EXPR_IDENTIFIER, ctx);
 
-  auto id = name->as<Identifier>();
+  assertRaiseFromNode(id && id->is(AST_EXPR_IDENTIFIER), Error(ERROR_FN_NAME_NOT_AN_IDENTIFIER, name->span), this);
 
   std::string fn_name = isExtern ? id->value : getMangledName(id->value);
   std::string symbol_name = fn_name;
