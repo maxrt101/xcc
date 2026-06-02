@@ -30,7 +30,9 @@ std::shared_ptr<Node> Identifier::clone() {
   return withAttrs(create(span, Node::scope, value, scope, genericArgs));
 }
 
-void Identifier::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {}
+void Identifier::visit(codegen::GlobalContext& globalContext, Visitor visitor, std::vector<NodeType> ignoreSubtree) {
+  visitVector(globalContext, genericArgs, visitor, ignoreSubtree);
+}
 
 std::string Identifier::toString(Node * grandparent, Node * parent, int indent, bool newline) {
   std::string res = attributesToString(0, false);
@@ -121,6 +123,10 @@ std::string Identifier::getResolvedName(codegen::ModuleContext& ctx) const {
       return qualified;
     }
 
+    if (ctx.globalContext.macros.contains(qualified)) {
+      return qualified;
+    }
+
     // TODO: Globals, macros and aliases are not checked. Should they be?
 
     // If prepending moduleStack didn't yield any
@@ -178,8 +184,22 @@ llvm::Value * Identifier::generateValue(codegen::ModuleContext& ctx, PayloadList
 }
 
 llvm::Value * Identifier::generateValueWithoutLoad(codegen::ModuleContext& ctx, PayloadList payload) {
-  // Local variables never have explicit scopes
   if (ctx.hasLocal(value)) {
+    auto tv = ctx.getLocal(value);
+
+    // Warn the used if value was moved
+    if (tv->state == meta::Liveness::MOVED) {
+      Warning(WARNING_USE_AFTER_MOVE, span, "'{}'", value)
+        .note(tv->moved_at, "Value was moved here")
+        .emitFromNode(this);
+    }
+
+    // Warn the used if value was never initialized
+    if (tv->state == meta::Liveness::UNINITIALIZED) {
+      Warning(WARNING_UNINITIALIZED_USE, span, "'{}'", value)
+        .emitFromNode(this);
+    }
+
     return ctx.getLocalValue(value);
   }
 
@@ -240,9 +260,20 @@ std::shared_ptr<meta::Type> Identifier::generateTypeForValueWithoutLoad(codegen:
 
     std::string actual_scope_name = ctx.globalContext.aliased(scope_target);
 
-    bool is_generic = codegen::GenericsCache::has(actual_scope_name);
+    std::string current_prefix = str::join(util::pairVectorExtractFirst(ctx.globalContext.moduleStack), "_", false);
 
-    if (auto _struct = meta::Type::getCustomType(actual_scope_name)) {
+    bool is_generic = false;
+
+    // Check if a generic with raw scope or prepended current scope exists, if so - the expression is a static method call
+    if (codegen::GenericsCache::has(current_prefix + actual_scope_name) || codegen::GenericsCache::has(actual_scope_name)) {
+      is_generic = true;
+    }
+
+    // A bit fucked-up double-check (I don't actually remember if it is really needed anymore :/)
+    // TODO: Try to remove this and see what happens
+    if (auto _struct = meta::Type::getCustomType(current_prefix + actual_scope_name)) {
+      is_generic |= _struct->isStruct();
+    } else if (auto _struct = meta::Type::getCustomType(actual_scope_name)) {
       is_generic |= _struct->isStruct();
     }
 
@@ -326,6 +357,13 @@ std::string Identifier::resolveStaticMethodName(codegen::ModuleContext& ctx, Pay
   }
 
   generic_struct_name = ctx.globalContext.aliased(generic_struct_name);
+
+  std::string current_prefix = str::join(util::pairVectorExtractFirst(ctx.globalContext.moduleStack), "_", false);
+
+  // Assume current scope
+  if (codegen::GenericsCache::has(current_prefix + generic_struct_name)) {
+    generic_struct_name = current_prefix + generic_struct_name;
+  }
 
   assertRaiseFromNode(codegen::GenericsCache::has(generic_struct_name), Error(ERROR_NO_SUCH_GENERIC_TYPE, span), this);
 
