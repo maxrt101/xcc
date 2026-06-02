@@ -182,6 +182,8 @@ const std::unordered_map<WarningId, WarningDescription> WarningDescription::desc
   DESC(WARNING_RESERVED,          "Reserved warning"),
   DESC(WARNING_USER_WARNING,      "Warning triggered by warn! macro"),
   DESC(WARNING_STRUCT_DROP_NO_FN, "Struct declared with [drop] attribute has no 'fn drop(self);' method"),
+  DESC(WARNING_USE_AFTER_MOVE,    "Value used after being moved"),
+  DESC(WARNING_UNINITIALIZED_USE, "Use of possibly initialized value"),
 };
 
 static std::string generateHighlight(size_t line_ofs, size_t line_size, size_t len) {
