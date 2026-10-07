@@ -90,7 +90,7 @@ jobs:
 
     - name: Configure
       run: |
-        ARGS=""
+        ARGS="-DCMAKE_BUILD_TYPE=Release"
 
         if [ -n "${{ inputs.features }}" ]; then
           for feature in ${{ inputs.features }}
@@ -110,7 +110,7 @@ jobs:
         LLVM_DIR: ${{ matrix.llvm_dir }}
 
     - name: Build
-      run: cmake --build build --target xcc --parallel
+      run: cmake --build build --target xcc --parallel 2
 
     - name: Run tests
       run: |
