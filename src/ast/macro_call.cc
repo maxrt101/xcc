@@ -6,6 +6,8 @@
 using namespace xcc;
 using namespace xcc::ast;
 
+static auto& logger = log::Logger::get("MACROS");
+
 // TODO: Make a member of MacroCall
 static void processMacroCall(
   codegen::GlobalContext&           globalContext,
@@ -142,6 +144,12 @@ std::shared_ptr<Node> MacroCall::expand(codegen::ModuleContext& ctx, PayloadList
   if (macro->native) {
     auto res = macro->fn(ctx, *call);
 
+    logger.debug("Native macro '{}' expansion:\n{}\n{}",
+      this->name->toString(nullptr, this, 0, false),
+      call->toString(nullptr, this, 0, true),
+      res->toString(nullptr, this, 0, true)
+    );
+
     // Attach expansion markers & set span to this site
     markExpandedMacro(res, {
       "__xcc_macro_expanded_from",
@@ -162,6 +170,12 @@ std::shared_ptr<Node> MacroCall::expand(codegen::ModuleContext& ctx, PayloadList
   } catch (CompilationException& ex) {
     ex.error.note(macro->span, "During expansion of macro {}", name).raise();
   }
+
+  logger.debug("Macro '{}' expansion:\n{}\n{}",
+      this->name->toString(nullptr, this, 0, false),
+      call->toString(nullptr, this, 0, true),
+      body->toString(nullptr, this, 0, true)
+    );
 
   // Attach expansion markers & set span to call site
   markExpandedMacro(body, {
