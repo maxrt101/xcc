@@ -3,7 +3,7 @@ mod stdc::arg;
 [if($XCC_ARCH == "arm64")]
 type va_list = u8*;
 
-[if($XCC_ARCH == "_x86_64")]
+[if($XCC_ARCH == "x86_64")]
 struct va_list {
     gp_offset:         u32;
     fp_offset:         u32;
@@ -40,7 +40,7 @@ macro va_arg(ap, t) {
   }
 }
 
-[if($XCC_ARCH == "_x86_64")]
+[if($XCC_ARCH == "x86_64")]
 macro va_arg(ap, t) {
   {
     var result: t;
