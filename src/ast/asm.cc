@@ -1,6 +1,8 @@
 #include "xcc/ast/asm.h"
 #include "xcc/codegen.h"
 
+#include <llvm/IR/InlineAsm.h>
+
 using namespace xcc::ast;
 
 Asm::Asm(
