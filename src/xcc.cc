@@ -22,14 +22,15 @@ static auto& mod_ir_logger = xcc::log::Logger::get("IR_MOD");
  * @param block         AST Block
  */
 static void processAttributes(codegen::GlobalContext& globalContext, const std::shared_ptr<ast::Block>& block) {
-  // TODO: Use visitor
-  for (auto& node : block->body) {
+  block->visit(globalContext, [&globalContext](auto node) {
     if (!node->attributes.empty()) {
       for (auto& attr : node->attributes) {
         attr::callHandler(globalContext, attr, node.get());
       }
     }
-  }
+
+    return nullptr;
+  }, {}); // Pass an empty ignore list so it processes attributes everywhere
 }
 
 /**
