@@ -44,7 +44,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 20 all
+        sudo ./llvm.sh 21 all
 
     - name: Configure
       run: |
@@ -63,8 +63,8 @@ jobs:
         
         cmake -B build -S . -G "Unix Makefiles" $ARGS
       env:
-        CC: clang-20
-        CXX: clang++-20
+        CC: clang-21
+        CXX: clang++-21
         LLVM_DIR: /usr/lib/llvm-20/lib/cmake/
 
     - name: Build
@@ -94,7 +94,7 @@ jobs:
         name: xcc-linux
         path: build/xcc
 
-  build-macos:
+  build-macos-intel:
     runs-on: macos-15-intel
 
     steps:
@@ -105,7 +105,7 @@ jobs:
         uses: Homebrew/actions/setup-homebrew@main
 
       - name: Install Dependencies
-        run: brew install cmake make zstd llvm@20 || true
+        run: brew install cmake make zstd llvm@21 || true
 
       - name: Configure
         run: |
@@ -124,7 +124,66 @@ jobs:
 
           cmake -B build -S . -G "Unix Makefiles" $ARGS
         env:
-          LLVM_DIR: /usr/local/opt/llvm@20/lib/cmake/
+          LLVM_DIR: /usr/local/opt/llvm@21/lib/cmake/
+
+      - name: Build
+        run: cmake --build build --target xcc
+
+      - name: Run tests
+        run: |
+          ARGS=""
+
+          if [ -n "${{ inputs.tests_verbose }}" ]; then
+              ARGS="$ARGS -v"
+          fi
+
+          if [ -n "${{ inputs.tests_print_output }}" ]; then
+              ARGS="$ARGS -p"
+          fi
+
+          if [ -z "${{ inputs.omit_tests }}" ]; then
+            python3 tests/testrun.py -c tests/tests.json -e build/xcc -l lib/stdc $ARGS
+          else
+            echo "Omit tests"
+          fi
+
+      - name: Archive executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcc-macos-intel
+          path: build/xcc
+
+  build-macos-arm64:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Homebrew
+        id: set-up-homebrew
+        uses: Homebrew/actions/setup-homebrew@main
+
+      - name: Install Dependencies
+        run: brew install cmake make zstd llvm@21 || true
+
+      - name: Configure
+        run: |
+          ARGS=""
+
+          if [ -n "${{ inputs.features }}" ]; then
+            for feature in ${{ inputs.features }}
+            do
+              ARGS="$ARGS -D$feature"
+            done
+          fi
+
+          if [ -n "${{ inputs.verbose_build }}" ]; then
+            ARGS="$ARGS -DVERBOSE=1"
+          fi
+
+          cmake -B build -S . -G "Unix Makefiles" $ARGS
+        env:
+          LLVM_DIR: /opt/homebrew/opt/llvm@21/lib/cmake/llvm
 
       - name: Build
         run: cmake --build build --target xcc
