@@ -11,7 +11,7 @@ fn variadic_test(fmt: u8*, ...) {
 }
 
 fn main() -> i32 {
-  variadic_test("test", 42);
+  variadic_test("test", 42 as i64);
   return 0;
 }
 
