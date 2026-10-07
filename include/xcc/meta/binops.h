@@ -1,94 +1,26 @@
 #pragma once
 
 #include "xcc/meta/type.h"
-#include "xcc/exceptions.h"
 #include "xcc/codegen.h"
 #include "xcc/lexer.h"
-#include <llvm/IR/IRBuilder.h>
+#include <functional>
 #include <vector>
 
 /**
- * Helper macro to expand value encased in `()`
- *
- * @warning Internal
- */
-#define XCC_BINOP_EXPAND(...) __VA_ARGS__
-
-/**
- * Base class name, for which instruction generators are members
- *
- * @warning Internal
- */
-#define XCC_BINOP_HANDLER_BASE_CLASS llvm::IRBuilderBase
-
-/**
- * Returns type of instruction generator
- *
- * @warning Internal
- */
-#define XCC_BINOP_HANDLER_RETURN llvm::Value *
-
-/**
- * Arguments of a base instruction generators
- *
- * @warning Internal
- */
-#define XCC_BINOP_HANDLER_BASE_ARGS llvm::Value*, llvm::Value*, const llvm::Twine&
-
-/**
- * Implementation of XCC_BINOP_HANDLER_TYPE
- *
- * @warning Internal
- */
-#define XCC_BINOP_HANDLER_TYPE_IMPL(...) \
-  XCC_BINOP_HANDLER_RETURN (XCC_BINOP_HANDLER_BASE_CLASS::*)(XCC_BINOP_HANDLER_BASE_ARGS, ## __VA_ARGS__)
-
-/**
- * Generate instruction generator function type, with __VA_ARGS__ being additional arguments
- *
- * @warning Internal
- */
-#define XCC_BINOP_HANDLER_TYPE(...) \
-  XCC_BINOP_HANDLER_TYPE_IMPL(__VA_ARGS__)
-
-/**
  * Creates a BinaryOperation
- *
- * Example:
- * @code{.c}
- *   binop::List ops = {
- *     XCC_BINOP(TOKEN_PLUS, INTEGER, CreateAdd,  (bool, bool)),
- *     XCC_BINOP(TOKEN_PLUS, FLOAT,   CreateFAdd, ())
- *   };
- * @endcode
- *
- * @param __op    Operation (operator) - TokenType
- * @param __cond  Bitmask of BinaryOperationConditions
- * @param __fn    Function name to generate instruction from lhs & rhs. Must be
- *                a member of XCC_BINOP_HANDLER_BASE_CLASS
- * @param __twine Twine (temporary value name)
- * @param ...     Additional arguments that the function __fn expects
- *                (besides lhs, rhs & twine)
  */
-#define XCC_BINOP(__op, __cond, __fn, __twine, ...)                                                           \
-  {                                                                                                           \
-    {__op, __cond},                                                                                           \
-    binop::Handler::create((XCC_BINOP_HANDLER_TYPE(XCC_BINOP_EXPAND __VA_ARGS__)) &llvm::IRBuilder<>::__fn),  \
-    __twine                                                                                                   \
+#define XCC_BINOP(__op, __cond, __fn, __twine)                                 \
+  {                                                                            \
+    {__op, __cond},                                                            \
+    binop::Handler{[](codegen::ModuleContext& ctx, llvm::Value* l,             \
+                      llvm::Value* r, const std::string& t) -> llvm::Value* {  \
+      return ctx.ir_builder->__fn(l, r, t);                                    \
+    }},                                                                        \
+    __twine                                                                    \
   }
-
-/**
- * Default values to be passed to handlers for unaccounted additional arguments
- *
- * @warning Internal
- */
-#define XCC_BINOP_VARGS_DEFAULT_VALUES 0, 0
 
 namespace xcc::binop {
 
-/**
- * Represents condition, a type must meet for handler to be called
- */
 namespace Conditions {
   constexpr uint8_t NONE        = 0;
   constexpr uint8_t INTEGER     = 1 << 0;
@@ -98,47 +30,18 @@ namespace Conditions {
 }
 
 /**
- * Handler for binary operation
+ * Handler for binary operation using safe std::function
  */
 struct Handler {
-  /**
-   * Base instruction generator type
-   *
-   * ... is appended to account for additional arguments
-   * This is a *very* sketchy workaround for sake of generic handlers
-   */
-  using Base = XCC_BINOP_HANDLER_TYPE(...);
+  std::function<llvm::Value*(codegen::ModuleContext&, llvm::Value*, llvm::Value*, const std::string&)> fn;
 
-public:
-  Base handler;
-
-public:
-  /**
-   * Call underlying handler (instruction generator)
-   *
-   * @param ctx Module Context
-   * @param lhs LeftHandSide of binary operation
-   * @param rhs RightHandSide of binary operation
-   * @param twine Temporary result name
-   * @return Operation result
-   */
   llvm::Value * operator()(
     codegen::ModuleContext& ctx,
     llvm::Value * lhs,
     llvm::Value * rhs,
     const std::string& twine
-  ) const;
-
-  /**
-   * Creates generic binary operation Handler from specific handler
-   *
-   * @tparam T Handler member function type
-   * @param handler Function
-   * @return New Handler instance
-   */
-  template <typename T>
-  static Handler create(T handler) {
-    return Handler {(Base) handler};
+  ) const {
+    return fn(ctx, lhs, rhs, twine);
   }
 };
 

@@ -10,15 +10,6 @@ static const std::unordered_map<uint8_t, std::string> s_binop_cond_str_map = {
   {UNSIGNED, "UNSIGNED"},
 };
 
-llvm::Value * xcc::binop::Handler::operator()(
-    codegen::ModuleContext& ctx,
-    llvm::Value * lhs,
-    llvm::Value * rhs,
-    const std::string& twine
-) const {
-  return ((*ctx.ir_builder).*handler)(lhs, rhs, twine, XCC_BINOP_VARGS_DEFAULT_VALUES);
-}
-
 bool xcc::binop::Meta::check(const Meta& rhs) const {
   if (op != rhs.op) {
     return false;
