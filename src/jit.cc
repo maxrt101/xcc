@@ -3,8 +3,9 @@
 #include "xcc/util/llvm.h"
 #include "xcc/exceptions.h"
 
-#include <llvm/ExecutionEngine/Orc/AbsoluteSymbols.h>
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
+#include <llvm/ExecutionEngine/Orc/AbsoluteSymbols.h>
+#include <llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h>
 
 using namespace xcc::codegen;
 
@@ -52,7 +53,7 @@ public:
 
 JIT::JIT(std::unique_ptr<llvm::orc::ExecutionSession> session, llvm::orc::JITTargetMachineBuilder jtmb, llvm::DataLayout layout)
   : session(std::move(session)), data_layout(layout), mangle(*this->session, this->data_layout),
-    object_layer(*this->session, []() { return std::make_unique<llvm::SectionMemoryManager>(); }),
+    object_layer(*this->session, [](const llvm::MemoryBuffer&) {return std::make_unique<llvm::SectionMemoryManager>(); }),
     compile_layer(*this->session, this->object_layer, std::make_unique<llvm::orc::ConcurrentIRCompiler>(std::move(jtmb))),
     main_jd(this->session->createBareJITDylib("<main>")) {
 

@@ -387,11 +387,14 @@ void ModuleContext::PhantomScope::add(const std::string& name, std::shared_ptr<m
 }
 
 ModuleContext::ModuleContext(GlobalContext& global, const std::string& name, FileId file, util::Target * target) : name(name), file(file), globalContext(global) {
-  llvm.ctx = globalContext.tsc.getContext();
+  globalContext.tsc.withContextDo([&](auto ctx) { llvm.ctx = ctx; });
+  // llvm.ctx = ctxLock.get();
+
+  // llvm.ctx = globalContext.tsc.getContext();
   llvm.module = std::make_unique<llvm::Module>(name, *llvm.ctx);
 
   llvm.module->setDataLayout(  target ? target->machine->createDataLayout() : globalContext.globalModule->llvm.module->getDataLayout());
-  llvm.module->setTargetTriple(target ? target->target_triple               : globalContext.globalModule->llvm.module->getTargetTriple());
+  llvm.module->setTargetTriple(target ? llvm::Triple(target->target_triple) : globalContext.globalModule->llvm.module->getTargetTriple());
 
   ir_builder = std::make_unique<llvm::IRBuilder<>>(*llvm.ctx);
 

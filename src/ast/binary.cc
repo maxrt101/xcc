@@ -36,7 +36,7 @@ static const binop::List s_binops = {
   XCC_BINOP(TOKEN_AND,            NONE,               CreateLogicalAnd,  "landtmp",     ()                ),
   XCC_BINOP(TOKEN_OR,             NONE,               CreateLogicalOr,   "lortmp",      ()                ),
   XCC_BINOP(TOKEN_AMP,            NONE,               CreateAnd,         "andtmp",      ()                ),
-  XCC_BINOP(TOKEN_VERTICAL_LINE,  NONE,               CreateOr,          "ortmp",       ()                ),
+  XCC_BINOP(TOKEN_VERTICAL_LINE,  NONE,               CreateOr,          "ortmp",       (bool)            ),
   XCC_BINOP(TOKEN_SHIFT_LEFT,     NONE,               CreateShl,         "shltmp",      (bool, bool)      ),
   XCC_BINOP(TOKEN_SHIFT_RIGHT,    NONE,               CreateLShr,        "shrtmp",      (bool)            ),
   XCC_BINOP(TOKEN_PERCENT,        INTEGER | SIGNED,   CreateSRem,        "sremtmp",     ()                ),
