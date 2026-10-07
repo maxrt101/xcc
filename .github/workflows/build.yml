@@ -30,21 +30,57 @@ on:
         required: false
 
 jobs:
-  build-linux:
-    runs-on: ubuntu-24.04
+  build:
+    name: Build on ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false # Prevent other builds from cancelling if one OS fails
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            name: linux
+            cc: clang-21
+            cxx: clang++-21
+            llvm_dir: /usr/lib/llvm-21/lib/cmake/
+
+          - os: macos-15-intel
+            name: macos-intel
+            # Direct path to MacPorts clang to prevent fallback to Apple Clang
+            cc: /opt/local/libexec/llvm-21/bin/clang
+            cxx: /opt/local/libexec/llvm-21/bin/clang++
+            llvm_dir: /opt/local/libexec/llvm-21/lib/cmake/llvm
+
+          - os: macos-latest
+            name: macos-arm64
+            # Direct path to Homebrew clang
+            cc: /opt/homebrew/opt/llvm@21/bin/clang
+            cxx: /opt/homebrew/opt/llvm@21/bin/clang++
+            llvm_dir: /opt/homebrew/opt/llvm@21/lib/cmake/llvm
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Install Dependencies
+    - name: Install Dependencies (Linux)
+      if: matrix.name == 'linux'
       run: |
-        sudo apt install python3 cmake make wget lsb-release software-properties-common gnupg zlib1g-dev libzstd-dev libdwarf-dev
-
-    - name: Install LLVM & Clang
-      run: |
+        sudo apt update
+        sudo apt install -y python3 cmake make wget lsb-release software-properties-common gnupg zlib1g-dev libzstd-dev libdwarf-dev
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
         sudo ./llvm.sh 21 all
+
+    - name: Install Dependencies (macOS ARM64 - Homebrew)
+      if: matrix.name == 'macos-arm64'
+      run: |
+        brew install cmake make zstd llvm@21 || true
+
+    - name: Install Dependencies (macOS Intel - MacPorts)
+      if: matrix.name == 'macos-intel'
+      uses: melusina-org/setup-macports@v1
+
+    - name: Fetch MacPorts Packages
+      if: matrix.name == 'macos-intel'
+      run: sudo port install cmake gmake zstd llvm-21
 
     - name: Configure
       run: |
@@ -63,9 +99,9 @@ jobs:
         
         cmake -B build -S . -G "Unix Makefiles" $ARGS
       env:
-        CC: clang-21
-        CXX: clang++-21
-        LLVM_DIR: /usr/lib/llvm-20/lib/cmake/
+        CC: ${{ matrix.cc }}
+        CXX: ${{ matrix.cxx }}
+        LLVM_DIR: ${{ matrix.llvm_dir }}
 
     - name: Build
       run: cmake --build build --target xcc
@@ -91,124 +127,5 @@ jobs:
     - name: Archive executable artifact
       uses: actions/upload-artifact@v4
       with:
-        name: xcc-linux
+        name: xcc-${{ matrix.name }}
         path: build/xcc
-
-  build-macos-intel:
-    runs-on: macos-15-intel
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@main
-
-      - name: Install Dependencies
-        run: brew install cmake make zstd llvm@21 || true
-
-      - name: Configure
-        run: |
-          ARGS=""
-
-          if [ -n "${{ inputs.features }}" ]; then
-            for feature in ${{ inputs.features }}
-            do
-              ARGS="$ARGS -D$feature"
-            done
-          fi
-
-          if [ -n "${{ inputs.verbose_build }}" ]; then
-            ARGS="$ARGS -DVERBOSE=1"
-          fi
-
-          cmake -B build -S . -G "Unix Makefiles" $ARGS
-        env:
-          LLVM_DIR: /usr/local/opt/llvm@21/lib/cmake/
-
-      - name: Build
-        run: cmake --build build --target xcc
-
-      - name: Run tests
-        run: |
-          ARGS=""
-
-          if [ -n "${{ inputs.tests_verbose }}" ]; then
-              ARGS="$ARGS -v"
-          fi
-
-          if [ -n "${{ inputs.tests_print_output }}" ]; then
-              ARGS="$ARGS -p"
-          fi
-
-          if [ -z "${{ inputs.omit_tests }}" ]; then
-            python3 tests/testrun.py -c tests/tests.json -e build/xcc -l lib/stdc $ARGS
-          else
-            echo "Omit tests"
-          fi
-
-      - name: Archive executable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: xcc-macos-intel
-          path: build/xcc
-
-  build-macos-arm64:
-    runs-on: macos-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Homebrew
-        id: set-up-homebrew
-        uses: Homebrew/actions/setup-homebrew@main
-
-      - name: Install Dependencies
-        run: brew install cmake make zstd llvm@21 || true
-
-      - name: Configure
-        run: |
-          ARGS=""
-
-          if [ -n "${{ inputs.features }}" ]; then
-            for feature in ${{ inputs.features }}
-            do
-              ARGS="$ARGS -D$feature"
-            done
-          fi
-
-          if [ -n "${{ inputs.verbose_build }}" ]; then
-            ARGS="$ARGS -DVERBOSE=1"
-          fi
-
-          cmake -B build -S . -G "Unix Makefiles" $ARGS
-        env:
-          LLVM_DIR: /opt/homebrew/opt/llvm@21/lib/cmake/llvm
-
-      - name: Build
-        run: cmake --build build --target xcc
-
-      - name: Run tests
-        run: |
-          ARGS=""
-
-          if [ -n "${{ inputs.tests_verbose }}" ]; then
-              ARGS="$ARGS -v"
-          fi
-
-          if [ -n "${{ inputs.tests_print_output }}" ]; then
-              ARGS="$ARGS -p"
-          fi
-
-          if [ -z "${{ inputs.omit_tests }}" ]; then
-            python3 tests/testrun.py -c tests/tests.json -e build/xcc -l lib/stdc $ARGS
-          else
-            echo "Omit tests"
-          fi
-
-      - name: Archive executable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: xcc-macos
-          path: build/xcc
-
