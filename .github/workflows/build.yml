@@ -72,7 +72,7 @@ jobs:
       run: |
         brew install cmake make zstd llvm@21 || true
 
-    - name: Cache MacPorts
+    - name: Cache MacPorts (macOS Intel)
       if: matrix.name == 'macos-intel'
       id: cache-macports
       uses: actions/cache@v4
@@ -84,7 +84,7 @@ jobs:
       if: matrix.name == 'macos-intel' && steps.cache-macports.outputs.cache-hit != 'true'
       uses: melusina-org/setup-macports@v1
 
-    - name: Fetch MacPorts Packages
+    - name: Fetch MacPorts Packages (macOS Intel)
       if: matrix.name == 'macos-intel' && steps.cache-macports.outputs.cache-hit != 'true'
       run: sudo port install cmake gmake zstd llvm-21
 
