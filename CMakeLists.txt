@@ -77,6 +77,13 @@ add_executable(xcc
   ${PROJECT_SOURCES}
 )
 
+################################     TESTS     ################################
+
+add_custom_target(tests
+    COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/tests/testrun.py -c ${CMAKE_CURRENT_LIST_DIR}/tests/tests.json -e ${CMAKE_BINARY_DIR}/xcc -l ${CMAKE_CURRENT_LIST_DIR}/lib/stdc
+    COMMENT "Running tests"
+)
+
 ################################    FEATURES    ################################
 
 set(FEATURE_TOGGLES
