@@ -69,11 +69,11 @@ public:
  */
 class RawStreamCollector {
 private:
-  llvm::raw_string_ostream raw_stream;
   std::string buffer;
+  llvm::raw_string_ostream raw_stream;
 
 public:
-  RawStreamCollector() : raw_stream(buffer) {}
+  RawStreamCollector() : buffer(), raw_stream(buffer) {}
   ~RawStreamCollector() = default;
 
   llvm::raw_ostream * stream() {
@@ -81,6 +81,7 @@ public:
   }
 
   std::string& string() {
+    raw_stream.flush();
     return buffer;
   }
 };
