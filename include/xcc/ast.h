@@ -99,19 +99,21 @@ std::shared_ptr<Node> getOrGetLastInBlock(std::shared_ptr<Node> node);
 /**
  * Expand a node, if it is a macro call, return expanded AST, otherwise just return the node
  *
- * @tparam  T    Any subtype of ast::Node (or the base class)
  * @param   node Node that may be a MacroCall
  * @param   ctx  Module Context
  * @returns Expanded AST or node
  */
-template <typename T>
-std::shared_ptr<T> expand(std::shared_ptr<T> node, codegen::ModuleContext& ctx) {
-  if (node && node->is(AST_EXPR_MACRO_CALL)) {
-    return Node::cast<T>(node->template as<MacroCall>()->expand(ctx, {}));
-  }
+std::shared_ptr<Node> expand(std::shared_ptr<Node> node, codegen::ModuleContext& ctx);
 
-  return node;
-}
+/**
+ * Expand a node with macro `expand`, and then handle constant binary expressions, returning a number
+ *
+ * @tparam  T    Any subtype of ast::Node (or the base class)
+ * @param   node Node that needs to be expanded
+ * @param   ctx  Module Context
+ * @returns Expanded node or Number
+ */
+std::shared_ptr<Node> expandConstantExpressionNode(std::shared_ptr<Node> node, codegen::ModuleContext& ctx);
 
 /**
  * Expand if MacroCall, use node otherwise, then try to convert it into target node type,
